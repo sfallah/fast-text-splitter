@@ -1,0 +1,26 @@
+[package]
+name = "fast-text-splitter"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+tokenizers = { version = "0.19.1", features = ["http"], optional = true }
+aho-corasick = "=1.1.3"
+anyhow = "1.0.83"
+rayon = "1.10.0"
+
+[features]
+default = []
+tokenizers = ["dep:tokenizers"]
+
+
+[dev-dependencies]
+criterion = "0.5.1"
+memchr = "2.7.2"
+tokenizers = "0.19.1"
+
+[[bench]]
+name = "benchmarks"
+harness = false
