@@ -1,8 +1,9 @@
 use crate::common::TokensResults;
-use crate::{EncodingType, Split, Tokenize};
+use crate::{Split, Tokenize};
 
 #[cfg(feature = "tokenizers")]
 use tokenizers::{Encoding, PaddingStrategy, Tokenizer, TruncationStrategy};
+use crate::encodings::EncodingType;
 
 #[cfg(feature = "tokenizers")]
 pub fn init_tokenizer(model: Option<String>) -> tokenizers::Result<Tokenizer> {

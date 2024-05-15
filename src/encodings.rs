@@ -1,3 +1,4 @@
+#[cfg(feature = "tokenizers")]
 use crate::common::TokensResults;
 
 #[cfg(feature = "tokenizers")]
@@ -54,6 +55,7 @@ impl EncodingType {
     }
 
     pub fn to_split_results(&self, splits: &Vec<Split>, data: &str) -> Vec<SplitResults> {
+        #[cfg(feature = "tokenizers")]
         let encodings: Vec<TokensResults> = match self {
             #[cfg(feature = "tokenizers")]
             EncodingType::HFEncoding(enc) => divide_encoding(enc, splits),

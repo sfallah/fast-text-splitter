@@ -5,12 +5,10 @@ use rayon::prelude::*;
 use crate::ac_matches::{match_offsets, matches_spans};
 use crate::common::{PySplitResults, Split, SplitResults, TokensResults};
 use crate::config::SplitterConfig;
-use crate::encodings::tokens_data_offsets;
-use crate::encodings::{EncodingType, Tokenize};
+use crate::encodings::{Tokenize, tokens_data_offsets};
 use crate::ws_tokenizer::WSTokenizer;
 
 use pyo3::prelude::*;
-
 
 pub mod ac_matches;
 pub mod common;
