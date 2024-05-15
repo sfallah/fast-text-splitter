@@ -4,7 +4,7 @@ use rayon::prelude::*;
 
 use crate::ac_matches::{match_offsets, matches_spans};
 use crate::common::{PySplitResults, Split, SplitResults, TokensResults};
-use crate::config::SplitterConfig;
+use crate::config::{ConfigParams, SplitterConfig};
 use crate::encodings::{Tokenize, tokens_data_offsets};
 use crate::ws_tokenizer::WSTokenizer;
 
@@ -55,8 +55,10 @@ pub fn next_split(
 }
 
 #[pyfunction]
-pub fn text_split_ws(data: &str) -> Vec<PySplitResults> {
-    let conf : SplitterConfig<WSTokenizer> = SplitterConfig::default();
+pub fn text_split_ws(data: &str, conf_params: &ConfigParams) -> Vec<PySplitResults> {
+    println!("ConfigParams= {:?}", conf_params);
+    let conf= config::SplitterConfig::<WSTokenizer>::from_params(conf_params);
+
     text_split_parallel(&conf, data).iter()
         .map(|x| PySplitResults {
             #[cfg(feature = "tokenizers")]
@@ -65,9 +67,29 @@ pub fn text_split_ws(data: &str) -> Vec<PySplitResults> {
         ).collect()
 }
 
+#[pyfunction]
+#[pyo3(signature = (merge_level=None, patterns=vec![], max_tokens=512, max_depth=2, parallel=true))]
+pub fn py_ws_config_params(
+    merge_level: Option<usize>,
+    patterns: Vec<String>,
+    max_tokens: usize,
+    max_depth: usize,
+    parallel: bool,
+) -> ConfigParams {
+    ConfigParams::builder()
+        .pattern(patterns)
+        .merge_level(merge_level.unwrap_or(0))
+        .max_tokens(max_tokens)
+        .max_depth(max_depth)
+        .parallel(parallel)
+        .build()
+}
+
 #[pymodule]
 fn fast_text_splitter(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(text_split_ws, m)?)?;
+    m.add_function(wrap_pyfunction!(py_ws_config_params, m)?)?;
+    m.add_class::<ConfigParams>()?;
     m.add_class::<PySplitResults>()?;
     #[cfg(feature = "tokenizers")]
     m.add_class::<TokensResults>()?;

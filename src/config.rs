@@ -4,6 +4,7 @@ use crate::encodings::Tokenize;
 use crate::hf_tokenizer::{init_tokenizer, HFTokenizer};
 use crate::ws_tokenizer::WSTokenizer;
 use aho_corasick::AhoCorasick;
+use pyo3::{pyclass, pymethods};
 
 #[derive(Debug, Clone)]
 pub struct SplitterConfig<T: Tokenize + Sync> {
@@ -16,13 +17,21 @@ pub struct SplitterConfig<T: Tokenize + Sync> {
 }
 
 
+#[derive(Debug, Clone)]
+#[pyclass]
 pub struct ConfigParams {
+    #[pyo3(get)]
     pub pattern: Option<Vec<String>>,
     #[cfg(feature = "tokenizers")]
+    #[pyo3(get)]
     pub model_path: Option<String>,
+    #[pyo3(get)]
     pub max_tokens: Option<usize>,
+    #[pyo3(get)]
     pub max_depth: Option<usize>,
+    #[pyo3(get)]
     pub merge_level: Option<usize>,
+    #[pyo3(get)]
     pub parallel: Option<bool>,
 }
 
@@ -32,7 +41,9 @@ impl ConfigParams {
     }
 }
 
+#[pymethods]
 impl ConfigParams {
+    #[staticmethod]
     pub fn ws_default() -> Self {
         Self::builder()
             .pattern(vec!["\n\n".to_string(), "\n".to_string()])
@@ -42,6 +53,7 @@ impl ConfigParams {
             .parallel(true).build()
     }
     #[cfg(feature = "tokenizers")]
+    #[staticmethod]
     pub fn hf_default() -> Self {
         Self::builder()
             .pattern(vec!["\n\n".to_string(), "\n".to_string()])
@@ -64,7 +76,7 @@ pub struct ConfigParamsBuilder {
 }
 
 impl ConfigParamsBuilder {
-    pub fn new() -> ConfigParamsBuilder {
+    pub fn new() -> Self {
         ConfigParamsBuilder {
             pattern: None,
             #[cfg(feature = "tokenizers")]
@@ -76,13 +88,13 @@ impl ConfigParamsBuilder {
         }
     }
 
-    pub fn pattern(mut self, pattern: Vec<String>) -> ConfigParamsBuilder {
+    pub fn pattern(mut self, pattern: Vec<String>) -> Self {
         self.pattern = Some(pattern);
         self
     }
 
     #[cfg(feature = "tokenizers")]
-    pub fn model_path(mut self, model_path: String) -> ConfigParamsBuilder {
+    pub fn model_path(mut self, model_path: String) -> Self {
         self.model_path = Some(model_path);
         self
     }
@@ -91,16 +103,17 @@ impl ConfigParamsBuilder {
         self.max_tokens = Some(max_tokens);
         self
     }
-
     pub fn max_depth(mut self, max_depth: usize) -> ConfigParamsBuilder {
         self.max_depth = Some(max_depth);
         self
     }
 
+
     pub fn merge_level(mut self, merge_level: usize) -> ConfigParamsBuilder {
         self.merge_level = Some(merge_level);
         self
     }
+
 
     pub fn parallel(mut self, parallel: bool) -> ConfigParamsBuilder {
         self.parallel = Some(parallel);
@@ -121,7 +134,7 @@ impl ConfigParamsBuilder {
 }
 
 impl SplitterConfig<WSTokenizer> {
-    pub fn from_params(config_params: ConfigParams) -> Self {
+    pub fn from_params(config_params: &ConfigParams) -> Self {
         Self {
             aho_corasick: init_aho_corasick(config_params.pattern.clone()).unwrap().into(),
             tokenizer: WSTokenizer {},
@@ -178,7 +191,7 @@ mod test {
     #[test]
     fn test_splitter_config_ws_tokenizer() {
         let config_params = ConfigParams::ws_default();
-        let splitter_config = SplitterConfig::<WSTokenizer>::from_params(config_params);
+        let splitter_config = SplitterConfig::<WSTokenizer>::from_params(&config_params);
 
         assert_eq!(splitter_config.max_tokens, 384);
         assert_eq!(splitter_config.max_depth, 2);
