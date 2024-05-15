@@ -4,8 +4,7 @@ use rayon::prelude::*;
 use crate::ac_matches::{match_offsets, matches_spans};
 use crate::common::{Split, SplitResults};
 use crate::config::SplitterConfig;
-use crate::encodings::tokens_data_offsets;
-use crate::encodings::{EncodingType, Tokenize};
+use crate::encodings::{Tokenize, tokens_data_offsets};
 
 pub mod ac_matches;
 pub mod common;
