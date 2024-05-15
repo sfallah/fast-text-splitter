@@ -1,6 +1,9 @@
 use aho_corasick::Span;
 use std::fmt;
 
+use pyo3::prelude::*;
+
+
 #[derive(Clone, Copy, Eq, PartialEq)]
 pub struct Split {
     pub matches_span: Span,
@@ -49,6 +52,16 @@ pub struct SplitResults {
     pub split_strings: String,
 }
 
+#[pyclass]
+pub struct PySplitResults {
+    #[pyo3(get)]
+    #[cfg(feature = "tokenizers")]
+    pub results: Option<TokensResults>,
+    #[pyo3(get)]
+    pub split_strings: String,
+}
+
+#[pyclass]
 #[derive(Default, PartialEq, Debug, Clone)]
 pub struct TokensResults {
     pub ids: Vec<u32>,

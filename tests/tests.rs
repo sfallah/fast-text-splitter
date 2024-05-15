@@ -7,7 +7,6 @@ use fast_text_splitter::hf_tokenizer::HFTokenizer;
 use fast_text_splitter::{text_split, text_split_parallel};
 use fast_text_splitter::ws_tokenizer::{whitespace_indices, word_spans, ws_spans, WSTokenizer};
 
-#[cfg(feature = "tokenizers")]
 
 #[cfg(feature = "tokenizers")]
 #[test]

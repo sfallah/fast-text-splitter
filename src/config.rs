@@ -43,7 +43,6 @@ impl Default for SplitterConfig<HFTokenizer> {
         }
     }
 }
-
 impl SplitterConfig<WSTokenizer> {
     pub fn new_ws_config(
         pattern: Option<&[&str]>,

@@ -1,11 +1,16 @@
 use aho_corasick::{Match, Span};
+use pyo3::{pyfunction, pymodule};
 use rayon::prelude::*;
 
 use crate::ac_matches::{match_offsets, matches_spans};
-use crate::common::{Split, SplitResults};
+use crate::common::{PySplitResults, Split, SplitResults, TokensResults};
 use crate::config::SplitterConfig;
 use crate::encodings::tokens_data_offsets;
 use crate::encodings::{EncodingType, Tokenize};
+use crate::ws_tokenizer::WSTokenizer;
+
+use pyo3::prelude::*;
+
 
 pub mod ac_matches;
 pub mod common;
@@ -49,6 +54,26 @@ pub fn next_split(
         }
         _ => Split::new(matches_span, tokens_span),
     }
+}
+
+#[pyfunction]
+pub fn text_split_ws(data: &str) -> Vec<PySplitResults> {
+    let conf : SplitterConfig<WSTokenizer> = SplitterConfig::default();
+    text_split_parallel(&conf, data).iter()
+        .map(|x| PySplitResults {
+            #[cfg(feature = "tokenizers")]
+            results: x.results.clone(),
+            split_strings: x.split_strings.clone() }
+        ).collect()
+}
+
+#[pymodule]
+fn fast_text_splitter(m: &Bound<'_, PyModule>) -> PyResult<()> {
+    m.add_function(wrap_pyfunction!(text_split_ws, m)?)?;
+    m.add_class::<PySplitResults>()?;
+    #[cfg(feature = "tokenizers")]
+    m.add_class::<TokensResults>()?;
+    Ok(())
 }
 
 pub fn text_split_parallel<T: Tokenize + Sync>(
