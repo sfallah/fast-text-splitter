@@ -7,7 +7,11 @@ use crate::encodings::EncodingType;
 
 #[cfg(feature = "tokenizers")]
 pub fn init_tokenizer(model: Option<String>) -> tokenizers::Result<Tokenizer> {
-    let model = model.unwrap_or("sentence-transformers/all-MiniLM-L6-v2".to_string());
+    let default_model = "sentence-transformers/all-MiniLM-L6-v2".to_string();
+    let model = match model {
+        Some(model_path) => if model_path.is_empty() { default_model } else { model_path },
+        None => default_model,
+    };
     let mut tokenizer = Tokenizer::from_pretrained(model, None)?;
     tokenizer.get_padding_mut().unwrap().strategy = PaddingStrategy::BatchLongest;
     let tokenizer_truncation = tokenizer.get_truncation_mut().unwrap();

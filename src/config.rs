@@ -4,7 +4,6 @@ use crate::encodings::Tokenize;
 use crate::hf_tokenizer::{init_tokenizer, HFTokenizer};
 use crate::ws_tokenizer::WSTokenizer;
 use aho_corasick::AhoCorasick;
-use pyo3::{pyclass, pymethods};
 
 #[derive(Debug, Clone)]
 pub struct SplitterConfig<T: Tokenize + Sync> {
@@ -18,20 +17,13 @@ pub struct SplitterConfig<T: Tokenize + Sync> {
 
 
 #[derive(Debug, Clone)]
-#[pyclass]
 pub struct ConfigParams {
-    #[pyo3(get)]
     pub pattern: Option<Vec<String>>,
     #[cfg(feature = "tokenizers")]
-    #[pyo3(get)]
     pub model_path: Option<String>,
-    #[pyo3(get)]
     pub max_tokens: Option<usize>,
-    #[pyo3(get)]
     pub max_depth: Option<usize>,
-    #[pyo3(get)]
     pub merge_level: Option<usize>,
-    #[pyo3(get)]
     pub parallel: Option<bool>,
 }
 
@@ -41,9 +33,7 @@ impl ConfigParams {
     }
 }
 
-#[pymethods]
 impl ConfigParams {
-    #[staticmethod]
     pub fn ws_default() -> Self {
         Self::builder()
             .pattern(vec!["\n\n".to_string(), "\n".to_string()])
@@ -53,7 +43,6 @@ impl ConfigParams {
             .parallel(true).build()
     }
     #[cfg(feature = "tokenizers")]
-    #[staticmethod]
     pub fn hf_default() -> Self {
         Self::builder()
             .pattern(vec!["\n\n".to_string(), "\n".to_string()])

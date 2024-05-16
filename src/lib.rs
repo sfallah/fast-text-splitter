@@ -1,14 +1,10 @@
 use aho_corasick::{Match, Span};
-use pyo3::{pyfunction, pymodule};
 use rayon::prelude::*;
 
 use crate::ac_matches::{match_offsets, matches_spans};
-use crate::common::{PySplitResults, Split, SplitResults, TokensResults};
-use crate::config::{ConfigParams, SplitterConfig};
+use crate::common::{Split, SplitResults};
+use crate::config::SplitterConfig;
 use crate::encodings::{Tokenize, tokens_data_offsets};
-use crate::ws_tokenizer::WSTokenizer;
-
-use pyo3::prelude::*;
 
 pub mod ac_matches;
 pub mod common;
@@ -17,6 +13,7 @@ pub mod encodings;
 #[cfg(feature = "tokenizers")]
 pub mod hf_tokenizer;
 pub mod ws_tokenizer;
+mod py_binding;
 
 #[inline]
 fn span(start: usize, end: usize) -> Span {
@@ -53,49 +50,6 @@ pub fn next_split(
         _ => Split::new(matches_span, tokens_span),
     }
 }
-
-#[pyfunction]
-pub fn text_split_ws(data: &str, conf_params: &ConfigParams) -> Vec<PySplitResults> {
-    println!("ConfigParams= {:?}", conf_params);
-    let conf= config::SplitterConfig::<WSTokenizer>::from_params(conf_params);
-
-    text_split_parallel(&conf, data).iter()
-        .map(|x| PySplitResults {
-            #[cfg(feature = "tokenizers")]
-            results: x.results.clone(),
-            split_strings: x.split_strings.clone() }
-        ).collect()
-}
-
-#[pyfunction]
-#[pyo3(signature = (merge_level=None, patterns=vec![], max_tokens=512, max_depth=2, parallel=true))]
-pub fn py_ws_config_params(
-    merge_level: Option<usize>,
-    patterns: Vec<String>,
-    max_tokens: usize,
-    max_depth: usize,
-    parallel: bool,
-) -> ConfigParams {
-    ConfigParams::builder()
-        .pattern(patterns)
-        .merge_level(merge_level.unwrap_or(0))
-        .max_tokens(max_tokens)
-        .max_depth(max_depth)
-        .parallel(parallel)
-        .build()
-}
-
-#[pymodule]
-fn fast_text_splitter(m: &Bound<'_, PyModule>) -> PyResult<()> {
-    m.add_function(wrap_pyfunction!(text_split_ws, m)?)?;
-    m.add_function(wrap_pyfunction!(py_ws_config_params, m)?)?;
-    m.add_class::<ConfigParams>()?;
-    m.add_class::<PySplitResults>()?;
-    #[cfg(feature = "tokenizers")]
-    m.add_class::<TokensResults>()?;
-    Ok(())
-}
-
 pub fn text_split_parallel<T: Tokenize + Sync>(
     conf: &SplitterConfig<T>,
     data: &str,

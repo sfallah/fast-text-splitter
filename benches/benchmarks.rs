@@ -2,7 +2,7 @@ use std::fs;
 
 use criterion::{black_box, criterion_main, Criterion};
 
-use fast_text_splitter::config::SplitterConfig;
+use fast_text_splitter::config::{ConfigParams, SplitterConfig};
 #[cfg(feature = "tokenizers")]
 use fast_text_splitter::hf_tokenizer::HFTokenizer;
 use fast_text_splitter::text_split_parallel;
@@ -15,7 +15,8 @@ pub fn tokenizer_single_split_benchmark(c: &mut Criterion) {
     let bytes = fs::read(data_path).unwrap();
     let data = std::str::from_utf8(&bytes).unwrap();
 
-    let conf: SplitterConfig<HFTokenizer> = SplitterConfig::default();
+    let conf_params = ConfigParams::hf_default();
+    let conf = SplitterConfig::<HFTokenizer>::from_params(conf_params);
 
     c.bench_function("tokenizer_single_split", |b| {
         b.iter(|| {
@@ -31,7 +32,9 @@ pub fn words_single_split_benchmark(c: &mut Criterion) {
     let bytes = fs::read(data_path).unwrap();
     let data = std::str::from_utf8(&bytes).unwrap();
 
-    let conf: SplitterConfig<WSTokenizer> = SplitterConfig::default();
+    let conf_params = ConfigParams::ws_default();
+    let conf = SplitterConfig::<WSTokenizer>::from_params(&conf_params);
+
 
     c.bench_function("words_single_split", |b| {
         b.iter(|| {
