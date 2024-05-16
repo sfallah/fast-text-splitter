@@ -1,9 +1,14 @@
 use pyo3::prelude::*;
+use std::collections::HashMap;
+use std::sync::{Arc, Mutex};
+use std::hash::{Hash, Hasher};
+use std::collections::hash_map::DefaultHasher;
+use lazy_static::lazy_static;
 
 #[cfg(feature = "tokenizers")]
 use crate::common::TokensResults;
 use crate::{config, text_split_parallel};
-use crate::config::ConfigParams;
+use crate::config::{ConfigParams, SplitterConfig};
 use crate::hf_tokenizer::HFTokenizer;
 use crate::ws_tokenizer::WSTokenizer;
 
@@ -29,11 +34,49 @@ pub struct PySplitResults {
     pub split_strings: String,
 }
 
+
+lazy_static! {
+    static ref CACHE: Arc<Mutex<HashMap<u64, Arc<SplitterConfig<WSTokenizer>>>>> = Arc::new(Mutex::new(HashMap::new()));
+}
+
+
+fn splitter_config_cache(cache_params: &PyConfigParams) -> Arc<SplitterConfig<WSTokenizer>> {
+    let mut hasher = DefaultHasher::new();
+    cache_params.hash(&mut hasher);
+    let cache_key = hasher.finish();
+
+    // Acquire the lock and check if the result is already in the cache
+    {
+        let cache = CACHE.lock().unwrap();
+        if let Some(cached_conf) = cache.get(&cache_key) {
+            return cached_conf.clone();
+        }
+    }
+
+    // If the result is not in the cache, compute it
+    let conf_params: ConfigParams = cache_params.clone().into();
+    let conf = config::SplitterConfig::<WSTokenizer>::from_params(&conf_params);
+    let conf = Arc::new(conf);
+
+    // Store the result in the cache
+    {
+        let mut cache = CACHE.lock().unwrap();
+        cache.insert(cache_key, conf.clone());
+    }
+
+    conf
+
+}
+
 #[pyfunction]
 pub fn text_split_ws(data: &str, py_conf_params: &PyConfigParams) -> Vec<PySplitResults> {
     println!("ConfigParams= {:?}", py_conf_params);
-    let conf_params: ConfigParams = py_conf_params.clone().into();
-    let conf = config::SplitterConfig::<WSTokenizer>::from_params(&conf_params);
+    
+    // Basic Caching
+    let mut cache_params = py_conf_params.clone();
+    cache_params.conf_type = Some("WS".to_string());
+
+    let conf = splitter_config_cache(&cache_params);
 
     text_split_parallel(&conf, data).iter()
         .map(|x| PySplitResults {
@@ -47,6 +90,7 @@ pub fn text_split_ws(data: &str, py_conf_params: &PyConfigParams) -> Vec<PySplit
 #[pyfunction]
 pub fn text_split_hf(data: &str, py_conf_params: &PyConfigParams) -> Vec<PySplitResults> {
     println!("ConfigParams= {:?}", py_conf_params);
+
     let conf_params: ConfigParams = py_conf_params.clone().into();
     let conf = config::SplitterConfig::<HFTokenizer>::from_params(conf_params);
 
@@ -144,6 +188,22 @@ pub struct PyConfigParams {
     pub merge_level: Option<usize>,
     #[pyo3(get)]
     pub parallel: Option<bool>,
+    #[pyo3(get)]
+    pub conf_type: Option<String>,
+}
+
+impl Hash for PyConfigParams {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        let mut hasher = DefaultHasher::new();
+        self.pattern.hash(&mut hasher);
+        #[cfg(feature = "tokenizers")]
+        self.model_path.hash(&mut hasher);
+        self.max_tokens.hash(&mut hasher);
+        self.max_depth.hash(&mut hasher);
+        self.merge_level.hash(&mut hasher);
+        self.parallel.hash(&mut hasher);
+        hasher.finish().hash(state);
+    }
 }
 
 impl From<ConfigParams> for PyConfigParams {
@@ -156,6 +216,7 @@ impl From<ConfigParams> for PyConfigParams {
             max_depth: conf_params.max_depth,
             merge_level: conf_params.merge_level,
             parallel: conf_params.parallel,
+            conf_type: None, // None for now
         }
     }
 }
@@ -170,6 +231,7 @@ impl From<PyConfigParams> for ConfigParams {
             max_depth: py_conf_params.max_depth,
             merge_level: py_conf_params.merge_level,
             parallel: py_conf_params.parallel,
+            conf_type: None, // None for now
         }
     }
 }
