@@ -1,8 +1,9 @@
 use pyo3::prelude::*;
-use std::collections::HashMap;
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
 use std::hash::{Hash, Hasher};
 use std::collections::hash_map::DefaultHasher;
+use once_cell::sync::OnceCell;
+use dashmap::DashMap;
 use lazy_static::lazy_static;
 
 #[cfg(feature = "tokenizers")]
@@ -36,11 +37,10 @@ pub struct PySplitResults {
 
 
 lazy_static! {
-    static ref CACHE: Mutex<std::collections::HashMap<u64, Arc<SplitterConfig<WSTokenizer>>>> = Mutex::new(HashMap::new());
+    static ref CACHE: DashMap<u64, OnceCell<Arc<SplitterConfig<WSTokenizer>>>> = DashMap::new();
 }
 
-
-fn splitter_config_cache(cache_params: &PyConfigParams) -> (Arc<SplitterConfig<WSTokenizer>>, bool) {
+fn splitter_config_cache(cache_params: &PyConfigParams) -> Arc<SplitterConfig<WSTokenizer>> {
     // Compute the cache key
     let cache_key = {
         let mut hasher = DefaultHasher::new();
@@ -48,22 +48,14 @@ fn splitter_config_cache(cache_params: &PyConfigParams) -> (Arc<SplitterConfig<W
         hasher.finish()
     };
 
-    // Attempt to get from cache
-    if let Some(cached_conf) = {
-        let cache = CACHE.lock().unwrap();
-        cache.get(&cache_key).cloned()
-    } {
-        return (cached_conf, true);
-    }
+    // Get or insert a OnceCell for the given cache_key
+    let cell = CACHE.entry(cache_key).or_insert_with(OnceCell::new);
 
-    // If not in cache, compute and insert
-    let conf_params: ConfigParams = cache_params.clone().into();
-    let conf = Arc::new(config::SplitterConfig::<WSTokenizer>::from_params(&conf_params));
-
-    let mut cache = CACHE.lock().unwrap();
-    cache.insert(cache_key, conf.clone());
-
-    (conf, false)
+    // Get or initialize the SplitterConfig within the OnceCell
+    cell.get_or_init(|| {
+        let conf_params: ConfigParams = cache_params.clone().into();
+        Arc::new(config::SplitterConfig::<WSTokenizer>::from_params(&conf_params))
+    }).clone()
 }
 
 #[pyfunction]
@@ -74,7 +66,7 @@ pub fn text_split_ws(data: &str, py_conf_params: &PyConfigParams) -> Vec<PySplit
     let mut cache_params = py_conf_params.clone();
     cache_params.conf_type = Some("WS".to_string());
 
-    let (conf, _) = splitter_config_cache(&cache_params);
+    let conf = splitter_config_cache(&cache_params);
 
     text_split_parallel(&conf, data).iter()
         .map(|x| PySplitResults {
@@ -236,11 +228,11 @@ impl From<PyConfigParams> for ConfigParams {
 
 
 
-//#[cfg(test)]
 #[cfg(test)]
 mod tests {
     use super::*;
     use std::sync::Arc;
+    use std::thread;
 
     #[test]
     fn test_splitter_config_cache_same_params() {
@@ -256,12 +248,10 @@ mod tests {
         };
 
         // Fetch configuration from the cache (first time)
-        let (conf1, hit1) = splitter_config_cache(&dummy_params);
-        assert!(!hit1, "Expected a cache miss on first fetch");
+        let conf1 = splitter_config_cache(&dummy_params);
 
         // Fetch configuration from the cache (second time, should hit cache)
-        let (conf2, hit2) = splitter_config_cache(&dummy_params);
-        assert!(hit2, "Expected a cache hit on second fetch");
+        let conf2 = splitter_config_cache(&dummy_params);
 
         // Both should be the same (same Arc)
         assert!(Arc::ptr_eq(&conf1, &conf2));
@@ -291,11 +281,8 @@ mod tests {
         };
 
         // Fetch configuration from the cache for different params
-        let (conf1, hit1) = splitter_config_cache(&params1);
-        assert!(!hit1, "Expected a cache miss for first set of params");
-
-        let (conf2, hit2) = splitter_config_cache(&params2);
-        assert!(!hit2, "Expected a cache miss for second set of params");
+        let conf1 = splitter_config_cache(&params1);
+        let conf2 = splitter_config_cache(&params2);
 
         // They should not be the same (different Arcs)
         assert!(!Arc::ptr_eq(&conf1, &conf2));
@@ -325,12 +312,10 @@ mod tests {
         };
 
         // Fetch configuration from the cache for first params
-        let (conf1, hit1) = splitter_config_cache(&params1);
-        assert!(!hit1, "Expected a cache miss for first set of params");
+        let conf1 = splitter_config_cache(&params1);
 
         // Fetch configuration from the cache for second params
-        let (conf2, hit2) = splitter_config_cache(&params2);
-        assert!(!hit2, "Expected a cache miss for second set of params");
+        let conf2 = splitter_config_cache(&params2);
 
         // They should not be the same (different Arcs)
         assert!(!Arc::ptr_eq(&conf1, &conf2));
@@ -338,7 +323,6 @@ mod tests {
 
     #[test]
     fn test_splitter_config_cache_thread_safety() {
-        use std::thread;
 
         // Create dummy PyConfigParams
         let dummy_params = Arc::new(PyConfigParams {
@@ -352,8 +336,7 @@ mod tests {
         });
 
         // Fetch configuration from the cache once to ensure it's populated
-        let (_, initial_hit) = splitter_config_cache(&dummy_params);
-        assert!(!initial_hit, "Expected a cache miss on first fetch");
+        let _ = splitter_config_cache(&dummy_params);
 
         let mut handles = vec![];
 
@@ -368,10 +351,9 @@ mod tests {
         // Ensure all threads complete and return the same configuration
         let results: Vec<_> = handles.into_iter().map(|h| h.join().unwrap()).collect();
 
-        // All results should be the same Arc and should be cache hits
+        // All results should be the same Arc
         for i in 1..results.len() {
-            assert!(Arc::ptr_eq(&results[0].0, &results[i].0));
-            assert!(results[i].1, "Expected a cache hit for all threads after first fetch");
+            assert!(Arc::ptr_eq(&results[0], &results[i]));
         }
     }
 }
