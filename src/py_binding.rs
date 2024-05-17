@@ -60,8 +60,8 @@ fn splitter_config_cache(cache_params: &PyConfigParams) -> Arc<SplitterConfig<WS
 
 #[pyfunction]
 pub fn text_split_ws(data: &str, py_conf_params: &PyConfigParams) -> Vec<PySplitResults> {
-    println!("ConfigParams= {:?}", py_conf_params);
-    
+    //println!("ConfigParams= {:?}", py_conf_params);
+
     // Basic Caching
     let mut cache_params = py_conf_params.clone();
     cache_params.conf_type = Some("WS".to_string());
