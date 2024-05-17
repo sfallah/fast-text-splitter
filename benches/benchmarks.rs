@@ -33,7 +33,8 @@ pub fn words_single_split_benchmark(c: &mut Criterion) {
     let data = std::str::from_utf8(&bytes).unwrap();
 
     let conf_params = ConfigParams::ws_default();
-    let conf = SplitterConfig::<WSTokenizer>::from_params(&conf_params);
+    let mut conf = SplitterConfig::<WSTokenizer>::from_params(&conf_params);
+    conf.parallel = false;
 
 
     c.bench_function("words_single_split", |b| {

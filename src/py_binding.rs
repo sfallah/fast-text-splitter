@@ -53,20 +53,28 @@ fn splitter_config_cache(cache_params: &PyConfigParams) -> Arc<SplitterConfig<WS
 
     // Get or initialize the SplitterConfig within the OnceCell
     cell.get_or_init(|| {
-        let conf_params: ConfigParams = cache_params.clone().into();
-        Arc::new(config::SplitterConfig::<WSTokenizer>::from_params(&conf_params))
+        let mut conf_params: ConfigParams = cache_params.clone().into();
+        let max_depth = conf_params.max_depth.unwrap_or(0);
+        let pattern_len = conf_params.pattern.as_ref().map(|p| p.len()).unwrap_or(0);
+        conf_params.max_depth = Some(std::cmp::min(max_depth, pattern_len));    // Min needed otherwise high max_depth slows down a ton
+        Arc::new(config::SplitterConfig::<WSTokenizer>::from_params(&conf_params)) 
     }).clone()
 }
 
 #[pyfunction]
-pub fn text_split_ws(data: &str, py_conf_params: &PyConfigParams) -> Vec<PySplitResults> {
+pub fn text_split_ws(data: &str, py_conf_params: &PyConfigParams, use_cache: bool) -> Vec<PySplitResults> {
     //println!("ConfigParams= {:?}", py_conf_params);
 
     // Basic Caching
     let mut cache_params = py_conf_params.clone();
     cache_params.conf_type = Some("WS".to_string());
 
-    let conf = splitter_config_cache(&cache_params);
+    let conf = if use_cache {
+        splitter_config_cache(&cache_params)
+    } else {
+        let conf_params: ConfigParams = py_conf_params.clone().into();
+        Arc::new(config::SplitterConfig::<WSTokenizer>::from_params(&conf_params))
+    };
 
     text_split_parallel(&conf, data).iter()
         .map(|x| PySplitResults {
