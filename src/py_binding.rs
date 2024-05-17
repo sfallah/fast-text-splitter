@@ -36,36 +36,34 @@ pub struct PySplitResults {
 
 
 lazy_static! {
-    static ref CACHE: Arc<Mutex<HashMap<u64, Arc<SplitterConfig<WSTokenizer>>>>> = Arc::new(Mutex::new(HashMap::new()));
+    static ref CACHE: Mutex<std::collections::HashMap<u64, Arc<SplitterConfig<WSTokenizer>>>> = Mutex::new(HashMap::new());
 }
 
 
-fn splitter_config_cache(cache_params: &PyConfigParams) -> Arc<SplitterConfig<WSTokenizer>> {
-    let mut hasher = DefaultHasher::new();
-    cache_params.hash(&mut hasher);
-    let cache_key = hasher.finish();
+fn splitter_config_cache(cache_params: &PyConfigParams) -> (Arc<SplitterConfig<WSTokenizer>>, bool) {
+    // Compute the cache key
+    let cache_key = {
+        let mut hasher = DefaultHasher::new();
+        cache_params.hash(&mut hasher);
+        hasher.finish()
+    };
 
-    // Acquire the lock and check if the result is already in the cache
-    {
+    // Attempt to get from cache
+    if let Some(cached_conf) = {
         let cache = CACHE.lock().unwrap();
-        if let Some(cached_conf) = cache.get(&cache_key) {
-            return cached_conf.clone();
-        }
+        cache.get(&cache_key).cloned()
+    } {
+        return (cached_conf, true);
     }
 
-    // If the result is not in the cache, compute it
+    // If not in cache, compute and insert
     let conf_params: ConfigParams = cache_params.clone().into();
-    let conf = config::SplitterConfig::<WSTokenizer>::from_params(&conf_params);
-    let conf = Arc::new(conf);
+    let conf = Arc::new(config::SplitterConfig::<WSTokenizer>::from_params(&conf_params));
 
-    // Store the result in the cache
-    {
-        let mut cache = CACHE.lock().unwrap();
-        cache.insert(cache_key, conf.clone());
-    }
+    let mut cache = CACHE.lock().unwrap();
+    cache.insert(cache_key, conf.clone());
 
-    conf
-
+    (conf, false)
 }
 
 #[pyfunction]
@@ -76,7 +74,7 @@ pub fn text_split_ws(data: &str, py_conf_params: &PyConfigParams) -> Vec<PySplit
     let mut cache_params = py_conf_params.clone();
     cache_params.conf_type = Some("WS".to_string());
 
-    let conf = splitter_config_cache(&cache_params);
+    let (conf, _) = splitter_config_cache(&cache_params);
 
     text_split_parallel(&conf, data).iter()
         .map(|x| PySplitResults {
@@ -237,3 +235,143 @@ impl From<PyConfigParams> for ConfigParams {
 }
 
 
+
+//#[cfg(test)]
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::sync::Arc;
+
+    #[test]
+    fn test_splitter_config_cache_same_params() {
+        // Create dummy PyConfigParams
+        let dummy_params = PyConfigParams {
+            pattern: Some(vec!["pattern1".to_string(), "pattern2".to_string()]),
+            model_path: Some("path/to/model".to_string()),
+            max_tokens: Some(100),
+            max_depth: Some(10),
+            merge_level: Some(2),
+            parallel: Some(true),
+            conf_type: Some("type1".to_string()),
+        };
+
+        // Fetch configuration from the cache (first time)
+        let (conf1, hit1) = splitter_config_cache(&dummy_params);
+        assert!(!hit1, "Expected a cache miss on first fetch");
+
+        // Fetch configuration from the cache (second time, should hit cache)
+        let (conf2, hit2) = splitter_config_cache(&dummy_params);
+        assert!(hit2, "Expected a cache hit on second fetch");
+
+        // Both should be the same (same Arc)
+        assert!(Arc::ptr_eq(&conf1, &conf2));
+    }
+
+    #[test]
+    fn test_splitter_config_cache_different_params() {
+        // Create different dummy PyConfigParams
+        let params1 = PyConfigParams {
+            pattern: Some(vec!["pattern1".to_string(), "pattern2".to_string()]),
+            model_path: Some("path/to/model1".to_string()),
+            max_tokens: Some(100),
+            max_depth: Some(10),
+            merge_level: Some(2),
+            parallel: Some(true),
+            conf_type: Some("type1".to_string()),
+        };
+
+        let params2 = PyConfigParams {
+            pattern: Some(vec!["pattern3".to_string(), "pattern4".to_string()]),
+            model_path: Some("path/to/model2".to_string()),
+            max_tokens: Some(200),
+            max_depth: Some(20),
+            merge_level: Some(3),
+            parallel: Some(false),
+            conf_type: Some("type2".to_string()),
+        };
+
+        // Fetch configuration from the cache for different params
+        let (conf1, hit1) = splitter_config_cache(&params1);
+        assert!(!hit1, "Expected a cache miss for first set of params");
+
+        let (conf2, hit2) = splitter_config_cache(&params2);
+        assert!(!hit2, "Expected a cache miss for second set of params");
+
+        // They should not be the same (different Arcs)
+        assert!(!Arc::ptr_eq(&conf1, &conf2));
+    }
+
+    #[test]
+    fn test_splitter_config_cache_partial_overlap() {
+        // Create partially overlapping PyConfigParams
+        let params1 = PyConfigParams {
+            pattern: Some(vec!["pattern1".to_string()]),
+            model_path: Some("path/to/model".to_string()),
+            max_tokens: Some(100),
+            max_depth: Some(10),
+            merge_level: Some(2),
+            parallel: Some(true),
+            conf_type: Some("type1".to_string()),
+        };
+
+        let params2 = PyConfigParams {
+            pattern: Some(vec!["pattern1".to_string()]),  // Same pattern
+            model_path: Some("path/to/model".to_string()),  // Same model path
+            max_tokens: Some(150),  // Different max tokens
+            max_depth: Some(15),  // Different max depth
+            merge_level: Some(2),
+            parallel: Some(true),
+            conf_type: Some("type1".to_string()),
+        };
+
+        // Fetch configuration from the cache for first params
+        let (conf1, hit1) = splitter_config_cache(&params1);
+        assert!(!hit1, "Expected a cache miss for first set of params");
+
+        // Fetch configuration from the cache for second params
+        let (conf2, hit2) = splitter_config_cache(&params2);
+        assert!(!hit2, "Expected a cache miss for second set of params");
+
+        // They should not be the same (different Arcs)
+        assert!(!Arc::ptr_eq(&conf1, &conf2));
+    }
+
+    #[test]
+    fn test_splitter_config_cache_thread_safety() {
+        use std::thread;
+
+        // Create dummy PyConfigParams
+        let dummy_params = Arc::new(PyConfigParams {
+            pattern: Some(vec!["pattern1".to_string(), "pattern2".to_string()]),
+            model_path: Some("path/to/model".to_string()),
+            max_tokens: Some(100),
+            max_depth: Some(10),
+            merge_level: Some(2),
+            parallel: Some(true),
+            conf_type: Some("type1".to_string()),
+        });
+
+        // Fetch configuration from the cache once to ensure it's populated
+        let (_, initial_hit) = splitter_config_cache(&dummy_params);
+        assert!(!initial_hit, "Expected a cache miss on first fetch");
+
+        let mut handles = vec![];
+
+        // Spawn multiple threads to access the cache
+        for _ in 0..10 {
+            let params = dummy_params.clone();
+            handles.push(thread::spawn(move || {
+                splitter_config_cache(&params)
+            }));
+        }
+
+        // Ensure all threads complete and return the same configuration
+        let results: Vec<_> = handles.into_iter().map(|h| h.join().unwrap()).collect();
+
+        // All results should be the same Arc and should be cache hits
+        for i in 1..results.len() {
+            assert!(Arc::ptr_eq(&results[0].0, &results[i].0));
+            assert!(results[i].1, "Expected a cache hit for all threads after first fetch");
+        }
+    }
+}

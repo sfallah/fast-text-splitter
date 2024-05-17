@@ -25,6 +25,7 @@ pub struct ConfigParams {
     pub max_depth: Option<usize>,
     pub merge_level: Option<usize>,
     pub parallel: Option<bool>,
+    pub conf_type: Option<String>,
 }
 
 impl ConfigParams {
@@ -118,6 +119,7 @@ impl ConfigParamsBuilder {
             max_depth: self.max_depth,
             merge_level: self.merge_level,
             parallel: self.parallel,
+            conf_type: None, // None for now
         }
     }
 }
