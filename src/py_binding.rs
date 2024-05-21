@@ -2,7 +2,6 @@ use pyo3::prelude::*;
 use std::sync::Arc;
 use std::hash::{Hash, Hasher};
 use std::collections::hash_map::DefaultHasher;
-use once_cell::sync::OnceCell;
 use dashmap::DashMap;
 use lazy_static::lazy_static;
 
@@ -37,7 +36,7 @@ pub struct PySplitResults {
 
 
 lazy_static! {
-    static ref CACHE: DashMap<u64, OnceCell<Arc<SplitterConfig<WSTokenizer>>>> = DashMap::new();
+    static ref CACHE: DashMap<u64, Arc<SplitterConfig<WSTokenizer>>> = DashMap::new();
 }
 
 fn splitter_config_cache(cache_params: &PyConfigParams) -> Arc<SplitterConfig<WSTokenizer>> {
@@ -48,23 +47,19 @@ fn splitter_config_cache(cache_params: &PyConfigParams) -> Arc<SplitterConfig<WS
         hasher.finish()
     };
 
-    // Get or insert a OnceCell for the given cache_key
-    let cell = CACHE.entry(cache_key).or_insert_with(OnceCell::new);
-
-    // Get or initialize the SplitterConfig within the OnceCell
-    cell.get_or_init(|| {
+    // Get or insert the SplitterConfig for the given cache_key
+    CACHE.entry(cache_key).or_insert_with(|| {
         let mut conf_params: ConfigParams = cache_params.clone().into();
         let max_depth = conf_params.max_depth.unwrap_or(0);
         let pattern_len = conf_params.pattern.as_ref().map(|p| p.len()).unwrap_or(0);
         conf_params.max_depth = Some(std::cmp::min(max_depth, pattern_len));    // Min needed otherwise high max_depth slows down a ton
-        Arc::new(config::SplitterConfig::<WSTokenizer>::from_params(&conf_params)) 
+        Arc::new(config::SplitterConfig::<WSTokenizer>::from_params(&conf_params))
     }).clone()
 }
 
+
 #[pyfunction]
 pub fn text_split_ws(data: &str, py_conf_params: &PyConfigParams, use_cache: bool) -> Vec<PySplitResults> {
-    //println!("ConfigParams= {:?}", py_conf_params);
-
     // Basic Caching
     let mut cache_params = py_conf_params.clone();
     cache_params.conf_type = Some("WS".to_string());
