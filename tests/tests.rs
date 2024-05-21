@@ -138,3 +138,41 @@ fn split_tokenizer_superlinear_test() -> tokenizers::Result<()> {
     }
     Ok(())
 }
+
+#[test]
+fn sentence_pattern_ws_splits_test() -> tokenizers::Result<()> {
+    let data = "Hello, you all! How are you? I am fine. Nice to meet you all!";
+
+    // Test default configuration
+    let conf_params = ConfigParams::ws_default();
+    let conf = SplitterConfig::<WSTokenizer>::from_params(&conf_params);
+    let splits = text_split_parallel(&conf, data);
+
+    println!("Default Configuration Splits:");
+    for split in splits.iter() {
+        println!("{:?}", split.split_strings);
+    }
+
+    // Test custom configuration with different patterns
+    let conf_params_patterns = ConfigParams::builder()
+        .max_tokens(12)
+        .max_depth(2)
+        .parallel(false)
+        .pattern(vec!["\n\n".to_string(), ".".to_string()])  // splits correctly but cuts off last split
+        //.pattern(vec![".".to_string(), "\n\n".to_string()]) // ignores "." pattern
+        .build();
+
+    let conf_patterns = SplitterConfig::<WSTokenizer>::from_params(&conf_params_patterns);
+    let splits_results = text_split_parallel(&conf_patterns, data);
+
+    let expected_splits = vec![
+        "Hello, you all! How are you ? I am fine.".to_string(),
+        "Nice to meet you all!".to_string(),
+    ];
+
+    let actual_splits: Vec<String> = splits_results.iter().map(|split| split.split_strings.clone()).collect();
+
+    assert_eq!(expected_splits, actual_splits);
+
+    Ok(())
+}
