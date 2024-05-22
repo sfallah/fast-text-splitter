@@ -1,13 +1,11 @@
-use crate::ac_matches::init_aho_corasick;
 use crate::encodings::Tokenize;
 #[cfg(feature = "tokenizers")]
-use crate::hf_tokenizer::{init_tokenizer, HFTokenizer};
+use crate::hf_tokenizer::{HFTokenizer, init_tokenizer};
 use crate::ws_tokenizer::WSTokenizer;
-use aho_corasick::AhoCorasick;
 
 #[derive(Debug, Clone)]
 pub struct SplitterConfig<T: Tokenize + Sync> {
-    pub aho_corasick: AhoCorasick,
+    pub pattern: Vec<String>,
     pub tokenizer: T,
     pub max_tokens: usize,
     pub max_depth: usize,
@@ -127,7 +125,7 @@ impl ConfigParamsBuilder {
 impl SplitterConfig<WSTokenizer> {
     pub fn from_params(config_params: &ConfigParams) -> Self {
         Self {
-            aho_corasick: init_aho_corasick(config_params.pattern.clone()).unwrap().into(),
+            pattern: config_params.pattern.clone().unwrap_or(vec!["\n\n".to_string(), "\n".to_string()]),
             tokenizer: WSTokenizer {},
             max_tokens: config_params.max_tokens.unwrap_or(384),
             max_depth: config_params.max_depth.unwrap_or(2),
@@ -141,7 +139,7 @@ impl SplitterConfig<WSTokenizer> {
 impl SplitterConfig<HFTokenizer> {
     pub fn from_params(config_params: ConfigParams) -> Self {
         Self {
-            aho_corasick: init_aho_corasick(config_params.pattern.clone()).unwrap().into(),
+            pattern: config_params.pattern.unwrap_or(vec!["\n\n".to_string(), "\n".to_string()]),
             tokenizer: HFTokenizer {
                 tokenizer: init_tokenizer(config_params.model_path).unwrap(),
             },

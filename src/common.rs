@@ -3,15 +3,13 @@ use std::fmt;
 
 #[derive(Clone, Copy, Eq, PartialEq)]
 pub struct Split {
-    pub matches_span: Span,
     pub tokens_span: Span,
     pub data_span: Option<Span>,
 }
 
 impl Split {
-    pub fn new(matches_span: Span, tokens_span: Span) -> Self {
+    pub fn new(tokens_span: Span) -> Self {
         Self {
-            matches_span,
             tokens_span,
             data_span: None,
         }
@@ -22,11 +20,9 @@ impl fmt::Debug for Split {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
             f,
-            "SplitOffset {{ tokens_span: {:?}, matches_span: {:?}, no_tokens: {}, no_matches: {}}}",
+            "SplitOffset {{ tokens_span: {:?}, no_tokens: {}}}",
             self.tokens_span,
-            self.matches_span,
             self.no_tokens(),
-            self.no_matches()
         )
     }
 }
@@ -34,10 +30,6 @@ impl fmt::Debug for Split {
 impl Split {
     pub fn no_tokens(&self) -> usize {
         self.tokens_span.len()
-    }
-
-    fn no_matches(&self) -> usize {
-        self.matches_span.len()
     }
 }
 

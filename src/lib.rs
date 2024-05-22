@@ -1,10 +1,10 @@
-use aho_corasick::{Match, Span};
+use aho_corasick::Span;
 use rayon::prelude::*;
 
-use crate::ac_matches::{match_offsets, matches_spans};
+use crate::ac_matches::find_matches;
 use crate::common::{Split, SplitResults};
 use crate::config::SplitterConfig;
-use crate::encodings::{Tokenize, tokens_data_offsets};
+use crate::encodings::Tokenize;
 
 pub mod ac_matches;
 pub mod common;
@@ -23,52 +23,45 @@ fn span(start: usize, end: usize) -> Span {
 pub fn next_split(
     tokens_offsets: &[(usize, usize)],
     tokens_span: Span,
-    matches: &[Match],
-    matches_span: Span,
-    pattern_id: usize,
+    pt_span: Span,
 ) -> Split {
-    let mt_next_pos_opt = ac_matches::next_match_pos(matches, matches_span, pattern_id);
+    let tk_next_pos_opt =
+        encodings::next_token_pos(tokens_offsets, tokens_span, pt_span.end);
 
-    match mt_next_pos_opt {
-        Some(mt_next_pos) => {
-            let mat = matches.get(matches_span.start + mt_next_pos).unwrap();
-
-            let tk_next_pos_opt =
-                encodings::next_token_pos(tokens_offsets, tokens_span, mat.start());
-
-            match tk_next_pos_opt {
-                Some(tk_pos) => Split::new(
-                    span(matches_span.start, matches_span.start + mt_next_pos + 1),
-                    span(tokens_span.start, tokens_span.start + tk_pos),
-                ),
-                _ => Split::new(
-                    span(matches_span.start, matches_span.start + mt_next_pos + 1),
-                    tokens_span,
-                ),
-            }
-        }
-        _ => Split::new(matches_span, tokens_span),
+    match tk_next_pos_opt {
+        Some(tk_pos) => {
+            let tk_span = span(tokens_span.start, tokens_span.start + tk_pos);
+            Split {
+            tokens_span: tk_span,
+            data_span: None,
+        }},
+        _ => Split {
+            tokens_span,
+            data_span: None,
+        },
     }
 }
+
 pub fn text_split_parallel<T: Tokenize + Sync>(
     conf: &SplitterConfig<T>,
     data: &str,
 ) -> Vec<SplitResults> {
-    let matches: Vec<_> = conf.aho_corasick.find_iter(data).collect();
-    let matches_spans = matches_spans(&matches, 0);
+    let matches_offsets = find_matches(conf.pattern[0].as_str(), data);
+
+    let patterns = conf.pattern.clone();
 
     let splits = if conf.parallel {
-        matches_spans
+        matches_offsets
             .par_iter()
-            .flat_map(|matches_span| {
-                sub_splits(&conf.tokenizer, conf, data, &matches, matches_span)
+            .flat_map(|dt_span| {
+                sub_splits(&conf.tokenizer, conf, data, dt_span.clone(), patterns.clone())
             })
             .collect()
     } else {
-        matches_spans
+        matches_offsets
             .iter()
-            .flat_map(|matches_span| {
-                sub_splits(&conf.tokenizer, conf, data, &matches, matches_span)
+            .flat_map(|dt_span| {
+                sub_splits(&conf.tokenizer, conf, data, dt_span.clone(), patterns.clone())
             })
             .collect()
     };
@@ -80,36 +73,42 @@ fn sub_splits<T: Tokenize + Sync>(
     tokenizer: &T,
     conf: &SplitterConfig<T>,
     data: &str,
-    matches: &[Match],
-    matches_span: &Span,
+    data_span: Span,
+    patterns: Vec<String>,
 ) -> Vec<SplitResults> {
-    let (start, end) = match_offsets(matches, matches_span, data.len()).unwrap();
-    let encoded = tokenizer.encode(&data[start..end]).unwrap();
+    let encoded = tokenizer.encode(&data[data_span.start..data_span.end]).unwrap();
     let tokens_offsets = encoded.get_offsets();
     let tokens_words = encoded.get_word_ids();
+
     let tokens_span = Span {
         start: 0,
         end: encoded.len(),
     };
+
     if tokens_span.len() > conf.max_tokens {
         let sub_splits = text_split(
             tokens_offsets,
             tokens_words,
             tokens_span,
-            matches,
-            *matches_span,
+            data_span,
+            patterns,
             1,
             conf,
+            data,
         );
-        let split_spans: Vec<Split> = sub_splits
+
+        let token_spans = sub_splits
             .iter()
-            .map(|split| {
-                let (tk_start, tk_end) =
-                    tokens_data_offsets(&tokens_offsets, split.tokens_span, (start, end)).unwrap();
+            .map(|split| split.tokens_span.clone())
+            .collect();
+        let actual_offsets = encoded.to_data_offsets(token_spans, data_span);
+        let split_spans = actual_offsets
+            .iter()
+            .zip(sub_splits.iter())
+            .map(|(span, split)| {
                 Split {
                     tokens_span: split.tokens_span,
-                    matches_span: *matches_span,
-                    data_span: Some(span(tk_start, tk_end)),
+                    data_span: Some(span.clone()),
                 }
             })
             .collect();
@@ -118,8 +117,7 @@ fn sub_splits<T: Tokenize + Sync>(
         encoded.to_split_results(
             &vec![Split {
                 tokens_span,
-                matches_span: *matches_span,
-                data_span: Some(span(start, end)),
+                data_span: Some(data_span),
             }],
             data,
         )
@@ -132,35 +130,37 @@ pub fn text_split<T: Tokenize + Sync>(
     tokens_offsets: &[(usize, usize)],
     tokens_words: &[Option<u32>],
     in_tokens_span: Span,
-    matches: &[Match],
-    in_matches_span: Span,
+    data_span: Span,
+    patterns: Vec<String>,
     pattern_id: usize,
     conf: &SplitterConfig<T>,
+    data: &str,
 ) -> Vec<Split> {
     let mut splits = Vec::new();
     let mut tokens_span = in_tokens_span;
-    let mut matches_span = in_matches_span;
+    let pt_spans = find_matches(patterns[pattern_id].clone().as_str(), &data[data_span.start..data_span.end]);
+
+    let mut pt_spans_idx: usize = 0;
 
     loop {
         let split = next_split(
             tokens_offsets,
             tokens_span,
-            matches,
-            matches_span,
-            pattern_id,
+            pt_spans[pt_spans_idx],
         );
 
-        if split.matches_span.end <= in_matches_span.end && split.no_tokens() > 0 {
+        if split.no_tokens() > 0 {
             if split.no_tokens() > conf.max_tokens {
                 if pattern_id + 1 < conf.max_depth {
                     let child_splits = text_split(
                         tokens_offsets,
                         tokens_words,
                         span(split.tokens_span.start, split.tokens_span.end),
-                        matches,
-                        span(split.matches_span.start, split.matches_span.end),
+                        pt_spans[pt_spans_idx],
+                        patterns.clone(),
                         pattern_id + 1,
                         conf,
+                        data,
                     );
 
                     if let Some(merge_level) = conf.merge_level {
@@ -175,7 +175,6 @@ pub fn text_split<T: Tokenize + Sync>(
                     let sub_splits = split_tokens_len(
                         tokens_words,
                         split.tokens_span,
-                        split.matches_span,
                         conf.max_tokens,
                     );
                     splits.extend(sub_splits);
@@ -185,11 +184,11 @@ pub fn text_split<T: Tokenize + Sync>(
             }
         }
 
-        if split.matches_span.end < in_matches_span.end
-            || split.tokens_span.end < in_tokens_span.end
+        pt_spans_idx += 1;
+        if pt_spans_idx < pt_spans.len() &&
+            split.tokens_span.end < in_tokens_span.end
         {
             tokens_span = span(split.tokens_span.end, in_tokens_span.end);
-            matches_span = span(split.matches_span.end, in_matches_span.end);
         } else {
             break;
         }
@@ -210,7 +209,6 @@ pub fn merge_splits(splits: &[Split], max_tokens: usize) -> Vec<Split> {
             last_split = split;
         } else {
             merged_splits.push(Split::new(
-                span(start_split.matches_span.start, last_split.matches_span.end),
                 span(start_split.tokens_span.start, last_split.tokens_span.end),
             ));
 
@@ -220,7 +218,6 @@ pub fn merge_splits(splits: &[Split], max_tokens: usize) -> Vec<Split> {
         }
         if i == splits.len() - 1 {
             merged_splits.push(Split::new(
-                span(start_split.matches_span.start, split.matches_span.end),
                 span(start_split.tokens_span.start, split.tokens_span.end),
             ));
         }
@@ -231,13 +228,12 @@ pub fn merge_splits(splits: &[Split], max_tokens: usize) -> Vec<Split> {
 pub fn split_tokens_len(
     tokens_words: &[Option<u32>],
     in_tokens_span: Span,
-    in_matches_span: Span,
     max_tokens: usize,
 ) -> Vec<Split> {
     let mut splits = Vec::new();
 
     if in_tokens_span.len() <= max_tokens {
-        splits.push(Split::new(in_matches_span, in_tokens_span));
+        splits.push(Split::new(in_tokens_span));
     } else {
         let mut split_start = in_tokens_span.start;
         let mut split_end = split_start + max_tokens;
@@ -248,7 +244,6 @@ pub fn split_tokens_len(
 
             if split_end >= in_tokens_span.end {
                 splits.push(Split::new(
-                    in_matches_span,
                     span(split_start, in_tokens_span.end),
                 ));
                 break;
@@ -266,7 +261,6 @@ pub fn split_tokens_len(
                     .position(|&x| x != *split_end_word)
                     .unwrap();
                 splits.push(Split::new(
-                    in_matches_span,
                     span(split_start, split_start + max_tokens - split_end_pos - 1),
                 ));
                 split_start = split_start + max_tokens - split_end_pos;
@@ -274,7 +268,6 @@ pub fn split_tokens_len(
             } else {
                 splits.push(Split {
                     tokens_span: span(split_start, split_end),
-                    matches_span: in_matches_span,
                     data_span: None,
                 });
                 split_start = split_end;

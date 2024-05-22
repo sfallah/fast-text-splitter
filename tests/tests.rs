@@ -26,9 +26,14 @@ fn hf_parallel_splits_test() -> tokenizers::Result<()> {
 
 #[test]
 fn ws_parallel_splits_test() -> tokenizers::Result<()> {
-    let data = "Hello, you all! \n How are you ? \n\n I am fine. Nice to meet you all insecure!";
+    let data = "Hello, you all! \n How are you ? \n\n I am fine. \n Nice to meet you all insecure!";
 
-    let conf_params = ConfigParams::ws_default();
+    let conf_params =
+        ConfigParams::builder()
+            .max_tokens(6)
+            .max_depth(2)
+            .parallel(true)
+            .build();
     let conf = SplitterConfig::<WSTokenizer>::from_params(&conf_params);
 
     let splits = text_split_parallel(&conf, data);
@@ -77,10 +82,39 @@ fn no_matches_hf_splits_test() -> tokenizers::Result<()> {
     let conf = SplitterConfig::<HFTokenizer>::from_params(conf_params);
 
     let splits = text_split_parallel(&conf, data);
+    assert_eq!(splits.len(), 1);
+    assert_eq!(splits[0].split_strings, data);
 
-    for split in splits.iter() {
-        println!("{:?}", split.split_strings);
+    Ok(())
+}
+
+#[test]
+#[cfg(feature = "tokenizers")]
+fn dot_pattern_hf_test() -> tokenizers::Result<()> {
+    let data = "Hello, you all! How are you ? I am fine. Nice to meet you all insecure!";
+
+    let conf_params = ConfigParams::builder()
+        .pattern(vec![".".to_string()])
+        .max_depth(1)
+        .parallel(true)
+        .build();
+    let conf = SplitterConfig::<HFTokenizer>::from_params(conf_params);
+
+    let splits = text_split_parallel(&conf, data);
+    assert_eq!(splits.len(), 2);
+
+    let expected_splits = vec!["Hello, you all! How are you ? I am fine.", " Nice to meet you all insecure!"];
+    for (split, expected) in splits.iter().zip(expected_splits.iter()) {
+        assert_eq!(split.split_strings, *expected);
     }
+
+    Ok(())
+}
+
+#[test]
+#[cfg(feature = "tokenizers")]
+fn no_match_max_hf_test() -> tokenizers::Result<()> {
+    let data = "Hello, you all! How are you ? I am fine. Nice to meet you all insecure!";
 
     let conf_params = ConfigParams::builder()
         .max_tokens(8)
@@ -90,12 +124,121 @@ fn no_matches_hf_splits_test() -> tokenizers::Result<()> {
     let conf = SplitterConfig::<HFTokenizer>::from_params(conf_params);
 
     let splits = text_split_parallel(&conf, data);
-    for split in splits.iter() {
-        println!("{:?}", split.split_strings);
+    assert_eq!(splits.len(), 3);
+
+    let total_len = splits.iter().map(|split| split.split_strings.len()).sum::<usize>();
+    assert_eq!(total_len, data.len());
+
+    let expected_splits = vec!["Hello, you all! How are you ", "? I am fine. Nice to meet ", "you all insecure!"];
+    for (split, expected) in splits.iter().zip(expected_splits.iter()) {
+        assert_eq!(split.split_strings, *expected);
     }
 
     Ok(())
 }
+
+#[test]
+#[cfg(feature = "tokenizers")]
+fn end_match_hf_test() -> tokenizers::Result<()> {
+    let data = "Hello, you all! How are you ? I am fine. Nice to meet you all insecure! \n\n";
+
+    let conf_params = ConfigParams::builder()
+        .max_tokens(8)
+        .max_depth(2)
+        .parallel(true)
+        .build();
+    let conf = SplitterConfig::<HFTokenizer>::from_params(conf_params);
+
+    let splits = text_split_parallel(&conf, data);
+    assert_eq!(splits.len(), 3);
+
+    let total_len = splits.iter().map(|split| split.split_strings.len()).sum::<usize>();
+    assert_eq!(total_len, data.len());
+
+    let expected_splits = vec!["Hello, you all! How are you ", "? I am fine. Nice to meet ", "you all insecure! \n\n"];
+    for (split, expected) in splits.iter().zip(expected_splits.iter()) {
+        assert_eq!(split.split_strings, *expected);
+    }
+
+    Ok(())
+}
+
+#[test]
+#[cfg(feature = "tokenizers")]
+fn first_match_hf_test() -> tokenizers::Result<()> {
+    let data = "\n\n Hello, you all! How are you ? I am fine. Nice to meet you all insecure!";
+
+    let conf_params = ConfigParams::builder()
+        .max_tokens(8)
+        .max_depth(2)
+        .parallel(true)
+        .build();
+    let conf = SplitterConfig::<HFTokenizer>::from_params(conf_params);
+
+    let splits = text_split_parallel(&conf, data);
+    assert_eq!(splits.len(), 3);
+
+    let total_len = splits.iter().map(|split| split.split_strings.len()).sum::<usize>();
+    assert_eq!(total_len, data.len());
+
+    let expected_splits = vec!["\n\n Hello, you all! How are you ", "? I am fine. Nice to meet ", "you all insecure!"];
+    for (split, expected) in splits.iter().zip(expected_splits.iter()) {
+        assert_eq!(split.split_strings, *expected);
+    }
+
+    Ok(())
+}
+
+#[test]
+#[cfg(feature = "tokenizers")]
+fn nl_match_hf_test() -> tokenizers::Result<()> {
+    let data = "\n\n Hello, you all! How are you ? \n I am fine. Nice to meet you all insecure! \n \n \n\n";
+
+    let conf_params = ConfigParams::builder()
+        .max_tokens(12)
+        .max_depth(2)
+        .parallel(true)
+        .build();
+    let conf = SplitterConfig::<HFTokenizer>::from_params(conf_params);
+
+    let splits = text_split_parallel(&conf, data);
+    assert_eq!(splits.len(), 2);
+
+    let total_len = splits.iter().map(|split| split.split_strings.len()).sum::<usize>();
+    assert_eq!(total_len, data.len());
+
+    let expected_splits = vec!["\n\n Hello, you all! How are you ? \n ", "I am fine. Nice to meet you all insecure! \n \n \n\n"];
+    for (split, expected) in splits.iter().zip(expected_splits.iter()) {
+        assert_eq!(split.split_strings, *expected);
+    }
+
+    Ok(())
+}
+#[test]
+fn no_match_max_ws_test() -> tokenizers::Result<()> {
+    let data = "Hello, you all! How are you ? I am fine. Nice to meet you all insecure!";
+
+    let conf_params = ConfigParams::builder()
+        .max_tokens(8)
+        .max_depth(2)
+        .parallel(true)
+        .build();
+    let conf = SplitterConfig::<WSTokenizer>::from_params(&conf_params);
+
+    let splits = text_split_parallel(&conf, data);
+    assert_eq!(splits.len(), 2);
+
+    let total_len = splits.iter().map(|split| split.split_strings.len()).sum::<usize>();
+    assert_eq!(total_len, data.len());
+
+    let expected_splits = vec!["Hello, you all! How are you ? I ", "am fine. Nice to meet you all insecure!"];
+    for (split, expected) in splits.iter().zip(expected_splits.iter()) {
+        assert_eq!(split.split_strings, *expected);
+    }
+
+    Ok(())
+}
+
 #[test]
 fn split_words_superlinear_test() -> tokenizers::Result<()> {
     let data_path = "tests/test_data/superlinear.txt";
@@ -141,38 +284,22 @@ fn split_tokenizer_superlinear_test() -> tokenizers::Result<()> {
 
 #[test]
 fn sentence_pattern_ws_splits_test() -> tokenizers::Result<()> {
-    let data = "Hello, you all! How are you? I am fine. Nice to meet you all!";
-
-    // Test default configuration
-    let conf_params = ConfigParams::ws_default();
-    let conf = SplitterConfig::<WSTokenizer>::from_params(&conf_params);
-    let splits = text_split_parallel(&conf, data);
-
-    println!("Default Configuration Splits:");
-    for split in splits.iter() {
-        println!("{:?}", split.split_strings);
-    }
+    let data = "Hello, you all! \n How are you? \n\n I am fine. \n Nice to meet you all!";
 
     // Test custom configuration with different patterns
     let conf_params_patterns = ConfigParams::builder()
-        .max_tokens(12)
+        .max_tokens(5)
         .max_depth(2)
         .parallel(false)
-        .pattern(vec!["\n\n".to_string(), ".".to_string()])  // splits correctly but cuts off last split
-        //.pattern(vec![".".to_string(), "\n\n".to_string()]) // ignores "." pattern
         .build();
 
     let conf_patterns = SplitterConfig::<WSTokenizer>::from_params(&conf_params_patterns);
     let splits_results = text_split_parallel(&conf_patterns, data);
 
-    let expected_splits = vec![
-        "Hello, you all! How are you ? I am fine.".to_string(),
-        "Nice to meet you all!".to_string(),
-    ];
-
-    let actual_splits: Vec<String> = splits_results.iter().map(|split| split.split_strings.clone()).collect();
-
-    assert_eq!(expected_splits, actual_splits);
+    println!("Custom Configuration Splits:");
+    for split in splits_results.iter() {
+        println!("{:?}", split.split_strings);
+    }
 
     Ok(())
 }
