@@ -1,12 +1,12 @@
-use crate::common::TokensResults;
-use crate::{Split, Tokenize};
-
 #[cfg(feature = "tokenizers")]
 use tokenizers::{Encoding, PaddingStrategy, Tokenizer, TruncationStrategy};
+
+use crate::{Split, Tokenize};
+use crate::common::TokensResults;
 use crate::encodings::EncodingType;
 
 #[cfg(feature = "tokenizers")]
-pub fn init_tokenizer(model: Option<String>) -> tokenizers::Result<Tokenizer> {
+pub fn init_tokenizer(model: Option<String>, max_len: Option<usize>) -> tokenizers::Result<Tokenizer> {
     let default_model = "sentence-transformers/all-MiniLM-L6-v2".to_string();
     let model = match model {
         Some(model_path) => if model_path.is_empty() { default_model } else { model_path },
@@ -16,6 +16,7 @@ pub fn init_tokenizer(model: Option<String>) -> tokenizers::Result<Tokenizer> {
     tokenizer.get_padding_mut().unwrap().strategy = PaddingStrategy::BatchLongest;
     let tokenizer_truncation = tokenizer.get_truncation_mut().unwrap();
     tokenizer_truncation.strategy = TruncationStrategy::LongestFirst;
+    tokenizer_truncation.max_length = max_len.unwrap_or(5120);
     Ok(tokenizer)
 }
 
@@ -51,3 +52,20 @@ pub fn divide_encoding(encoded: &Encoding, splits: &[Split]) -> Vec<TokensResult
     }
     results
 }
+
+#[cfg(feature = "tokenizers")]
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn tokens_len_test() -> tokenizers::Result<()> {
+        let tokenizer = init_tokenizer(None,None)?;
+        let data = "This is a test";
+        let encoded = tokenizer.encode(data, false).unwrap();
+        assert_eq!(encoded.len(), 4);
+        Ok(())
+
+    }
+}
+

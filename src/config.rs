@@ -138,12 +138,13 @@ impl SplitterConfig<WSTokenizer> {
 #[cfg(feature = "tokenizers")]
 impl SplitterConfig<HFTokenizer> {
     pub fn from_params(config_params: ConfigParams) -> Self {
+        let mx_tokens = config_params.max_tokens.unwrap_or(512);
         Self {
             pattern: config_params.pattern.unwrap_or(vec!["\n\n".to_string(), "\n".to_string()]),
             tokenizer: HFTokenizer {
-                tokenizer: init_tokenizer(config_params.model_path).unwrap(),
+                tokenizer: init_tokenizer(config_params.model_path, Some(10 * mx_tokens)).unwrap(),
             },
-            max_tokens: config_params.max_tokens.unwrap_or(512),
+            max_tokens: mx_tokens,
             max_depth: config_params.max_depth.unwrap_or(2),
             merge_level: config_params.merge_level,
             parallel: config_params.parallel.unwrap_or(true),
