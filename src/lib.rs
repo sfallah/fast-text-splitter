@@ -101,7 +101,9 @@ fn sub_splits<T: Tokenize + Sync>(
             .iter()
             .map(|split| split.tokens_span.clone())
             .collect();
+
         let actual_offsets = encoded.to_data_offsets(token_spans, data_span);
+
         let split_spans = actual_offsets
             .iter()
             .zip(sub_splits.iter())
@@ -113,6 +115,7 @@ fn sub_splits<T: Tokenize + Sync>(
             })
             .collect();
         encoded.to_split_results(&split_spans, data)
+
     } else if !tokens_span.is_empty() {
         encoded.to_split_results(
             &vec![Split {

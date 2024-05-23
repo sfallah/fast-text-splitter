@@ -251,6 +251,9 @@ fn split_words_superlinear_test() -> tokenizers::Result<()> {
 
     let splits = text_split_parallel(&conf, data);
 
+    //let total_len = splits.iter().map(|split| split.split_strings.len()).sum::<usize>();
+    //assert_eq!(total_len, data.len());
+
     for split in splits.iter() {
         println!("{:?}", split.splits);
         println!("{:?}", split.split_strings);
