@@ -31,7 +31,7 @@ fn tokenize_file(tokenizer: &Tokenizer ,file: &str) -> io::Result<()> {
     println!("### Tokenize file: {}", file);
     let data = fs::read_to_string(file)?;
     let hf_encoding = tokenizer.encode(data.to_string(), false).unwrap();
-    println!("    Number of tokens: {}", hf_encoding.get_tokens().len());
+    println!("    Number of tokens: {}", hf_encoding.len());
     println!("    Content-length: {}", data.len());
     let splits = tokenize_data(&data)?;
     println!("    Number of Splits: {}", splits.len());
