@@ -173,6 +173,9 @@ pub struct PyConfigParams {
     #[cfg(feature = "tokenizers")]
     #[pyo3(get)]
     pub model_path: Option<String>,
+    #[cfg(feature = "tokenizers")]
+    #[pyo3(get)]
+    pub tokenizer_max_len: Option<usize>,
     #[pyo3(get)]
     pub max_tokens: Option<usize>,
     #[pyo3(get)]
@@ -205,6 +208,8 @@ impl From<ConfigParams> for PyConfigParams {
             pattern: conf_params.pattern,
             #[cfg(feature = "tokenizers")]
             model_path: conf_params.model_path,
+            #[cfg(feature = "tokenizers")]
+            tokenizer_max_len: conf_params.tokenizer_max_len,
             max_tokens: conf_params.max_tokens,
             max_depth: conf_params.max_depth,
             merge_level: conf_params.merge_level,
@@ -220,6 +225,8 @@ impl From<PyConfigParams> for ConfigParams {
             pattern: py_conf_params.pattern,
             #[cfg(feature = "tokenizers")]
             model_path: py_conf_params.model_path,
+            #[cfg(feature = "tokenizers")]
+            tokenizer_max_len: py_conf_params.tokenizer_max_len,
             max_tokens: py_conf_params.max_tokens,
             max_depth: py_conf_params.max_depth,
             merge_level: py_conf_params.merge_level,
@@ -243,6 +250,8 @@ mod tests {
         let dummy_params = PyConfigParams {
             pattern: Some(vec!["pattern1".to_string(), "pattern2".to_string()]),
             model_path: Some("path/to/model".to_string()),
+            tokenizer_max_len: Some(5120),
+
             max_tokens: Some(100),
             max_depth: Some(10),
             merge_level: Some(2),
@@ -266,6 +275,7 @@ mod tests {
         let params1 = PyConfigParams {
             pattern: Some(vec!["pattern1".to_string(), "pattern2".to_string()]),
             model_path: Some("path/to/model1".to_string()),
+            tokenizer_max_len: Some(5120),
             max_tokens: Some(100),
             max_depth: Some(10),
             merge_level: Some(2),
@@ -276,6 +286,7 @@ mod tests {
         let params2 = PyConfigParams {
             pattern: Some(vec!["pattern3".to_string(), "pattern4".to_string()]),
             model_path: Some("path/to/model2".to_string()),
+            tokenizer_max_len: Some(5120),
             max_tokens: Some(200),
             max_depth: Some(20),
             merge_level: Some(3),
@@ -297,6 +308,8 @@ mod tests {
         let params1 = PyConfigParams {
             pattern: Some(vec!["pattern1".to_string()]),
             model_path: Some("path/to/model".to_string()),
+            tokenizer_max_len: Some(5120),
+
             max_tokens: Some(100),
             max_depth: Some(10),
             merge_level: Some(2),
@@ -307,6 +320,8 @@ mod tests {
         let params2 = PyConfigParams {
             pattern: Some(vec!["pattern1".to_string()]),  // Same pattern
             model_path: Some("path/to/model".to_string()),  // Same model path
+            tokenizer_max_len: Some(5120),
+
             max_tokens: Some(150),  // Different max tokens
             max_depth: Some(15),  // Different max depth
             merge_level: Some(2),
@@ -331,6 +346,7 @@ mod tests {
         let dummy_params = Arc::new(PyConfigParams {
             pattern: Some(vec!["pattern1".to_string(), "pattern2".to_string()]),
             model_path: Some("path/to/model".to_string()),
+            tokenizer_max_len: Some(5120),
             max_tokens: Some(100),
             max_depth: Some(10),
             merge_level: Some(2),

@@ -19,6 +19,8 @@ pub struct ConfigParams {
     pub pattern: Option<Vec<String>>,
     #[cfg(feature = "tokenizers")]
     pub model_path: Option<String>,
+    #[cfg(feature = "tokenizers")]
+    pub tokenizer_max_len: Option<usize>,
     pub max_tokens: Option<usize>,
     pub max_depth: Option<usize>,
     pub merge_level: Option<usize>,
@@ -57,6 +59,8 @@ pub struct ConfigParamsBuilder {
     pattern: Option<Vec<String>>,
     #[cfg(feature = "tokenizers")]
     model_path: Option<String>,
+    #[cfg(feature = "tokenizers")]
+    tokenizer_max_len: Option<usize>,
     max_tokens: Option<usize>,
     max_depth: Option<usize>,
     merge_level: Option<usize>,
@@ -69,6 +73,8 @@ impl ConfigParamsBuilder {
             pattern: None,
             #[cfg(feature = "tokenizers")]
             model_path: None,
+            #[cfg(feature = "tokenizers")]
+            tokenizer_max_len: None,
             max_tokens: None,
             max_depth: None,
             merge_level: None,
@@ -108,11 +114,19 @@ impl ConfigParamsBuilder {
         self
     }
 
+    #[cfg(feature = "tokenizers")]
+    pub fn tokenizer_max_len(mut self, tokenizer_max_len: usize) -> ConfigParamsBuilder {
+        self.tokenizer_max_len = Some(tokenizer_max_len);
+        self
+    }
+
     pub fn build(self) -> ConfigParams {
         ConfigParams {
             pattern: self.pattern,
             #[cfg(feature = "tokenizers")]
             model_path: self.model_path,
+            #[cfg(feature = "tokenizers")]
+            tokenizer_max_len: self.tokenizer_max_len,
             max_tokens: self.max_tokens,
             max_depth: self.max_depth,
             merge_level: self.merge_level,
@@ -138,13 +152,12 @@ impl SplitterConfig<WSTokenizer> {
 #[cfg(feature = "tokenizers")]
 impl SplitterConfig<HFTokenizer> {
     pub fn from_params(config_params: ConfigParams) -> Self {
-        let mx_tokens = config_params.max_tokens.unwrap_or(512);
         Self {
             pattern: config_params.pattern.unwrap_or(vec!["\n\n".to_string(), "\n".to_string()]),
             tokenizer: HFTokenizer {
-                tokenizer: init_tokenizer(config_params.model_path, Some(10 * mx_tokens)).unwrap(),
+                tokenizer: init_tokenizer(config_params.model_path, config_params.tokenizer_max_len).unwrap(),
             },
-            max_tokens: mx_tokens,
+            max_tokens: config_params.max_tokens.unwrap_or(512),
             max_depth: config_params.max_depth.unwrap_or(2),
             merge_level: config_params.merge_level,
             parallel: config_params.parallel.unwrap_or(true),
