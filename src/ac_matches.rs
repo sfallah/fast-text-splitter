@@ -55,7 +55,6 @@ mod tests {
     #[test]
     fn find_matches_test() -> anyhow::Result<()> {
 
-        let pattern = "\n\n";
         let data = "Hello, you all! How are you ? I am fine. Nice to meet you all insecure!";
 
         let spans = find_matches("\n\n", data);
