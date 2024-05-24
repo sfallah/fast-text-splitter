@@ -39,6 +39,7 @@ fn ws_parallel_splits_test() -> tokenizers::Result<()> {
     let splits = text_split_parallel(&conf, data);
 
     for split in splits.iter() {
+        println!("{:?}", split.splits.tokens_span.len());
         println!("{:?}", split.split_strings);
     }
 
@@ -226,12 +227,13 @@ fn no_match_max_ws_test() -> tokenizers::Result<()> {
     let conf = SplitterConfig::<WSTokenizer>::from_params(&conf_params);
 
     let splits = text_split_parallel(&conf, data);
-    assert_eq!(splits.len(), 2);
+    assert_eq!(splits.len(), 3);
 
     let total_len = splits.iter().map(|split| split.split_strings.len()).sum::<usize>();
     assert_eq!(total_len, data.len());
 
-    let expected_splits = vec!["Hello, you all! How are you ? I ", "am fine. Nice to meet you all insecure!"];
+    let expected_splits = vec!["Hello, you all! How are you ", "? I am fine. Nice to meet ", "you all insecure!"];
+
     for (split, expected) in splits.iter().zip(expected_splits.iter()) {
         assert_eq!(split.split_strings, *expected);
     }

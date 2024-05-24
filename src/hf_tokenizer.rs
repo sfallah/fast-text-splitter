@@ -65,7 +65,16 @@ mod tests {
         let encoded = tokenizer.encode(data, false).unwrap();
         assert_eq!(encoded.len(), 4);
         Ok(())
+    }
 
+    #[test]
+    fn tokens_len_test2() -> tokenizers::Result<()> {
+        let tokenizer = init_tokenizer(None,None)?;
+        let df_data = "\"You get out,\" I heard a thousand times, \"what you put in.\" I'm not sure, I don't think so.";
+        let encoded = tokenizer.encode(df_data, false).unwrap();
+        println!("tokens_no: {:?}", encoded.len());
+        encoded.get_tokens().iter().for_each(|token| println!("{:?}", token));
+        Ok(())
     }
 }
 

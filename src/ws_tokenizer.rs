@@ -20,79 +20,104 @@ impl Tokenize for WSTokenizer {
     }
 }
 
-pub fn ws_spans(ws_idxs: Vec<usize>) -> Vec<Span> {
-    let mut spans: Vec<Span> = vec![];
-    let mut start: usize = ws_idxs[0];
-    let mut end: usize = start;
-
-    for idx in ws_idxs.iter().skip(1) {
-        if *idx == end + 1 {
-            end = *idx;
-        } else {
-            spans.push(Span {
-                start,
-                end: end + 1,
-            });
-            start = *idx;
-            end = start;
-        }
-    }
-
-    spans.push(Span {
-        start,
-        end: end + 1,
-    });
-
-    spans
-}
-
-pub fn word_spans(ws_spans: Vec<Span>, data_len: usize) -> Vec<Span> {
-    let mut w_spans: Vec<Span> = vec![];
-    let mut prev = ws_spans[0];
-    let mut start: usize = prev.start + prev.len();
-    if prev.start > 0 {
-        w_spans.push(Span {
-            start,
-            end: prev.start,
-        });
-        start = prev.start + prev.len();
-    }
-    for span in ws_spans.iter().skip(1) {
-        w_spans.push(Span {
-            start,
-            end: span.start,
-        });
-        start = span.start + span.len();
-        prev = *span;
-    }
-
-    if prev.end < data_len {
-        w_spans.push(Span {
-            start,
-            end: data_len,
-        });
-    }
-
-    w_spans
-}
 
 pub fn word_tokenize(data: &str) -> Vec<(usize, usize)> {
-    let indexes: Vec<_> = whitespace_indices(data);
-    let spans = ws_spans(indexes);
-    let word_spans = word_spans(spans, data.len());
-
-    word_spans
-        .iter()
-        .map(|span| (span.start, span.end))
-        .collect()
+    let mut spans: Vec<Span> = vec![];
+    let mut start: usize = 0;
+    data.chars().enumerate().for_each(|(idx, c)| {
+        if !c.is_alphanumeric() {
+            if start < idx {
+                spans.push(Span {
+                    start,
+                    end: idx,
+                });
+            }
+            if !c.is_whitespace() {
+                spans.push(Span {
+                    start: idx,
+                    end: idx + 1,
+                });
+            }
+            start = idx + 1;
+        }
+    });
+    spans.iter().map(|span| (span.start, span.end)).collect()
 }
 
-pub fn whitespace_indices(input: &str) -> Vec<usize> {
-    let mut indices = Vec::new();
-    for (i, c) in input.char_indices() {
-        if c.is_whitespace() {
-            indices.push(i);
-        }
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn alphanumeric_test() {
+        assert!(!'.'.is_alphanumeric());
+        assert!(!'!'.is_alphanumeric());
+        assert!(!' '.is_alphanumeric());
+        assert!(!'?'.is_alphanumeric());
+        assert!(!'('.is_alphanumeric());
+        assert!(!')'.is_alphanumeric());
+        assert!(!'['.is_alphanumeric());
+        assert!(!']'.is_alphanumeric());
+        assert!(!'{'.is_alphanumeric());
+        assert!(!'}'.is_alphanumeric());
+        assert!(!'@'.is_alphanumeric());
+        assert!(!'#'.is_alphanumeric());
+        assert!(!'$'.is_alphanumeric());
+        assert!(!'%'.is_alphanumeric());
     }
-    indices
+
+    #[test]
+    fn token_span_test() {
+        let en_data = "   \n \t This is a test, 123! :,+-     some more text. \n \n \t something else";
+
+        println!("{:?}", en_data);
+        let en_tokens = word_tokenize(en_data);
+        println!("{:?}", en_tokens);
+
+        en_tokens.iter().for_each(|(start, end)| {
+            let token = en_data.chars().skip(*start).take(*end - *start).collect::<String>();
+            println!("{}", token);
+        });
+
+        let ar_data = "مرحبا، كيف حالك؟";
+        let ar_tokens = word_tokenize(ar_data);
+
+        println!("{:?}", ar_tokens);
+        ar_tokens.iter().for_each(|(start, end)| {
+            let token = ar_data.chars().skip(*start).take(*end - *start).collect::<String>();
+            println!("{}", token);
+        });
+
+        let ja_data = "こんにちは、お元気ですか？";
+        let ja_tokens = word_tokenize(ja_data);
+        ja_tokens.iter().for_each(|(start, end)| {
+            let token = ja_data.chars().skip(*start).take(*end - *start).collect::<String>();
+            println!("{}", token);
+        });
+
+        let df_data = "\"You get out,\" I heard a thousand times, \"what you put in.\" I'm not sure, I don't think so.";
+
+        let df_tokens = word_tokenize(df_data);
+        println!("tokens_no: {:?}", df_tokens.len());
+
+        df_tokens.iter().for_each(|(start, end)| {
+            let token = df_data.chars().skip(*start).take(*end - *start).collect::<String>();
+            println!("{:?}", token);
+        });
+    }
+
+    #[test]
+    fn ws_empty_test() {
+        let data = "";
+        let wd_spans = word_tokenize(data);
+        assert_eq!(wd_spans.len(), 0);
+
+        let data = " ";
+        let wd_spans = word_tokenize(data);
+        assert_eq!(wd_spans.len(), 0);
+
+        let data = "  \n \t ";
+        let wd_spans = word_tokenize(data);
+        assert_eq!(wd_spans.len(), 0);
+    }
 }
