@@ -104,6 +104,9 @@ fn dot_pattern_hf_test() -> tokenizers::Result<()> {
     let splits = text_split_parallel(&conf, data);
     assert_eq!(splits.len(), 2);
 
+    splits.iter().for_each(|split| println!("{:?}", split.split_strings));
+
+
     let expected_splits = vec!["Hello, you all! How are you ? I am fine.", " Nice to meet you all insecure!"];
     for (split, expected) in splits.iter().zip(expected_splits.iter()) {
         assert_eq!(split.split_strings, *expected);

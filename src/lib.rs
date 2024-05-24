@@ -32,9 +32,10 @@ pub fn next_split(
         Some(tk_pos) => {
             let tk_span = span(tokens_span.start, tokens_span.start + tk_pos);
             Split {
-            tokens_span: tk_span,
-            data_span: None,
-        }},
+                tokens_span: tk_span,
+                data_span: None,
+            }
+        }
         _ => Split {
             tokens_span,
             data_span: None,

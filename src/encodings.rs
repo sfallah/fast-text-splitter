@@ -76,9 +76,9 @@ impl EncodingType {
         });
 
         res.push(Span {
-                start,
-                end: data_span.end,
-            });
+            start,
+            end: data_span.end,
+        });
 
 
         res
@@ -86,7 +86,7 @@ impl EncodingType {
 
     pub fn to_split_results(&self, splits: &Vec<Split>, data: &str) -> Vec<SplitResults> {
         #[cfg(feature = "tokenizers")]
-        let encodings: Vec<TokensResults> = match self {
+            let encodings: Vec<TokensResults> = match self {
             #[cfg(feature = "tokenizers")]
             EncodingType::HFEncoding(enc) => divide_encoding(enc, splits),
             EncodingType::WSEncoding(_) => vec![],
@@ -96,6 +96,8 @@ impl EncodingType {
             .iter()
             .map(|split| {
                 let data_span = split.data_span.unwrap();
+                //FIXME: This is not working non-ascii characters
+                //data.chars().skip(data_span.start).take(data_span.len()).collect::<String>()
                 data[data_span.start..data_span.end].to_string()
             })
             .collect();
@@ -116,6 +118,7 @@ impl EncodingType {
         res
     }
 }
+
 #[inline]
 pub fn tokens_data_offsets(
     tokens_offsets: &[(usize, usize)],
@@ -133,7 +136,7 @@ pub fn tokens_data_offsets(
     } else {
         match_offsets.end
     };
-    Span{start, end}
+    Span { start, end }
 }
 
 #[inline(always)]

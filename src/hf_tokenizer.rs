@@ -1,5 +1,6 @@
 #[cfg(feature = "tokenizers")]
 use tokenizers::{Encoding, PaddingStrategy, Tokenizer, TruncationStrategy};
+use tokenizers::{PaddingParams, TruncationParams};
 
 use crate::{Split, Tokenize};
 use crate::common::TokensResults;
@@ -13,10 +14,22 @@ pub fn init_tokenizer(model: Option<String>, max_len: Option<usize>) -> tokenize
         None => default_model,
     };
     let mut tokenizer = Tokenizer::from_pretrained(model, None)?;
-    tokenizer.get_padding_mut().unwrap().strategy = PaddingStrategy::BatchLongest;
-    let tokenizer_truncation = tokenizer.get_truncation_mut().unwrap();
-    tokenizer_truncation.strategy = TruncationStrategy::LongestFirst;
-    tokenizer_truncation.max_length = max_len.unwrap_or(5120);
+    tokenizer.get_padding_mut().unwrap_or(&mut PaddingParams::default()).strategy = PaddingStrategy::BatchLongest;
+    let tokenizer_truncation = tokenizer.get_truncation_mut();
+    match tokenizer_truncation {
+        None => {
+            let mut truncation= TruncationParams::default();
+            truncation.max_length = max_len.unwrap_or(5120);
+            truncation.strategy = TruncationStrategy::LongestFirst;
+            tokenizer.with_truncation(Option::from(truncation)).expect("TODO: panic message");
+        },
+        Some(truncation) => {
+            truncation.max_length = max_len.unwrap_or(5120);
+            truncation.strategy = TruncationStrategy::LongestFirst;
+        },
+    }
+    //tokenizer_truncation.strategy = TruncationStrategy::LongestFirst;
+    //tokenizer_truncation.max_length = max_len.unwrap_or(5120);
     Ok(tokenizer)
 }
 
@@ -60,7 +73,7 @@ mod tests {
 
     #[test]
     fn tokens_len_test() -> tokenizers::Result<()> {
-        let tokenizer = init_tokenizer(None,None)?;
+        let tokenizer = init_tokenizer(None, None)?;
         let data = "This is a test";
         let encoded = tokenizer.encode(data, false).unwrap();
         assert_eq!(encoded.len(), 4);
@@ -69,11 +82,39 @@ mod tests {
 
     #[test]
     fn tokens_len_test2() -> tokenizers::Result<()> {
-        let tokenizer = init_tokenizer(None,None)?;
+        let tokenizer = init_tokenizer(None, None)?;
         let df_data = "\"You get out,\" I heard a thousand times, \"what you put in.\" I'm not sure, I don't think so.";
         let encoded = tokenizer.encode(df_data, false).unwrap();
         println!("tokens_no: {:?}", encoded.len());
         encoded.get_tokens().iter().for_each(|token| println!("{:?}", token));
+        Ok(())
+    }
+
+    #[test]
+    fn tokens_german_test() -> tokenizers::Result<()> {
+        let model = "sentence-transformers/distiluse-base-multilingual-cased-v2".to_string();
+        let tokenizer = init_tokenizer(Some(model), None)?;
+        // german text with umlauts
+        let data = "Lächeln ist die kürzeste Entfernung zwischen zwei Menschen. Über den Wolken muss die Freiheit wohl grenzenlos sein. Die Schüler lernen, wie man präzise Lösungen für schwierige Aufgaben findet. In München gibt es viele schöne Plätze zum Verweilen. Äpfel und Birnen wachsen im Garten.";
+        let encoded = tokenizer.encode(data, false).unwrap();
+        println!("tokens_no: {:?}", encoded.len());
+        encoded.get_tokens().iter().zip(encoded.get_offsets().iter()).for_each(|(token, offset)| {
+            println!("Offset: {:?}", offset);
+            println!("Token: {:?}", token);
+            println!("Token: {:?}", data.chars().skip(offset.0).take(offset.1 - offset.0).collect::<String>());
+        });
+        Ok(())
+    }
+
+    #[test]
+    fn tokens_arabic_test() -> tokenizers::Result<()> {
+        let model = "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2".to_string();
+        let tokenizer = init_tokenizer(Some(model), None)?;
+        let data = "مرحبا، كيف حالك؟";
+        let encoded = tokenizer.encode(data, false).unwrap();
+        assert_eq!(encoded.len(), 8);
+        encoded.get_tokens().iter().for_each(|token| println!("{:?}", token));
+        encoded.get_offsets().iter().for_each(|offset| println!("{:?}", offset));
         Ok(())
     }
 }
