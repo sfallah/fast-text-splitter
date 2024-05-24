@@ -92,7 +92,7 @@ mod tests {
 
     #[test]
     fn tokens_german_test() -> tokenizers::Result<()> {
-        let model = "sentence-transformers/distiluse-base-multilingual-cased-v2".to_string();
+        let model = "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2".to_string();
         let tokenizer = init_tokenizer(Some(model), None)?;
         // german text with umlauts
         let data = "Lächeln ist die kürzeste Entfernung zwischen zwei Menschen. Über den Wolken muss die Freiheit wohl grenzenlos sein. Die Schüler lernen, wie man präzise Lösungen für schwierige Aufgaben findet. In München gibt es viele schöne Plätze zum Verweilen. Äpfel und Birnen wachsen im Garten.";
@@ -101,7 +101,7 @@ mod tests {
         encoded.get_tokens().iter().zip(encoded.get_offsets().iter()).for_each(|(token, offset)| {
             println!("Offset: {:?}", offset);
             println!("Token: {:?}", token);
-            println!("Token: {:?}", data.chars().skip(offset.0).take(offset.1 - offset.0).collect::<String>());
+            println!("Data: {:?}", &data[offset.0..offset.1]);
         });
         Ok(())
     }

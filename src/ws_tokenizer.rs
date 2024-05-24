@@ -24,23 +24,33 @@ impl Tokenize for WSTokenizer {
 pub fn word_tokenize(data: &str) -> Vec<(usize, usize)> {
     let mut spans: Vec<Span> = vec![];
     let mut start: usize = 0;
+    let mut bytes_start: usize = 0;
+    let mut bytes_end: usize = 0;
     data.chars().enumerate().for_each(|(idx, c)| {
         if !c.is_alphanumeric() {
             if start < idx {
                 spans.push(Span {
-                    start,
-                    end: idx,
+                    start: bytes_start,
+                    end: bytes_end,
                 });
             }
             if !c.is_whitespace() {
                 spans.push(Span {
-                    start: idx,
-                    end: idx + 1,
+                    start: bytes_end,
+                    end: bytes_end + c.len_utf8(),
                 });
             }
             start = idx + 1;
+            bytes_start = bytes_end + c.len_utf8();
         }
+        bytes_end += c.len_utf8();
     });
+    if bytes_start < data.len() {
+        spans.push(Span {
+            start: bytes_start,
+            end: data.len(),
+        });
+    }
     spans.iter().map(|span| (span.start, span.end)).collect()
 }
 
@@ -66,6 +76,10 @@ mod tests {
         assert!(!'%'.is_alphanumeric());
     }
 
+    fn get_token(data: &str, start: usize, end: usize) -> String {
+        data[start..end].to_string()
+    }
+
     #[test]
     fn token_span_test() {
         let en_data = "   \n \t This is a test, 123! :,+-     some more text. \n \n \t something else";
@@ -75,7 +89,7 @@ mod tests {
         println!("{:?}", en_tokens);
 
         en_tokens.iter().for_each(|(start, end)| {
-            let token = en_data.chars().skip(*start).take(*end - *start).collect::<String>();
+            let token = get_token(en_data, *start, *end);
             println!("{}", token);
         });
 
@@ -84,14 +98,14 @@ mod tests {
 
         println!("{:?}", ar_tokens);
         ar_tokens.iter().for_each(|(start, end)| {
-            let token = ar_data.chars().skip(*start).take(*end - *start).collect::<String>();
+            let token = get_token(ar_data, *start, *end);
             println!("{}", token);
         });
 
         let ja_data = "こんにちは、お元気ですか？";
         let ja_tokens = word_tokenize(ja_data);
         ja_tokens.iter().for_each(|(start, end)| {
-            let token = ja_data.chars().skip(*start).take(*end - *start).collect::<String>();
+            let token = get_token(ja_data, *start, *end);
             println!("{}", token);
         });
 
@@ -101,7 +115,7 @@ mod tests {
         println!("tokens_no: {:?}", df_tokens.len());
 
         df_tokens.iter().for_each(|(start, end)| {
-            let token = df_data.chars().skip(*start).take(*end - *start).collect::<String>();
+            let token = get_token(df_data, *start, *end);
             println!("{:?}", token);
         });
     }
