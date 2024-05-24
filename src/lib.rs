@@ -264,7 +264,7 @@ pub fn split_tokens_len(
                     .position(|&x| x != *split_end_word)
                     .unwrap();
                 splits.push(Split::new(
-                    span(split_start, split_start + max_tokens - split_end_pos - 1),
+                    span(split_start, split_start + max_tokens - split_end_pos),
                 ));
                 split_start = split_start + max_tokens - split_end_pos;
                 split_end = split_start + max_tokens;

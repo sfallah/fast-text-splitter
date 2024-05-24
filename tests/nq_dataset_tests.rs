@@ -37,6 +37,8 @@ fn tokenize_file(conf: &SplitterConfig<HFTokenizer>, tokenizer: &Tokenizer, file
     println!("    Total data length: {}", total_data_len);
     let total_tokens_len = splits.iter().map(|split| split.splits.no_tokens()).sum::<usize>();
     println!("    Total tokens length: {}", total_tokens_len);
+
+    assert_eq!(total_tokens_len, hf_encoding.len());
     Ok(())
 }
 
