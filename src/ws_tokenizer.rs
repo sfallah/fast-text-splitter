@@ -121,6 +121,17 @@ mod tests {
     }
 
     #[test]
+    fn ws_test() {
+        let data = " Hello, you all! How are you ? I am fine. Nice to meet you all insecure! ";
+        let wd_spans = word_tokenize(data);
+        assert_eq!(wd_spans.len(), 20);
+        for (start, end) in wd_spans.iter() {
+            let token = get_token(data, *start, *end);
+            println!("'{}'", token);
+        }
+    }
+
+    #[test]
     fn ws_empty_test() {
         let data = "";
         let wd_spans = word_tokenize(data);
