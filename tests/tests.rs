@@ -28,12 +28,11 @@ fn hf_parallel_splits_test() -> tokenizers::Result<()> {
 fn ws_parallel_splits_test() -> tokenizers::Result<()> {
     let data = "Hello, you all! \n How are you ? \n\n I am fine. \n Nice to meet you all insecure!";
 
-    let conf_params =
-        ConfigParams::builder()
-            .max_tokens(6)
-            .max_depth(2)
-            .parallel(true)
-            .build();
+    let conf_params = ConfigParams::builder()
+        .max_tokens(6)
+        .max_depth(2)
+        .parallel(true)
+        .build();
     let conf = SplitterConfig::<WSTokenizer>::from_params(&conf_params);
 
     let splits = text_split_parallel(&conf, data);
@@ -104,10 +103,14 @@ fn dot_pattern_hf_test() -> tokenizers::Result<()> {
     let splits = text_split_parallel(&conf, data);
     assert_eq!(splits.len(), 2);
 
-    splits.iter().for_each(|split| println!("{:?}", split.split_strings));
+    splits
+        .iter()
+        .for_each(|split| println!("{:?}", split.split_strings));
 
-
-    let expected_splits = vec!["Hello, you all! How are you ? I am fine.", " Nice to meet you all insecure!"];
+    let expected_splits = vec![
+        "Hello, you all! How are you ? I am fine.",
+        " Nice to meet you all insecure!",
+    ];
     for (split, expected) in splits.iter().zip(expected_splits.iter()) {
         assert_eq!(split.split_strings, *expected);
     }
@@ -130,10 +133,17 @@ fn no_match_max_hf_test() -> tokenizers::Result<()> {
     let splits = text_split_parallel(&conf, data);
     assert_eq!(splits.len(), 3);
 
-    let total_len = splits.iter().map(|split| split.split_strings.len()).sum::<usize>();
+    let total_len = splits
+        .iter()
+        .map(|split| split.split_strings.len())
+        .sum::<usize>();
     assert_eq!(total_len, data.len());
 
-    let expected_splits = vec!["Hello, you all! How are you ", "? I am fine. Nice to meet ", "you all insecure!"];
+    let expected_splits = vec![
+        "Hello, you all! How are you ",
+        "? I am fine. Nice to meet ",
+        "you all insecure!",
+    ];
     for (split, expected) in splits.iter().zip(expected_splits.iter()) {
         assert_eq!(split.split_strings, *expected);
     }
@@ -156,10 +166,17 @@ fn end_match_hf_test() -> tokenizers::Result<()> {
     let splits = text_split_parallel(&conf, data);
     assert_eq!(splits.len(), 3);
 
-    let total_len = splits.iter().map(|split| split.split_strings.len()).sum::<usize>();
+    let total_len = splits
+        .iter()
+        .map(|split| split.split_strings.len())
+        .sum::<usize>();
     assert_eq!(total_len, data.len());
 
-    let expected_splits = vec!["Hello, you all! How are you ", "? I am fine. Nice to meet ", "you all insecure! \n\n"];
+    let expected_splits = vec![
+        "Hello, you all! How are you ",
+        "? I am fine. Nice to meet ",
+        "you all insecure! \n\n",
+    ];
     for (split, expected) in splits.iter().zip(expected_splits.iter()) {
         assert_eq!(split.split_strings, *expected);
     }
@@ -182,10 +199,17 @@ fn first_match_hf_test() -> tokenizers::Result<()> {
     let splits = text_split_parallel(&conf, data);
     assert_eq!(splits.len(), 3);
 
-    let total_len = splits.iter().map(|split| split.split_strings.len()).sum::<usize>();
+    let total_len = splits
+        .iter()
+        .map(|split| split.split_strings.len())
+        .sum::<usize>();
     assert_eq!(total_len, data.len());
 
-    let expected_splits = vec!["\n\n Hello, you all! How are you ", "? I am fine. Nice to meet ", "you all insecure!"];
+    let expected_splits = vec![
+        "\n\n Hello, you all! How are you ",
+        "? I am fine. Nice to meet ",
+        "you all insecure!",
+    ];
     for (split, expected) in splits.iter().zip(expected_splits.iter()) {
         assert_eq!(split.split_strings, *expected);
     }
@@ -208,10 +232,16 @@ fn nl_match_hf_test() -> tokenizers::Result<()> {
     let splits = text_split_parallel(&conf, data);
     assert_eq!(splits.len(), 2);
 
-    let total_len = splits.iter().map(|split| split.split_strings.len()).sum::<usize>();
+    let total_len = splits
+        .iter()
+        .map(|split| split.split_strings.len())
+        .sum::<usize>();
     assert_eq!(total_len, data.len());
 
-    let expected_splits = vec!["\n\n Hello, you all! How are you ? \n ", "I am fine. Nice to meet you all insecure! \n \n \n\n"];
+    let expected_splits = vec![
+        "\n\n Hello, you all! How are you ? \n ",
+        "I am fine. Nice to meet you all insecure! \n \n \n\n",
+    ];
     for (split, expected) in splits.iter().zip(expected_splits.iter()) {
         assert_eq!(split.split_strings, *expected);
     }
@@ -232,10 +262,17 @@ fn no_match_max_ws_test() -> tokenizers::Result<()> {
     let splits = text_split_parallel(&conf, data);
     assert_eq!(splits.len(), 3);
 
-    let total_len = splits.iter().map(|split| split.split_strings.len()).sum::<usize>();
+    let total_len = splits
+        .iter()
+        .map(|split| split.split_strings.len())
+        .sum::<usize>();
     assert_eq!(total_len, data.len());
 
-    let expected_splits = vec!["Hello, you all! How are you ", "? I am fine. Nice to meet ", "you all insecure!"];
+    let expected_splits = vec![
+        "Hello, you all! How are you ",
+        "? I am fine. Nice to meet ",
+        "you all insecure!",
+    ];
 
     for (split, expected) in splits.iter().zip(expected_splits.iter()) {
         assert_eq!(split.split_strings, *expected);

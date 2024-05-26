@@ -41,7 +41,6 @@ pub struct SplitResults {
     pub split_strings: String,
 }
 
-
 #[derive(Default, PartialEq, Debug, Clone)]
 pub struct TokensResults {
     pub ids: Vec<u32>,

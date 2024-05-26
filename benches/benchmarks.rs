@@ -20,7 +20,7 @@ pub fn tokenizer_single_split_benchmark(c: &mut Criterion) {
 
     c.bench_function("tokenizer_single_split", |b| {
         b.iter(|| {
-            let splits =text_split_parallel(&conf, data);
+            let splits = text_split_parallel(&conf, data);
             black_box(splits);
         })
     });
@@ -35,7 +35,6 @@ pub fn words_single_split_benchmark(c: &mut Criterion) {
     let conf_params = ConfigParams::ws_default();
     let mut conf = SplitterConfig::<WSTokenizer>::from_params(&conf_params);
     conf.parallel = false;
-
 
     c.bench_function("words_single_split", |b| {
         b.iter(|| {
