@@ -318,8 +318,7 @@ fn split_tokenizer_superlinear_test() -> tokenizers::Result<()> {
     let data = std::str::from_utf8(&bytes).unwrap();
 
     let conf_params = ConfigParams::builder()
-        .max_tokens(68)
-        .max_depth(2)
+        .merge_level(1)
         .parallel(true)
         .build();
     let conf = SplitterConfig::<HFTokenizer>::from_params(conf_params);
