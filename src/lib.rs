@@ -2,7 +2,7 @@ use aho_corasick::Span;
 use rayon::prelude::*;
 
 use crate::ac_matches::find_patterns_matches;
-use crate::common::{Split, SplitResults};
+use crate::common::{Split, SplitResults, TokensResults};
 use crate::config::SplitterConfig;
 use crate::encodings::Tokenize;
 
@@ -52,14 +52,15 @@ pub fn text_split_parallel<T: Tokenize + Sync>(
         } else {
             if first_level_pattern_id + 1 < conf.pattern.len() {
                 first_level_pattern_id += 1;
+            } else {
+                break;
             }
-            else { break; }
         }
     }
 
     let patterns = conf.pattern.clone();
 
-    let splits = if conf.parallel {
+    let splits: Vec<_> = if conf.parallel {
         matches_offsets
             .par_iter()
             .flat_map(|dt_span| {
@@ -73,7 +74,6 @@ pub fn text_split_parallel<T: Tokenize + Sync>(
                 )
             })
             .collect()
-
     } else {
         matches_offsets
             .iter()
@@ -89,6 +89,12 @@ pub fn text_split_parallel<T: Tokenize + Sync>(
             })
             .collect()
     };
+
+    if let Some(merge_level) = conf.merge_level {
+        if splits.len() > 1 && merge_level <= first_level_pattern_id {
+            return merge_split_results(&splits, conf.max_tokens);
+        }
+    }
 
     splits
 }
@@ -255,6 +261,62 @@ pub fn merge_splits(splits: &[Split], max_tokens: usize) -> Vec<Split> {
         }
     }
     merged_splits
+}
+
+pub fn merge_split_results(
+    split_ruslts: &Vec<SplitResults>,
+    max_tokens: usize,
+) -> Vec<SplitResults> {
+    let mut merged_results = Vec::new();
+    let first_sp_res = split_ruslts.first().unwrap();
+
+    let mut split_no_tokens = first_sp_res.split.no_tokens();
+    let mut split_strings = first_sp_res.split_strings.clone();
+    let mut split_tk_start: usize = 0;
+    let mut cur_tk_end: usize = first_sp_res.split.no_tokens();
+
+    let mut split_tk_res = first_sp_res
+        .results
+        .clone()
+        .unwrap_or(TokensResults::default());
+
+    for (i, split_res) in split_ruslts.iter().enumerate().skip(1) {
+        if split_no_tokens + split_res.split.no_tokens() <= max_tokens {
+            split_no_tokens += split_res.split.no_tokens();
+            split_strings.push_str(split_res.split_strings.as_str());
+            split_tk_res.extend(
+                split_res
+                    .results
+                    .clone()
+                    .unwrap_or(TokensResults::default()),
+            );
+            cur_tk_end += split_res.split.no_tokens();
+        } else {
+            merged_results.push(SplitResults {
+                split: Split::new(span(split_tk_start, cur_tk_end)),
+                results: Some(split_tk_res.clone()),
+                split_strings: split_strings.clone(),
+            });
+
+            split_no_tokens = split_res.split.no_tokens();
+            split_strings = split_res.split_strings.clone();
+            split_tk_res = split_res
+                .results
+                .clone()
+                .unwrap_or(TokensResults::default());
+            split_tk_start = cur_tk_end;
+            cur_tk_end += split_res.split.no_tokens();
+        }
+
+        if i == split_ruslts.len() - 1 {
+            merged_results.push(SplitResults {
+                split: Split::new(span(split_tk_start, cur_tk_end)),
+                results: Some(split_tk_res.clone()),
+                split_strings: split_strings.clone(),
+            });
+        }
+    }
+    merged_results
 }
 
 pub fn split_tokens_len(

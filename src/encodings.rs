@@ -104,7 +104,7 @@ impl EncodingType {
             .iter()
             .enumerate()
             .map(|(i, split)| SplitResults {
-                splits: split.clone(),
+                split: split.clone(),
                 #[cfg(feature = "tokenizers")]
                 results: if encodings.is_empty() {
                     None

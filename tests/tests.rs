@@ -17,7 +17,7 @@ fn hf_parallel_splits_test() -> tokenizers::Result<()> {
     let splits = text_split_parallel(&conf, data);
 
     for split in splits.iter() {
-        println!("{:?}", split.splits);
+        println!("{:?}", split.split);
         println!("{:?}", split.split_strings);
     }
 
@@ -38,7 +38,7 @@ fn ws_parallel_splits_test() -> tokenizers::Result<()> {
     let splits = text_split_parallel(&conf, data);
 
     for split in splits.iter() {
-        println!("{:?}", split.splits.tokens_span.len());
+        println!("{:?}", split.split.tokens_span.len());
         println!("{:?}", split.split_strings);
     }
 
@@ -303,7 +303,7 @@ fn split_words_superlinear_test() -> tokenizers::Result<()> {
     //assert_eq!(total_len, data.len());
 
     for split in splits.iter() {
-        println!("{:?}", split.splits);
+        println!("{:?}", split.split);
         println!("{:?}", split.split_strings);
     }
     Ok(())
@@ -327,7 +327,7 @@ fn split_tokenizer_superlinear_test() -> tokenizers::Result<()> {
     let splits = text_split_parallel(&conf, data);
 
     for split in splits.iter() {
-        println!("{:?}", split.splits);
+        println!("{:?}", split.split);
         println!("{:?}", split.split_strings);
     }
     Ok(())

@@ -15,7 +15,16 @@ pub fn tokenizer_single_split_benchmark(c: &mut Criterion) {
     let bytes = fs::read(data_path).unwrap();
     let data = std::str::from_utf8(&bytes).unwrap();
 
-    let conf_params = ConfigParams::hf_default();
+    let conf_params = ConfigParams::builder()
+        .pattern(vec![
+            vec!["\n\n".to_string()],
+            vec!["\n".to_string()],
+            vec![".".to_string(), "!".to_string(), "?".to_string()],
+        ])
+        .tokenizer_max_len(40000)
+        .merge_level(0)
+        .build();
+
     let conf = SplitterConfig::<HFTokenizer>::from_params(conf_params);
 
     c.bench_function("tokenizer_single_split", |b| {
@@ -32,7 +41,15 @@ pub fn words_single_split_benchmark(c: &mut Criterion) {
     let bytes = fs::read(data_path).unwrap();
     let data = std::str::from_utf8(&bytes).unwrap();
 
-    let conf_params = ConfigParams::ws_default();
+    let conf_params = ConfigParams::builder()
+        .pattern(vec![
+            vec!["\n\n".to_string()],
+            vec!["\n".to_string()],
+            vec![".".to_string(), "!".to_string(), "?".to_string()],
+        ])
+        //.merge_level(0)
+        .max_depth(3)
+        .build();
     let mut conf = SplitterConfig::<WSTokenizer>::from_params(&conf_params);
     conf.parallel = false;
 

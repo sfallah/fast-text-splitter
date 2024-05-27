@@ -2,7 +2,6 @@ use fast_text_splitter::common::SplitResults;
 use fast_text_splitter::config::{ConfigParams, SplitterConfig};
 use fast_text_splitter::hf_tokenizer::{init_tokenizer, HFTokenizer};
 use fast_text_splitter::text_split_parallel;
-use rayon::prelude::*;
 use std::{fs, io};
 use tokenizers::Tokenizer;
 
@@ -48,10 +47,18 @@ fn tokenize_file(
     }
     let total_tokens_len = splits
         .iter()
-        .map(|split| split.splits.no_tokens())
+        .map(|split| split.split.no_tokens())
         .sum::<usize>();
     println!("    Total tokens length: {}", total_tokens_len);
     assert_eq!(hf_encoding.len(), total_tokens_len);
+
+    let total_tk_results = splits
+        .iter()
+        .map(|split| split.results.as_ref().unwrap().ids.len())
+        .sum::<usize>();
+    println!("    Total tokens results: {}", total_tk_results);
+    assert_eq!(hf_encoding.len(), total_tk_results);
+
     Ok(())
 }
 
@@ -89,13 +96,15 @@ fn hf_local_data_test() -> tokenizers::Result<()> {
 fn hf_nq_dataset_test() -> tokenizers::Result<()> {
     let files = list_text_files("data/train/")?;
     let tokenizer = init_tokenizer(None, Some(40000))?;
-    let conf_params = ConfigParams::builder().pattern(vec![
-        vec!["\n\n".to_string()],
-        vec!["\n".to_string()],
-        vec![".".to_string(), "!".to_string(), "?".to_string()],
-    ])
+    let conf_params = ConfigParams::builder()
+        .pattern(vec![
+            vec!["\n\n".to_string()],
+            vec!["\n".to_string()],
+            vec![".".to_string(), "!".to_string(), "?".to_string()],
+        ])
         .tokenizer_max_len(40000)
         .merge_level(0)
+        .max_depth(3)
         .build();
     let conf = SplitterConfig::<HFTokenizer>::from_params(conf_params);
 
