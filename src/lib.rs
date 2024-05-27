@@ -45,7 +45,7 @@ pub fn text_split_parallel<T: Tokenize + Sync>(
     let mut first_level_pattern_id = 0;
     let mut matches_offsets = vec![];
     loop {
-        let match_result = find_patterns_matches(&conf.pattern[first_level_pattern_id], data);
+        let match_result = find_patterns_matches(&conf.pattern[first_level_pattern_id], data.as_bytes());
         matches_offsets = match_result.splits;
         if matches_offsets.len() > 1 || match_result.matched {
             break;
@@ -133,7 +133,7 @@ fn sub_splits<T: Tokenize + Sync>(
         let mut splits = Vec::new();
 
         if let Some(merge_level) = conf.merge_level {
-            if merge_level <= pattern_id {
+            if sub_splits.len() > 1 && merge_level <= pattern_id {
                 let merged_child_splits = merge_splits(&sub_splits, conf.max_tokens);
                 splits.extend(merged_child_splits);
             }
@@ -183,7 +183,7 @@ pub fn text_split<T: Tokenize + Sync>(
     let mut splits = Vec::new();
     let mut tokens_span = in_tokens_span;
     let pt_spans =
-        find_patterns_matches(&patterns[pattern_id], &data[data_span.start..data_span.end]).splits;
+        find_patterns_matches(&patterns[pattern_id], &data.as_bytes()[data_span.start..data_span.end]).splits;
 
     let mut pt_spans_idx: usize = 0;
 
@@ -205,7 +205,7 @@ pub fn text_split<T: Tokenize + Sync>(
                     );
 
                     if let Some(merge_level) = conf.merge_level {
-                        if merge_level <= pattern_id + 1 {
+                        if child_splits.len() > 1 && merge_level <= pattern_id + 1 {
                             let merged_child_splits = merge_splits(&child_splits, conf.max_tokens);
                             splits.extend(merged_child_splits);
                         }
@@ -233,6 +233,9 @@ pub fn text_split<T: Tokenize + Sync>(
 }
 
 pub fn merge_splits(splits: &[Split], max_tokens: usize) -> Vec<Split> {
+    if splits.len() <= 1 {
+        return splits.to_vec();
+    }
     let mut merged_splits = Vec::new();
 
     let mut start_split = splits.first().unwrap();
@@ -267,6 +270,9 @@ pub fn merge_split_results(
     split_ruslts: &Vec<SplitResults>,
     max_tokens: usize,
 ) -> Vec<SplitResults> {
+    if split_ruslts.len() <= 1 {
+        return split_ruslts.to_vec();
+    }
     let mut merged_results = Vec::new();
     let first_sp_res = split_ruslts.first().unwrap();
 

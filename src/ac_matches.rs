@@ -14,17 +14,17 @@ pub fn init_aho_corasick(patterns: &Vec<String>) -> anyhow::Result<AhoCorasick> 
     Ok(ac)
 }
 
-pub fn find_patterns_matches(patterns: &Vec<String>, data: &str) -> MatchResult {
+pub fn find_patterns_matches(patterns: &Vec<String>, data_bytes: &[u8]) -> MatchResult {
     if patterns.len() == 1 {
-        return find_pattern_matches(&patterns[0], data);
+        return find_pattern_matches(&patterns[0], data_bytes);
     }
     let ac = init_aho_corasick(patterns).unwrap();
-    let matches: Vec<_> = ac.find_iter(data).collect();
+    let matches: Vec<_> = ac.find_iter(data_bytes).collect();
     let mut splits = Vec::new();
     if matches.is_empty() {
         splits.push(Span {
             start: 0,
-            end: data.len(),
+            end: data_bytes.len(),
         });
         return MatchResult {
             splits,
@@ -47,7 +47,7 @@ pub fn find_patterns_matches(patterns: &Vec<String>, data: &str) -> MatchResult 
         if matches.len() == 1 {
             splits.push(Span {
                 start: 0,
-                end: data.len(),
+                end: data_bytes.len(),
             });
             return MatchResult {
                 splits,
@@ -65,10 +65,10 @@ pub fn find_patterns_matches(patterns: &Vec<String>, data: &str) -> MatchResult 
         });
         start = end + pattern_len;
     });
-    if start < data.len() {
+    if start < data_bytes.len() {
         splits.push(Span {
             start,
-            end: data.len(),
+            end: data_bytes.len(),
         });
     }
     MatchResult {
@@ -77,14 +77,14 @@ pub fn find_patterns_matches(patterns: &Vec<String>, data: &str) -> MatchResult 
     }
 }
 
-pub fn find_pattern_matches(pattern: &str, data: &str) -> MatchResult {
+pub fn find_pattern_matches(pattern: &str, data_bytes: &[u8]) -> MatchResult {
     let pattern_len = pattern.len();
-    let matches: Vec<_> = find_iter(data.as_bytes(), pattern.as_bytes()).collect();
+    let matches: Vec<_> = find_iter(data_bytes, pattern.as_bytes()).collect();
     let mut splits = Vec::new();
     if matches.is_empty() {
         splits.push(Span {
             start: 0,
-            end: data.len(),
+            end: data_bytes.len(),
         });
         return MatchResult {
             splits,
@@ -104,7 +104,7 @@ pub fn find_pattern_matches(pattern: &str, data: &str) -> MatchResult {
         if matches.len() == 1 {
             splits.push(Span {
                 start: 0,
-                end: data.len(),
+                end: data_bytes.len(),
             });
             return MatchResult {
                 splits,
@@ -120,10 +120,10 @@ pub fn find_pattern_matches(pattern: &str, data: &str) -> MatchResult {
         });
         start = end + pattern_len;
     });
-    if start < data.len() {
+    if start < data_bytes.len() {
         splits.push(Span {
             start,
-            end: data.len(),
+            end: data_bytes.len(),
         });
     }
     MatchResult {
@@ -136,7 +136,7 @@ pub fn find_pattern_matches(pattern: &str, data: &str) -> MatchResult {
 mod tests {
     use super::*;
 
-    fn print_spans(spans: &MatchResult, data: &str) {
+    fn print_spans(spans: &MatchResult, data: &[u8]) {
         println!("-------------------");
         println!("Input Data: {:?}", data);
         for span in spans.splits.iter() {
@@ -148,30 +148,30 @@ mod tests {
 
     #[test]
     fn find_matches_test() -> anyhow::Result<()> {
-        let data = "Hello, you all! How are you ? I am fine. Nice to meet you all insecure!";
+        let data = "Hello, you all! How are you ? I am fine. Nice to meet you all insecure!".as_bytes();
         let patterns = vec!["\n\n".to_string()];
 
         let spans = find_patterns_matches(&patterns, data);
         print_spans(&spans, data);
 
-        let data = "\n\n Hello, you all! How are you ? I am fine. Nice to meet you all insecure!";
+        let data = "\n\n Hello, you all! How are you ? I am fine. Nice to meet you all insecure!".as_bytes();
 
         let spans = find_patterns_matches(&patterns, data);
         print_spans(&spans, data);
 
-        let data = "Hello, you all! How are you ? \n\n I am fine. Nice to meet you all insecure!";
+        let data = "Hello, you all! How are you ? \n\n I am fine. Nice to meet you all insecure!".as_bytes();
         let spans = find_patterns_matches(&patterns, data);
         print_spans(&spans, data);
 
-        let data = "Hello, you all! How are you ? I am fine. Nice to meet you all insecure! \n\n";
+        let data = "Hello, you all! How are you ? I am fine. Nice to meet you all insecure! \n\n".as_bytes();
         let spans = find_patterns_matches(&patterns, data);
         print_spans(&spans, data);
 
-        let data = "\n\n Hello, you all! How are you ? \n I am fine. \n\n Nice to meet you all insecure! \n And it continues!";
+        let data = "\n\n Hello, you all! How are you ? \n I am fine. \n\n Nice to meet you all insecure! \n And it continues!".as_bytes();
         let spans = find_patterns_matches(&patterns, data);
         print_spans(&spans, data);
 
-        let data = "\n\n Hello, you all! How are you ? \n I am fine. Nice to meet you all insecure! \n \n \n\n";
+        let data = "\n\n Hello, you all! How are you ? \n I am fine. Nice to meet you all insecure! \n \n \n\n".as_bytes();
         let spans = find_patterns_matches(&patterns, data);
         print_spans(&spans, data);
 
