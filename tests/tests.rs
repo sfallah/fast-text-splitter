@@ -94,7 +94,7 @@ fn dot_pattern_hf_test() -> tokenizers::Result<()> {
     let data = "Hello, you all! How are you ? I am fine. Nice to meet you all insecure!";
 
     let conf_params = ConfigParams::builder()
-        .pattern(vec![".".to_string()])
+        .pattern(vec![vec![".".to_string()]])
         .max_depth(1)
         .parallel(true)
         .build();
@@ -232,6 +232,10 @@ fn nl_match_hf_test() -> tokenizers::Result<()> {
     let splits = text_split_parallel(&conf, data);
     assert_eq!(splits.len(), 2);
 
+    splits
+        .iter()
+        .for_each(|split| println!("{:?}", split.split_strings));
+
     let total_len = splits
         .iter()
         .map(|split| split.split_strings.len())
@@ -248,6 +252,7 @@ fn nl_match_hf_test() -> tokenizers::Result<()> {
 
     Ok(())
 }
+
 #[test]
 fn no_match_max_ws_test() -> tokenizers::Result<()> {
     let data = "Hello, you all! How are you ? I am fine. Nice to meet you all insecure!";
@@ -255,6 +260,7 @@ fn no_match_max_ws_test() -> tokenizers::Result<()> {
     let conf_params = ConfigParams::builder()
         .max_tokens(8)
         .max_depth(2)
+        .pattern(vec![vec!["\n\n".to_string()], vec!["\n".to_string()]])
         .parallel(true)
         .build();
     let conf = SplitterConfig::<WSTokenizer>::from_params(&conf_params);

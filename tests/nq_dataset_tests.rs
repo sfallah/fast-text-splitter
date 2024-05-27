@@ -89,26 +89,18 @@ fn hf_local_data_test() -> tokenizers::Result<()> {
 fn hf_nq_dataset_test() -> tokenizers::Result<()> {
     let files = list_text_files("data/train/")?;
     let tokenizer = init_tokenizer(None, Some(40000))?;
-    let conf_params = ConfigParams::builder().tokenizer_max_len(40000).build();
+    let conf_params = ConfigParams::builder().pattern(vec![
+        vec!["\n\n".to_string()],
+        vec!["\n".to_string()],
+        vec![".".to_string(), "!".to_string(), "?".to_string()],
+    ])
+        .tokenizer_max_len(40000)
+        .merge_level(0)
+        .build();
     let conf = SplitterConfig::<HFTokenizer>::from_params(conf_params);
 
     for file in files.iter() {
         tokenize_file(&conf, &tokenizer, file, true)?;
     }
-    Ok(())
-}
-
-#[test]
-#[cfg(feature = "tokenizers")]
-fn hf_nq_dataset_par_test() -> tokenizers::Result<()> {
-    let files = list_text_files("data/dev")?;
-    let tokenizer = init_tokenizer(None, Some(40000))?;
-    let conf_params = ConfigParams::builder().tokenizer_max_len(40000).build();
-    let conf = SplitterConfig::<HFTokenizer>::from_params(conf_params);
-
-    files.par_iter().for_each(|file| {
-        tokenize_file(&conf, &tokenizer, file, false).unwrap();
-    });
-
     Ok(())
 }

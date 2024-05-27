@@ -5,7 +5,7 @@ use crate::ws_tokenizer::WSTokenizer;
 
 #[derive(Debug, Clone)]
 pub struct SplitterConfig<T: Tokenize + Sync> {
-    pub pattern: Vec<String>,
+    pub pattern: Vec<Vec<String>>,
     pub tokenizer: T,
     pub max_tokens: usize,
     pub max_depth: usize,
@@ -15,7 +15,7 @@ pub struct SplitterConfig<T: Tokenize + Sync> {
 
 #[derive(Debug, Clone)]
 pub struct ConfigParams {
-    pub pattern: Option<Vec<String>>,
+    pub pattern: Option<Vec<Vec<String>>>,
     #[cfg(feature = "tokenizers")]
     pub model_path: Option<String>,
     #[cfg(feature = "tokenizers")]
@@ -36,7 +36,10 @@ impl ConfigParams {
 impl ConfigParams {
     pub fn ws_default() -> Self {
         Self::builder()
-            .pattern(vec!["\n\n".to_string(), "\n".to_string()])
+            .pattern(vec![
+                vec!["\n\n".to_string()],
+                vec!["\n".to_string()],
+            ])
             .max_tokens(384)
             .max_depth(2)
             .merge_level(1)
@@ -46,7 +49,10 @@ impl ConfigParams {
     #[cfg(feature = "tokenizers")]
     pub fn hf_default() -> Self {
         Self::builder()
-            .pattern(vec!["\n\n".to_string(), "\n".to_string()])
+            .pattern(vec![
+                vec!["\n\n".to_string()],
+                vec!["\n".to_string()],
+            ])
             .model_path("sentence-transformers/all-MiniLM-L6-v2".to_string())
             .max_tokens(512)
             .max_depth(2)
@@ -57,7 +63,7 @@ impl ConfigParams {
 }
 
 pub struct ConfigParamsBuilder {
-    pattern: Option<Vec<String>>,
+    pattern: Option<Vec<Vec<String>>>,
     #[cfg(feature = "tokenizers")]
     model_path: Option<String>,
     #[cfg(feature = "tokenizers")]
@@ -83,7 +89,7 @@ impl ConfigParamsBuilder {
         }
     }
 
-    pub fn pattern(mut self, pattern: Vec<String>) -> Self {
+    pub fn pattern(mut self, pattern: Vec<Vec<String>>) -> Self {
         self.pattern = Some(pattern);
         self
     }
@@ -138,10 +144,10 @@ impl ConfigParamsBuilder {
 impl SplitterConfig<WSTokenizer> {
     pub fn from_params(config_params: &ConfigParams) -> Self {
         Self {
-            pattern: config_params
-                .pattern
-                .clone()
-                .unwrap_or(vec!["\n\n".to_string(), "\n".to_string()]),
+            pattern: config_params.pattern.clone().unwrap_or(vec![
+                vec!["\n\n".to_string()],
+                vec!["\n".to_string()],
+            ]),
             tokenizer: WSTokenizer {},
             max_tokens: config_params.max_tokens.unwrap_or(384),
             max_depth: config_params.max_depth.unwrap_or(2),
@@ -155,15 +161,16 @@ impl SplitterConfig<WSTokenizer> {
 impl SplitterConfig<HFTokenizer> {
     pub fn from_params(config_params: ConfigParams) -> Self {
         Self {
-            pattern: config_params
-                .pattern
-                .unwrap_or(vec!["\n\n".to_string(), "\n".to_string()]),
+            pattern: config_params.pattern.unwrap_or(vec![
+                vec!["\n\n".to_string()],
+                vec!["\n".to_string()],
+            ]),
             tokenizer: HFTokenizer {
                 tokenizer: init_tokenizer(
                     config_params.model_path,
                     config_params.tokenizer_max_len,
                 )
-                .unwrap(),
+                    .unwrap(),
             },
             max_tokens: config_params.max_tokens.unwrap_or(512),
             max_depth: config_params.max_depth.unwrap_or(2),
@@ -183,7 +190,8 @@ mod test {
 
         assert_eq!(
             config_params.pattern.unwrap(),
-            vec!["\n\n".to_string(), "\n".to_string()]
+            vec![vec!["\n\n".to_string()], vec!["\n".to_string()]
+            ],
         );
         assert_eq!(config_params.max_tokens.unwrap(), 384);
         assert_eq!(config_params.max_depth.unwrap(), 2);
@@ -197,7 +205,7 @@ mod test {
 
         assert_eq!(
             config_params.pattern.unwrap(),
-            vec!["\n\n".to_string(), "\n".to_string()]
+            vec![vec!["\n\n".to_string()], vec!["\n".to_string()]]
         );
         assert_eq!(config_params.max_tokens.unwrap(), 384);
         assert_eq!(config_params.max_depth.unwrap(), 2);

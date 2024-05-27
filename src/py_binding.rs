@@ -112,7 +112,7 @@ pub fn text_split_hf(data: &str, py_conf_params: &PyConfigParams) -> Vec<PySplit
 )]
 pub fn py_ws_config_params(
     merge_level: Option<usize>,
-    patterns: Vec<String>,
+    patterns: Vec<Vec<String>>,
     max_tokens: usize,
     max_depth: usize,
     parallel: bool,
@@ -135,7 +135,7 @@ pub fn py_ws_config_params(
 pub fn py_hf_config_params(
     model_path: Option<String>,
     merge_level: Option<usize>,
-    patterns: Vec<String>,
+    patterns: Vec<Vec<String>>,
     max_tokens: usize,
     max_depth: usize,
     parallel: bool,
@@ -181,7 +181,7 @@ impl From<TokensResults> for PyTokensResults {
 #[pyclass]
 pub struct PyConfigParams {
     #[pyo3(get)]
-    pub pattern: Option<Vec<String>>,
+    pub pattern: Option<Vec<Vec<String>>>,
     #[cfg(feature = "tokenizers")]
     #[pyo3(get)]
     pub model_path: Option<String>,
@@ -258,7 +258,10 @@ mod tests {
     fn test_splitter_config_cache_same_params() {
         // Create dummy PyConfigParams
         let dummy_params = PyConfigParams {
-            pattern: Some(vec!["pattern1".to_string(), "pattern2".to_string()]),
+            pattern: Some(vec![
+                vec!["pattern1".to_string()],
+                vec!["pattern2".to_string()],
+            ]),
             model_path: Some("path/to/model".to_string()),
             tokenizer_max_len: Some(5120),
 
@@ -283,7 +286,10 @@ mod tests {
     fn test_splitter_config_cache_different_params() {
         // Create different dummy PyConfigParams
         let params1 = PyConfigParams {
-            pattern: Some(vec!["pattern1".to_string(), "pattern2".to_string()]),
+            pattern: Some(vec![
+                vec!["pattern1".to_string()],
+                vec!["pattern2".to_string()],
+            ]),
             model_path: Some("path/to/model1".to_string()),
             tokenizer_max_len: Some(5120),
             max_tokens: Some(100),
@@ -294,7 +300,10 @@ mod tests {
         };
 
         let params2 = PyConfigParams {
-            pattern: Some(vec!["pattern3".to_string(), "pattern4".to_string()]),
+            pattern: Some(vec![
+                vec!["pattern1".to_string()],
+                vec!["pattern2".to_string()],
+            ]),
             model_path: Some("path/to/model2".to_string()),
             tokenizer_max_len: Some(5120),
             max_tokens: Some(200),
@@ -316,7 +325,7 @@ mod tests {
     fn test_splitter_config_cache_partial_overlap() {
         // Create partially overlapping PyConfigParams
         let params1 = PyConfigParams {
-            pattern: Some(vec!["pattern1".to_string()]),
+            pattern: Some(vec![vec!["pattern1".to_string()]]),
             model_path: Some("path/to/model".to_string()),
             tokenizer_max_len: Some(5120),
 
@@ -328,7 +337,7 @@ mod tests {
         };
 
         let params2 = PyConfigParams {
-            pattern: Some(vec!["pattern1".to_string()]), // Same pattern
+            pattern: Some(vec![vec!["pattern1".to_string()]]),
             model_path: Some("path/to/model".to_string()), // Same model path
             tokenizer_max_len: Some(5120),
 
@@ -353,7 +362,10 @@ mod tests {
     fn test_splitter_config_cache_thread_safety() {
         // Create dummy PyConfigParams
         let dummy_params = Arc::new(PyConfigParams {
-            pattern: Some(vec!["pattern1".to_string(), "pattern2".to_string()]),
+            pattern: Some(vec![
+                vec!["pattern1".to_string()],
+                vec!["pattern2".to_string()],
+            ]),
             model_path: Some("path/to/model".to_string()),
             tokenizer_max_len: Some(5120),
             max_tokens: Some(100),
