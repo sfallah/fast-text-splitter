@@ -2,9 +2,9 @@
 use tokenizers::{Encoding, PaddingStrategy, Tokenizer, TruncationStrategy};
 use tokenizers::{PaddingParams, TruncationParams};
 
+use crate::{Split, Tokenize};
 use crate::common::TokensResults;
 use crate::encodings::EncodingType;
-use crate::{Split, Tokenize};
 
 #[cfg(feature = "tokenizers")]
 pub fn init_tokenizer(
@@ -31,17 +31,19 @@ pub fn init_tokenizer(
     match tokenizer_truncation {
         None => {
             let mut truncation = TruncationParams::default();
-            truncation.max_length = max_len.unwrap_or(5120);
+            truncation.max_length = max_len.unwrap_or(40000);
             truncation.strategy = TruncationStrategy::LongestFirst;
             tokenizer
                 .with_truncation(Option::from(truncation))
                 .expect("TODO: panic message");
         }
         Some(truncation) => {
-            truncation.max_length = max_len.unwrap_or(5120);
+            truncation.max_length = max_len.unwrap_or(40000);
             truncation.strategy = TruncationStrategy::LongestFirst;
         }
     }
+    //let normalizer = BertNormalizer::new(false, false, None, false);
+    //tokenizer.with_normalizer(normalizer);
     Ok(tokenizer)
 }
 

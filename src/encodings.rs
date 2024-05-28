@@ -97,7 +97,8 @@ impl EncodingType {
                 let data_span = split.data_span.unwrap();
                 //FIXME: This is not working non-ascii characters
                 //data.chars().skip(data_span.start).take(data_span.len()).collect::<String>()
-                data[data_span.start..data_span.end].to_string()
+                let data_bytes = &data.as_bytes()[data_span.start..data_span.end];
+                std::str::from_utf8(data_bytes).unwrap().to_string()
             })
             .collect();
         let res: Vec<_> = splits

@@ -7,6 +7,17 @@ pub struct MatchResult {
     pub matched: bool,
 }
 
+pub fn merge_partition_spans(splits: &Vec<Span>, part_size: usize) -> Vec<Span> {
+    splits
+        .chunks(part_size)
+        .map(|chunk| {
+            let start = chunk[0].start;
+            let end = chunk[chunk.len() - 1].end;
+            Span { start, end }
+        })
+        .collect()
+}
+
 pub fn init_aho_corasick(patterns: &Vec<String>) -> anyhow::Result<AhoCorasick> {
     let ac = AhoCorasick::builder()
         .match_kind(MatchKind::LeftmostFirst)
@@ -134,6 +145,9 @@ pub fn find_pattern_matches(pattern: &str, data_bytes: &[u8]) -> MatchResult {
 
 #[cfg(test)]
 mod tests {
+    use std::string::String;
+    use crate::hf_tokenizer::init_tokenizer;
+    use crate::normalizer::TextNormalizer;
     use super::*;
 
     fn print_spans(spans: &MatchResult, data: &[u8]) {
@@ -178,6 +192,79 @@ mod tests {
         let second_patterns = vec!["\n".to_string()];
         let spans = find_patterns_matches(&second_patterns, data);
         print_spans(&spans, data);
+
+        Ok(())
+    }
+
+    #[test]
+    fn not_normalized_test() -> anyhow::Result<()>{
+        let normalizer = TextNormalizer::new(true, false, None, false);
+
+        let data_file = "tests/error_data/Selena Gomez - Wikipedia.txt";
+        let data= std::fs::read_to_string(data_file)?;
+
+
+        //let binding = normalizer.normalize(&data)?;
+        //let data_bytes = binding.as_bytes();
+        let data_bytes = data.as_bytes();
+
+        let match_result = find_patterns_matches(&vec!["\n\n".to_string()], data_bytes);
+        println!("Matched: {:?}", match_result.splits.len());
+
+        let mut reconstructed_data = String::new();
+        for span in match_result.splits.iter() {
+            reconstructed_data.push_str(std::str::from_utf8(&data_bytes[span.start..span.end])?);
+        }
+        assert_eq!(reconstructed_data, data);
+
+        let tokenizer = init_tokenizer(None, Some(data.len())).unwrap();
+        let once_encoded = tokenizer.encode(data.as_str(), false).unwrap();
+        println!("Once Tokens: {:?}", once_encoded.len());
+
+        let mut total_tokens: usize = 0;
+
+        for span in match_result.splits.iter() {
+            let sub_data = std::str::from_utf8(&data_bytes[span.start..span.end])?;
+            let encoded_res = tokenizer.encode(sub_data, false);
+            match encoded_res {
+                Ok(encoded) => {
+                    total_tokens += encoded.len();
+                }
+                Err(e) => {
+                    println!("Error: {:?}", e);
+                    println!("Data Span: {:?}", span);
+                }
+            }
+        }
+        println!("Total Tokens: {:?}", total_tokens);
+        assert_eq!(total_tokens, once_encoded.len());
+
+        let normalized_data = normalizer.normalize(&data.to_string())?;
+
+        let normalized_encoded = tokenizer.encode(normalized_data.as_str(), false).unwrap();
+        println!("Normalized Tokens: {:?}", normalized_encoded.len());
+        assert_eq!(normalized_encoded.len(), once_encoded.len());
+
+
+        let nomalized_match_result = find_patterns_matches(&vec!["\n\n".to_string()], normalized_data.as_bytes());
+        println!("Normalized Matched: {:?}", nomalized_match_result.splits.len());
+
+        let mut normalized_total_tokens: usize = 0;
+
+        for span in nomalized_match_result.splits.iter() {
+            let sub_data = std::str::from_utf8(&normalized_data.as_bytes()[span.start..span.end])?;
+            let encoded_res = tokenizer.encode(sub_data, false);
+            match encoded_res {
+                Ok(encoded) => {
+                    normalized_total_tokens += encoded.len();
+                }
+                Err(e) => {
+                    println!("Error: {:?}", e);
+                    println!("Data Span: {:?}", span);
+                }
+            }
+        }
+        println!("Normalized Total Tokens: {:?}", normalized_total_tokens);
 
         Ok(())
     }
