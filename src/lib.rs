@@ -204,8 +204,11 @@ pub fn text_split<T: Tokenize + Sync>(
 ) -> Vec<Split> {
     let mut splits = Vec::new();
     let mut tokens_span = in_tokens_span;
-    let pt_spans =
-        find_patterns_matches(&patterns[pattern_id], &data.as_bytes()[data_span.start..data_span.end]).splits;
+    let pt_spans = if pattern_id <= patterns.len() - 1 {
+        find_patterns_matches(&patterns[pattern_id], &data.as_bytes()[data_span.start..data_span.end]).splits
+    } else {
+        vec![Span { start: data_span.start, end: data_span.end }]
+    };
 
     let mut pt_spans_idx: usize = 0;
 
