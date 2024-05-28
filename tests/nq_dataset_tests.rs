@@ -148,7 +148,7 @@ fn hf_nq_dataset_test() -> tokenizers::Result<()> {
         .build();
     let conf = SplitterConfig::<HFTokenizer>::from_params(conf_params);
 
-    for file in files.iter().skip(400).take(400) {
+    for file in files.iter() {
         tokenize_file(&conf, &tokenizer, file, false, false)?;
     }
     Ok(())
