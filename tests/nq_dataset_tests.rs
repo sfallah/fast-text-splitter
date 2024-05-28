@@ -94,22 +94,22 @@ fn hf_local_data_test() -> tokenizers::Result<()> {
 #[test]
 #[cfg(feature = "tokenizers")]
 fn hf_nq_dataset_test() -> tokenizers::Result<()> {
-    let files = list_text_files("data/train/")?;
-    let tokenizer = init_tokenizer(None, Some(40000))?;
+    let files = list_text_files("data/dev/")?;
+    let tokenizer = init_tokenizer(None, Some(400000))?;
     let conf_params = ConfigParams::builder()
         .pattern(vec![
             vec!["\n\n".to_string()],
             vec!["\n".to_string()],
             vec![".".to_string(), "!".to_string(), "?".to_string()],
         ])
-        .tokenizer_max_len(40000)
-        .merge_level(0)
+        .tokenizer_max_len(400000)
+        .merge_level(1)
         .max_depth(3)
         .build();
     let conf = SplitterConfig::<HFTokenizer>::from_params(conf_params);
 
     for file in files.iter() {
-        tokenize_file(&conf, &tokenizer, file, true)?;
+        tokenize_file(&conf, &tokenizer, file, false)?;
     }
     Ok(())
 }

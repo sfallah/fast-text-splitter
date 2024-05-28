@@ -70,7 +70,7 @@ pub fn text_split_parallel<T: Tokenize + Sync>(
                     data,
                     dt_span.clone(),
                     patterns.clone(),
-                    first_level_pattern_id,
+                    first_level_pattern_id + 1,
                 )
             })
             .collect()
@@ -84,7 +84,7 @@ pub fn text_split_parallel<T: Tokenize + Sync>(
                     data,
                     dt_span.clone(),
                     patterns.clone(),
-                    first_level_pattern_id,
+                    first_level_pattern_id + 1,
                 )
             })
             .collect()
@@ -107,9 +107,13 @@ fn sub_splits<T: Tokenize + Sync>(
     patterns: Vec<Vec<String>>,
     pattern_id: usize,
 ) -> Vec<SplitResults> {
+    let data_bytes = &data.as_bytes()[data_span.start..data_span.end];
+    let data_str = std::str::from_utf8(&data_bytes).unwrap();
+
     let encoded = tokenizer
-        .encode(&data[data_span.start..data_span.end])
+        .encode(data_str)
         .unwrap();
+
     let tokens_offsets = encoded.get_offsets();
     let tokens_words = encoded.get_word_ids();
 
@@ -133,7 +137,7 @@ fn sub_splits<T: Tokenize + Sync>(
         let mut splits = Vec::new();
 
         if let Some(merge_level) = conf.merge_level {
-            if sub_splits.len() > 1 && merge_level <= pattern_id {
+            if sub_splits.len() > 1 && merge_level <= pattern_id + 1 {
                 let merged_child_splits = merge_splits(&sub_splits, conf.max_tokens);
                 splits.extend(merged_child_splits);
             }
@@ -182,8 +186,11 @@ pub fn text_split<T: Tokenize + Sync>(
 ) -> Vec<Split> {
     let mut splits = Vec::new();
     let mut tokens_span = in_tokens_span;
-    let pt_spans =
-        find_patterns_matches(&patterns[pattern_id], &data.as_bytes()[data_span.start..data_span.end]).splits;
+    let pt_spans = if pattern_id <= patterns.len() - 1 {
+        find_patterns_matches(&patterns[pattern_id], &data.as_bytes()[data_span.start..data_span.end]).splits
+    } else {
+        vec![Span { start: data_span.start, end: data_span.end }]
+    };
 
     let mut pt_spans_idx: usize = 0;
 
@@ -279,6 +286,7 @@ pub fn merge_split_results(
     let mut split_no_tokens = first_sp_res.split.no_tokens();
     let mut split_strings = first_sp_res.split_strings.clone();
     let mut split_tk_start: usize = 0;
+
     let mut cur_tk_end: usize = first_sp_res.split.no_tokens();
 
     let mut split_tk_res = first_sp_res
