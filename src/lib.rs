@@ -48,11 +48,11 @@ pub fn text_split_parallel<T: Tokenize + Sync>(
     text_normalize: Option<bool>,
 ) -> Vec<SplitResults> {
     let mut first_level_pattern_id = 0;
-    let mut matches_offsets = vec![];
+    let mut matches_offsets ;
     let normalizer =
         TextNormalizer::new(text_normalize.unwrap_or(false), false, Some(false), false);
     let binding = normalizer
-        .normalize(&in_data.clone().to_string())
+        .normalize(&in_data.to_string())
         .unwrap()
         .clone();
     let data = binding.as_str();

@@ -7,7 +7,7 @@ use unicode_categories::UnicodeCategories;
 use unicode_normalization::UnicodeNormalization;
 
 /// Checks whether a character is whitespace
-fn is_whitespace(c: char) -> bool {
+fn _is_whitespace(c: char) -> bool {
     // These are technically control characters but we count them as whitespace
     match c {
         '\t' | '\n' | '\r' => true,

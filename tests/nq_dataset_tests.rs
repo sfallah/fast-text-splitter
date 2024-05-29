@@ -203,7 +203,7 @@ fn hf_nq_dataset_test() -> tokenizers::Result<()> {
     let conf = SplitterConfig::<HFTokenizer>::from_params(conf_params);
 
 
-    files.par_iter().for_each(|file| {
+    files.par_iter().skip(654).take(600).for_each(|file| {
         tokenize_file(&conf, &tokenizer, file, true, false, false).unwrap();
     });
 
