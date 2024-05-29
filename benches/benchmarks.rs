@@ -9,7 +9,7 @@ use fast_text_splitter::config::{ConfigParams, SplitterConfig};
 #[cfg(feature = "tokenizers")]
 use fast_text_splitter::hf_tokenizer::HFTokenizer;
 use fast_text_splitter::normalizer::TextNormalizer;
-use fast_text_splitter::{normalizer, text_split_parallel};
+use fast_text_splitter::text_split_parallel;
 use fast_text_splitter::ws_tokenizer::WSTokenizer;
 
 #[cfg(feature = "tokenizers")]
@@ -43,7 +43,7 @@ pub fn tokenizer_single_split_benchmark(c: &mut Criterion) {
 }
 
 pub fn text_normalize_benchmark(c: &mut Criterion) {
-    let data_path = "tests/error_data/Selena Gomez - Wikipedia.txt";
+    //let data_path = "tests/error_data/Selena Gomez - Wikipedia.txt";
     let data_path = "tests/test_data/superlinear.txt";
 
     let data = fs::read_to_string(data_path).unwrap();
@@ -58,7 +58,7 @@ pub fn text_normalize_benchmark(c: &mut Criterion) {
 }
 
 pub fn hf_text_normalize_benchmark(c: &mut Criterion) {
-    let data_path = "tests/error_data/Selena Gomez - Wikipedia.txt";
+    //let data_path = "tests/error_data/Selena Gomez - Wikipedia.txt";
     let data_path = "tests/test_data/superlinear.txt";
 
     let data = fs::read_to_string(data_path).unwrap();

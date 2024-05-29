@@ -2,9 +2,9 @@
 use tokenizers::{Encoding, PaddingStrategy, Tokenizer, TruncationStrategy};
 use tokenizers::{PaddingParams, TruncationParams};
 
-use crate::{Split, Tokenize};
 use crate::common::TokensResults;
 use crate::encodings::EncodingType;
+use crate::{Split, Tokenize};
 
 #[cfg(feature = "tokenizers")]
 pub fn init_tokenizer(

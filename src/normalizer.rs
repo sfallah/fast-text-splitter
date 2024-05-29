@@ -93,13 +93,14 @@ impl TextNormalizer {
     }
 
     fn do_clean_text(&self, normalized: &String) -> String {
-        normalized.chars()
+        normalized
+            .chars()
             .filter(|c| !(*c as usize == 0 || *c as usize == 0xfffd || is_control(*c)))
             //.map(|c| if is_whitespace(c) { ' ' } else { c })
             .collect::<String>()
     }
 
-    fn do_handle_chinese_chars(&self, data: &String) -> String{
+    fn do_handle_chinese_chars(&self, data: &String) -> String {
         let mut normalized = String::new();
         data.chars().for_each(|c| {
             if is_chinese_char(c) {
@@ -113,9 +114,12 @@ impl TextNormalizer {
         normalized
     }
 
-
     fn do_strip_accents(&self, normalized: &String) -> String {
-        normalized.to_owned().nfd().filter(|c| !c.is_mark_nonspacing()).collect::<String>()
+        normalized
+            .to_owned()
+            .nfd()
+            .filter(|c| !c.is_mark_nonspacing())
+            .collect::<String>()
     }
 
     fn do_lowercase(&self, normalized: &String) -> String {

@@ -145,10 +145,10 @@ pub fn find_pattern_matches(pattern: &str, data_bytes: &[u8]) -> MatchResult {
 
 #[cfg(test)]
 mod tests {
-    use std::string::String;
+    use super::*;
     use crate::hf_tokenizer::init_tokenizer;
     use crate::normalizer::TextNormalizer;
-    use super::*;
+    use std::string::String;
 
     fn print_spans(spans: &MatchResult, data: &[u8]) {
         println!("-------------------");
@@ -162,22 +162,26 @@ mod tests {
 
     #[test]
     fn find_matches_test() -> anyhow::Result<()> {
-        let data = "Hello, you all! How are you ? I am fine. Nice to meet you all insecure!".as_bytes();
+        let data =
+            "Hello, you all! How are you ? I am fine. Nice to meet you all insecure!".as_bytes();
         let patterns = vec!["\n\n".to_string()];
 
         let spans = find_patterns_matches(&patterns, data);
         print_spans(&spans, data);
 
-        let data = "\n\n Hello, you all! How are you ? I am fine. Nice to meet you all insecure!".as_bytes();
+        let data = "\n\n Hello, you all! How are you ? I am fine. Nice to meet you all insecure!"
+            .as_bytes();
 
         let spans = find_patterns_matches(&patterns, data);
         print_spans(&spans, data);
 
-        let data = "Hello, you all! How are you ? \n\n I am fine. Nice to meet you all insecure!".as_bytes();
+        let data = "Hello, you all! How are you ? \n\n I am fine. Nice to meet you all insecure!"
+            .as_bytes();
         let spans = find_patterns_matches(&patterns, data);
         print_spans(&spans, data);
 
-        let data = "Hello, you all! How are you ? I am fine. Nice to meet you all insecure! \n\n".as_bytes();
+        let data = "Hello, you all! How are you ? I am fine. Nice to meet you all insecure! \n\n"
+            .as_bytes();
         let spans = find_patterns_matches(&patterns, data);
         print_spans(&spans, data);
 
@@ -197,12 +201,11 @@ mod tests {
     }
 
     #[test]
-    fn not_normalized_test() -> anyhow::Result<()>{
+    fn not_normalized_test() -> anyhow::Result<()> {
         let normalizer = TextNormalizer::new(true, false, None, false);
 
         let data_file = "tests/error_data/Selena Gomez - Wikipedia.txt";
-        let data= std::fs::read_to_string(data_file)?;
-
+        let data = std::fs::read_to_string(data_file)?;
 
         //let binding = normalizer.normalize(&data)?;
         //let data_bytes = binding.as_bytes();
@@ -245,13 +248,16 @@ mod tests {
         println!("Normalized Tokens: {:?}", normalized_encoded.len());
         assert_eq!(normalized_encoded.len(), once_encoded.len());
 
-
-        let nomalized_match_result = find_patterns_matches(&vec!["\n\n".to_string()], normalized_data.as_bytes());
-        println!("Normalized Matched: {:?}", nomalized_match_result.splits.len());
+        let normalized_match_result =
+            find_patterns_matches(&vec!["\n\n".to_string()], normalized_data.as_bytes());
+        println!(
+            "Normalized Matched: {:?}",
+            normalized_match_result.splits.len()
+        );
 
         let mut normalized_total_tokens: usize = 0;
 
-        for span in nomalized_match_result.splits.iter() {
+        for span in normalized_match_result.splits.iter() {
             let sub_data = std::str::from_utf8(&normalized_data.as_bytes()[span.start..span.end])?;
             let encoded_res = tokenizer.encode(sub_data, false);
             match encoded_res {

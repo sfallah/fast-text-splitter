@@ -6,7 +6,7 @@ use tokenizers::Tokenizer;
 
 use fast_text_splitter::common::SplitResults;
 use fast_text_splitter::config::{ConfigParams, SplitterConfig};
-use fast_text_splitter::hf_tokenizer::{HFTokenizer, init_tokenizer};
+use fast_text_splitter::hf_tokenizer::{init_tokenizer, HFTokenizer};
 use fast_text_splitter::text_split_parallel;
 
 use rayon::prelude::*;
@@ -25,7 +25,11 @@ fn list_text_files(dir: &str) -> io::Result<Vec<String>> {
     Ok(files)
 }
 
-fn tokenize_data(conf: &SplitterConfig<HFTokenizer>, data: &str, normalize: bool) -> io::Result<Vec<SplitResults>> {
+fn tokenize_data(
+    conf: &SplitterConfig<HFTokenizer>,
+    data: &str,
+    normalize: bool,
+) -> io::Result<Vec<SplitResults>> {
     let splits = text_split_parallel(&conf, data, Some(normalize));
     Ok(splits)
 }
@@ -36,14 +40,29 @@ fn tokenize_file(
     file: &str,
     data_len_check: bool,
     normalize: bool,
+    check_splits: bool,
 ) -> io::Result<()> {
     println!("### Tokenize file: {}", file);
     let data = fs::read_to_string(file)?;
-    tokenize_file_data(conf, tokenizer, data_len_check, &data, normalize)?;
+    tokenize_file_data(
+        conf,
+        tokenizer,
+        data_len_check,
+        &data,
+        normalize,
+        check_splits,
+    )?;
     Ok(())
 }
 
-fn tokenize_file_data(conf: &SplitterConfig<HFTokenizer>, tokenizer: &Tokenizer, data_len_check: bool, in_data: &String, normalize: bool) -> io::Result<()> {
+fn tokenize_file_data(
+    conf: &SplitterConfig<HFTokenizer>,
+    tokenizer: &Tokenizer,
+    data_len_check: bool,
+    in_data: &String,
+    normalize: bool,
+    check_splits: bool,
+) -> io::Result<()> {
     println!("    Content-length: {}", in_data.len());
 
     let hf_encoding = tokenizer.encode(in_data.clone(), false).unwrap();
@@ -65,14 +84,29 @@ fn tokenize_file_data(conf: &SplitterConfig<HFTokenizer>, tokenizer: &Tokenizer,
         assert_eq!(reconstructed_data, in_data.clone());
     }
 
+    if check_splits {
+        for split in splits.iter() {
+            let split_str_encoded = tokenizer
+                .encode(split.split_strings.clone(), false)
+                .unwrap();
+            let split_str_encoded_len = split_str_encoded.len();
+            assert_eq!(
+                split_str_encoded_len,
+                split.results.clone().unwrap().ids.len(),
+                "Split-text: {:?} ",
+                split.split_strings
+            );
+        }
+    }
+
     let total_tk_results = splits
         .iter()
         .map(|split| split.results.clone().unwrap().ids.len())
         .sum::<usize>();
 
     println!("    Total tokens results: {}", total_tk_results);
-
     assert_eq!(hf_encoding.len(), total_tk_results);
+
     Ok(())
 }
 
@@ -96,11 +130,24 @@ fn list_files_test() -> io::Result<()> {
 #[cfg(feature = "tokenizers")]
 fn hf_local_data_test() -> tokenizers::Result<()> {
     let files = list_text_files("tests/test_data/")?;
-    let conf_params = ConfigParams::builder().tokenizer_max_len(40000).build();
+    //let conf_params = ConfigParams::builder().tokenizer_max_len(40000).build();
+    let conf_params = ConfigParams::builder()
+        .pattern(vec![
+            vec!["\n\n".to_string()],
+            vec!["\n".to_string()],
+            vec![".".to_string()],
+        ])
+        .tokenizer_max_len(40000)
+        .max_tokens(30)
+        .max_depth(3)
+        .merge_level(1)
+        .parallel(true)
+        .build();
+
     let conf = SplitterConfig::<HFTokenizer>::from_params(conf_params);
     let tokenizer = init_tokenizer(None, Some(40000))?;
     for file in files.iter() {
-        tokenize_file(&conf, &tokenizer, file, false, false)?;
+        tokenize_file(&conf, &tokenizer, file, false, false, true)?;
     }
     Ok(())
 }
@@ -129,7 +176,7 @@ fn text_normalize_test() -> tokenizers::Result<()> {
         .build();
 
     let conf = SplitterConfig::<HFTokenizer>::from_params(conf_params);
-    tokenize_file_data(&conf, &tokenizer, false, &data, true)?;
+    tokenize_file_data(&conf, &tokenizer, false, &data, true, true)?;
 
     Ok(())
 }
@@ -153,7 +200,7 @@ fn hf_nq_dataset_test() -> tokenizers::Result<()> {
     let conf = SplitterConfig::<HFTokenizer>::from_params(conf_params);
 
     files.par_iter().for_each(|file| {
-        tokenize_file(&conf, &tokenizer, file, false, false).unwrap();
+        tokenize_file(&conf, &tokenizer, file, false, false, true).unwrap();
     });
 
     Ok(())

@@ -166,7 +166,7 @@ fn end_match_hf_test() -> tokenizers::Result<()> {
     let splits = text_split_parallel(&conf, data, None);
     assert_eq!(splits.len(), 3);
 
-    let total_len = splits
+    let _total_len = splits
         .iter()
         .map(|split| split.split_strings.len())
         .sum::<usize>();
@@ -223,8 +223,14 @@ fn nl_match_hf_test() -> tokenizers::Result<()> {
     let data = "\n\n Hello, you all! How are you ? \n I am fine. Nice to meet you all insecure! \n \n \n\n";
 
     let conf_params = ConfigParams::builder()
+        .pattern(vec![
+            vec!["\n\n".to_string()],
+            vec!["\n".to_string()],
+            vec!["!".to_string(), "?".to_string(), ".".to_string()],
+        ])
         .max_tokens(12)
-        .max_depth(2)
+        .max_depth(3)
+        .merge_level(0)
         .parallel(true)
         .build();
     let conf = SplitterConfig::<HFTokenizer>::from_params(conf_params);
@@ -294,7 +300,19 @@ fn split_words_superlinear_test() -> tokenizers::Result<()> {
     let bytes = fs::read(data_path)?;
     let data = std::str::from_utf8(&bytes).unwrap();
 
-    let conf_params = ConfigParams::ws_default();
+    //let conf_params = ConfigParams::ws_default();
+    let conf_params = ConfigParams::builder()
+        .pattern(vec![
+            vec!["\n\n".to_string()],
+            vec!["\n".to_string()],
+            vec![".".to_string()],
+        ])
+        .tokenizer_max_len(40000)
+        .max_tokens(256)
+        .max_depth(2)
+        .merge_level(1)
+        .parallel(true)
+        .build();
     let conf = SplitterConfig::<WSTokenizer>::from_params(&conf_params);
 
     let splits = text_split_parallel(&conf, data, None);
