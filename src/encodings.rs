@@ -101,6 +101,7 @@ impl EncodingType {
                 std::str::from_utf8(data_bytes).unwrap().to_string()
             })
             .collect();
+
         let res: Vec<_> = splits
             .iter()
             .enumerate()

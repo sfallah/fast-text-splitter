@@ -192,7 +192,15 @@ fn sub_splits<T: Tokenize + Sync>(
             data,
         )
     } else {
-        vec![]
+        encoded.to_split_results(&vec![
+            Split {
+                tokens_span: Span {
+                    start: 0,
+                    end: 0,
+                },
+                data_span: Some(data_span),
+            },
+        ], data)
     }
 }
 
@@ -213,7 +221,7 @@ pub fn text_split<T: Tokenize + Sync>(
             &patterns[pattern_id],
             &data.as_bytes()[data_span.start..data_span.end],
         )
-        .splits
+            .splits
     } else {
         vec![Span {
             start: data_span.start,
@@ -226,38 +234,36 @@ pub fn text_split<T: Tokenize + Sync>(
     loop {
         let split = next_split(tokens_offsets, tokens_span, pt_spans[pt_spans_idx]);
 
-        if split.no_tokens() > 0 {
-            if split.no_tokens() > conf.max_tokens {
-                if pattern_id + 1 < conf.max_depth {
-                    let child_splits = text_split(
-                        tokens_offsets,
-                        tokens_words,
-                        span(split.tokens_span.start, split.tokens_span.end),
-                        pt_spans[pt_spans_idx],
-                        patterns.clone(),
-                        pattern_id + 1,
-                        conf,
-                        data,
-                    );
+        if split.no_tokens() > conf.max_tokens {
+            if pattern_id + 1 < conf.max_depth {
+                let child_splits = text_split(
+                    tokens_offsets,
+                    tokens_words,
+                    span(split.tokens_span.start, split.tokens_span.end),
+                    pt_spans[pt_spans_idx],
+                    patterns.clone(),
+                    pattern_id + 1,
+                    conf,
+                    data,
+                );
 
-                    if let Some(merge_level) = conf.merge_level {
-                        if child_splits.len() > 1 && merge_level <= pattern_id {
-                            let merged_child_splits = merge_splits(&child_splits, conf.max_tokens);
-                            splits.extend(merged_child_splits);
-                        } else {
-                            splits.extend(child_splits);
-                        }
+                if let Some(merge_level) = conf.merge_level {
+                    if child_splits.len() > 1 && merge_level <= pattern_id {
+                        let merged_child_splits = merge_splits(&child_splits, conf.max_tokens);
+                        splits.extend(merged_child_splits);
                     } else {
                         splits.extend(child_splits);
                     }
                 } else {
-                    let sub_splits =
-                        split_tokens_len(tokens_words, split.tokens_span, conf.max_tokens);
-                    splits.extend(sub_splits);
-                };
+                    splits.extend(child_splits);
+                }
             } else {
-                splits.push(split);
-            }
+                let sub_splits =
+                    split_tokens_len(tokens_words, split.tokens_span, conf.max_tokens);
+                splits.extend(sub_splits);
+            };
+        } else {
+            splits.push(split);
         }
 
         pt_spans_idx += 1;
