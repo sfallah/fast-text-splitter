@@ -184,8 +184,8 @@ fn text_normalize_test() -> tokenizers::Result<()> {
 #[test]
 #[cfg(feature = "tokenizers")]
 fn hf_nq_dataset_test() -> tokenizers::Result<()> {
-    let files = list_text_files("data/train/")?;
-    let tokenizer = init_tokenizer(None, Some(400000))?;
+    let files = list_text_files("data/dev_all/")?;
+    let tokenizer = init_tokenizer(None, Some(100_000))?;
 
     let conf_params = ConfigParams::builder()
         .pattern(vec![
@@ -193,8 +193,8 @@ fn hf_nq_dataset_test() -> tokenizers::Result<()> {
             vec!["\n".to_string()],
             vec![".".to_string(), "!".to_string(), "?".to_string()],
         ])
-        .tokenizer_max_len(400000)
-        //.merge_level(0)
+        .tokenizer_max_len(100_000)
+        .merge_level(0)
         .max_depth(3)
         .build();
     let conf = SplitterConfig::<HFTokenizer>::from_params(conf_params);
