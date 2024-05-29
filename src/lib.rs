@@ -377,19 +377,25 @@ pub fn split_tokens_len(
             let next_split_start_word = tokens_words.get(split_end).unwrap();
 
             if split_end_word == next_split_start_word {
-                let split_end_pos = tokens_words
+                let split_end_pos_opt = tokens_words
                     .iter()
                     .skip(split_start)
                     .take(max_tokens)
                     .rev()
-                    .position(|&x| x != *split_end_word)
-                    .unwrap();
-                splits.push(Split::new(span(
-                    split_start,
-                    split_start + max_tokens - split_end_pos,
-                )));
-                split_start = split_start + max_tokens - split_end_pos;
-                split_end = split_start + max_tokens;
+                    .position(|&x| x != *split_end_word);
+
+                if let Some(split_end_pos) = split_end_pos_opt {
+                    splits.push(Split::new(span(
+                        split_start,
+                        split_start + max_tokens - split_end_pos,
+                    )));
+                    split_start = split_start + max_tokens - split_end_pos;
+                    split_end = split_start + max_tokens;
+                } else {
+                    splits.push(Split::new(span(split_start, split_end)));
+                    split_start = split_end;
+                    split_end = split_start + max_tokens;
+                }
             } else {
                 splits.push(Split {
                     tokens_span: span(split_start, split_end),

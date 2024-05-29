@@ -108,8 +108,9 @@ fn hf_local_data_test() -> tokenizers::Result<()> {
 #[test]
 #[cfg(feature = "tokenizers")]
 fn text_normalize_test() -> tokenizers::Result<()> {
-    let file = "data/dev/Super Bowl 50 halftime show - Wikipedia.txt";
+    //let file = "data/dev/Super Bowl 50 halftime show - Wikipedia.txt";
     //let file = "data/dev_all/List_of_Orange_Is_the_New_Black_characters.txt";
+    let file = "tests/error_data/Geothermal_gradient.txt";
     let data = fs::read_to_string(file)?;
 
     let tokenizer = init_tokenizer(None, Some(data.len()))?;
@@ -121,6 +122,7 @@ fn text_normalize_test() -> tokenizers::Result<()> {
             vec![".".to_string(), "!".to_string(), "?".to_string()],
         ])
         .tokenizer_max_len(data.len())
+        .max_tokens(50)
         .merge_level(0)
         .max_depth(2)
         //.parallel(true)
