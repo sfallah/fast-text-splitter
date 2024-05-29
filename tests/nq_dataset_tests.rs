@@ -9,6 +9,8 @@ use fast_text_splitter::config::{ConfigParams, SplitterConfig};
 use fast_text_splitter::hf_tokenizer::{HFTokenizer, init_tokenizer};
 use fast_text_splitter::text_split_parallel;
 
+use rayon::prelude::*;
+
 fn list_text_files(dir: &str) -> io::Result<Vec<String>> {
     let mut files = Vec::new();
 
@@ -133,7 +135,7 @@ fn text_normalize_test() -> tokenizers::Result<()> {
 #[test]
 #[cfg(feature = "tokenizers")]
 fn hf_nq_dataset_test() -> tokenizers::Result<()> {
-    let files = list_text_files("data/dev_all/")?;
+    let files = list_text_files("data/train/")?;
     let tokenizer = init_tokenizer(None, Some(400000))?;
 
     let conf_params = ConfigParams::builder()
@@ -148,8 +150,9 @@ fn hf_nq_dataset_test() -> tokenizers::Result<()> {
         .build();
     let conf = SplitterConfig::<HFTokenizer>::from_params(conf_params);
 
-    for file in files.iter() {
-        tokenize_file(&conf, &tokenizer, file, false, false)?;
-    }
+    files.par_iter().for_each(|file| {
+        tokenize_file(&conf, &tokenizer, file, false, false).unwrap();
+    });
+
     Ok(())
 }
