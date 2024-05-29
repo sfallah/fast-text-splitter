@@ -310,7 +310,7 @@ fn split_words_superlinear_test() -> tokenizers::Result<()> {
         .tokenizer_max_len(40000)
         //.max_tokens(60)
         .max_depth(3)
-        //.merge_level(1)
+        .merge_level(0)
         .parallel(true)
         .build();
     let conf = SplitterConfig::<WSTokenizer>::from_params(&conf_params);

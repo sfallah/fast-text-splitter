@@ -197,13 +197,13 @@ fn hf_nq_dataset_test() -> tokenizers::Result<()> {
             vec![".".to_string(), "!".to_string(), "?".to_string()],
         ])
         .tokenizer_max_len(100_000)
-        .merge_level(0)
+        .merge_level(1)
         .max_depth(3)
         .build();
     let conf = SplitterConfig::<HFTokenizer>::from_params(conf_params);
 
 
-    files.par_iter().take(500).for_each(|file| {
+    files.par_iter().for_each(|file| {
         tokenize_file(&conf, &tokenizer, file, true, false, false).unwrap();
     });
 
