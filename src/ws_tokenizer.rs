@@ -19,101 +19,77 @@ impl Tokenize for WSTokenizer {
     }
 }
 
-pub fn whitespace_punctuation_tokenize(data: &str) -> Vec<(usize, usize)> {
-    let mut spans: Vec<(usize, usize)> = vec![];
-    let mut start: usize = 0;
-    let mut bytes_start: usize = 0;
-    let mut bytes_end: usize = 0;
-    data.chars().enumerate().for_each(|(idx, c)| {
-        let c_len = c.len_utf8();
-        if !c.is_alphanumeric() {
-            if start < idx {
-                spans.push((bytes_start, bytes_end));
+pub fn whitespace_punctuation_tokenize(text: &str) -> Vec<(usize, usize)> {
+    let mut offsets = Vec::new();
+    let mut start_index = 0;
+    let mut current_index = 0;
+    let mut in_token = false;
+
+    let mut chars = text.chars();
+
+    while let Some(c) = chars.next() {
+        let char_len = c.len_utf8();
+        if c.is_whitespace() {
+            if in_token {
+                offsets.push((start_index, current_index));
+                in_token = false;
             }
-            if c.is_ascii_punctuation() {
-                spans.push((bytes_end, bytes_end + c_len));
+            current_index += char_len;
+        } else if c.is_ascii_punctuation() {
+            if in_token {
+                offsets.push((start_index, current_index));
+                in_token = false;
             }
-            start = idx + 1;
-            bytes_start = bytes_end + c_len;
+            offsets.push((current_index, current_index + char_len));
+            current_index += char_len;
+        } else {
+            if !in_token {
+                start_index = current_index;
+                in_token = true;
+            }
+            current_index += char_len;
         }
-        bytes_end += c_len;
-    });
-    if bytes_start < data.len() {
-        spans.push((bytes_start, data.len()));
     }
-    spans
+
+    if in_token {
+        offsets.push((start_index, current_index));
+    }
+
+    offsets
+}
+
+pub fn ws_punc_tokens(text: &str) -> Vec<String> {
+    let mut tokens = Vec::new();
+    let mut current_token = String::new();
+
+    for c in text.chars() {
+        if c.is_whitespace() {
+            if !current_token.is_empty() {
+                tokens.push(current_token.clone());
+                current_token.clear();
+            }
+        } else if c.is_ascii_punctuation() {
+            if !current_token.is_empty() {
+                tokens.push(current_token.clone());
+                current_token.clear();
+            }
+            tokens.push(c.to_string());
+        } else {
+            current_token.push(c);
+        }
+    }
+
+    if !current_token.is_empty() {
+        tokens.push(current_token);
+    }
+
+    tokens
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    fn ws_punc_tokens(text: &str) -> Vec<String> {
-        let mut tokens = Vec::new();
-        let mut current_token = String::new();
-
-        for c in text.chars() {
-            if c.is_whitespace() {
-                if !current_token.is_empty() {
-                    tokens.push(current_token.clone());
-                    current_token.clear();
-                }
-            } else if c.is_ascii_punctuation() {
-                if !current_token.is_empty() {
-                    tokens.push(current_token.clone());
-                    current_token.clear();
-                }
-                tokens.push(c.to_string());
-            } else {
-                current_token.push(c);
-            }
-        }
-
-        if !current_token.is_empty() {
-            tokens.push(current_token);
-        }
-
-        tokens
-    }
-
-    fn tokenize_with_offsets_zero(text: &str) -> Vec<(usize, usize)> {
-        let mut offsets = Vec::new();
-        let mut start_index = 0;
-        let mut current_index = 0;
-        let mut in_token = false;
-
-        let mut chars = text.chars();
-
-        while let Some(c) = chars.next() {
-            let char_len = c.len_utf8();
-            if c.is_whitespace() {
-                if in_token {
-                    offsets.push((start_index, current_index));
-                    in_token = false;
-                }
-                current_index += char_len;
-            } else if c.is_ascii_punctuation() {
-                if in_token {
-                    offsets.push((start_index, current_index));
-                    in_token = false;
-                }
-                offsets.push((current_index, current_index + char_len));
-                current_index += char_len;
-            } else {
-                if !in_token {
-                    start_index = current_index;
-                    in_token = true;
-                }
-                current_index += char_len;
-            }
-        }
-
-        if in_token {
-            offsets.push((start_index, current_index));
-        }
-
-        offsets
-    }
+    use std::str::from_utf8;
 
     #[test]
     fn alphanumeric_test() {
@@ -134,7 +110,7 @@ mod tests {
     }
 
     fn get_token(data: &str, start: usize, end: usize) -> String {
-        data[start..end].to_string()
+        from_utf8(&data.as_bytes()[start..end]).unwrap().to_string()
     }
 
     #[test]
@@ -190,9 +166,6 @@ mod tests {
             println!("'{}'", token);
         }
 
-        let zero_cp_offsets = tokenize_with_offsets_zero(data);
-        assert_eq!(wd_spans, zero_cp_offsets);
-
         let expected_tokens = ws_punc_tokens(data);
         assert_eq!(ws_tokens, expected_tokens);
     }
@@ -210,5 +183,29 @@ mod tests {
         let data = "  \n \t ";
         let wd_spans = whitespace_punctuation_tokenize(data);
         assert_eq!(wd_spans.len(), 0);
+    }
+
+    #[test]
+    fn ws_superlinear_split_test() {
+        let split_string =  "\"Seek competition\" is similarly useless; what if the prize isn't worth competing for? Sufficiently fast exponential growth guarantees both the shape and magnitude of the return curve — because something that grows fast enough will grow big even if it's trivially small at first — but thresholds only guarantee the shape. ";
+
+        let tokens_spans = whitespace_punctuation_tokenize(split_string);
+
+        let ws_tokens: Vec<_> = tokens_spans
+            .iter()
+            .map(|(start, end)| get_token(split_string, *start, *end))
+            .collect();
+        println!("{:?}", ws_tokens);
+        let tokens = ws_punc_tokens(split_string);
+        println!("{:?}", tokens);
+        assert_eq!(tokens.len(), tokens_spans.len());
+        assert_eq!(tokens, ws_tokens);
+
+        let problem_chars = split_string
+            .chars()
+            .filter(|c| !c.is_whitespace() && !c.is_alphanumeric() && !c.is_ascii_punctuation())
+            .map(|c| format!("'{}'", c))
+            .collect::<String>();
+        println!("{:?}", problem_chars);
     }
 }

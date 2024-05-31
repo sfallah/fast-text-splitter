@@ -80,7 +80,7 @@ pub fn text_split_ws(
         ))
     };
 
-    text_split_parallel(&conf, data, None)
+    text_split_parallel(&conf, data)
         .iter()
         .map(|x| PySplitResults {
             results: None,
@@ -97,7 +97,7 @@ pub fn text_split_hf(data: &str, py_conf_params: &PyConfigParams) -> Vec<PySplit
     let conf_params: ConfigParams = py_conf_params.clone().into();
     let conf = config::SplitterConfig::<HFTokenizer>::from_params(conf_params);
 
-    text_split_parallel(&conf, data, None)
+    text_split_parallel(&conf, data)
         .iter()
         .map(|x| PySplitResults {
             results: x.results.clone().map(|t| t.into()),

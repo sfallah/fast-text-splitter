@@ -1,11 +1,12 @@
 use std::fs;
 
-use criterion::{black_box, Criterion, criterion_main};
-use tokenizers::{NormalizedString, Normalizer};
+use criterion::{black_box, criterion_main, Criterion};
 use tokenizers::normalizers::bert::BertNormalizer;
+use tokenizers::{NormalizedString, Normalizer};
 
 use fast_text_splitter::ac_matches::init_aho_corasick;
 use fast_text_splitter::config::{ConfigParams, SplitterConfig};
+use fast_text_splitter::hf_tokenizer::init_tokenizer;
 #[cfg(feature = "tokenizers")]
 use fast_text_splitter::hf_tokenizer::HFTokenizer;
 use fast_text_splitter::normalizer::TextNormalizer;
@@ -36,7 +37,7 @@ pub fn tokenizer_single_split_benchmark(c: &mut Criterion) {
 
     c.bench_function("tokenizer_single_split", |b| {
         b.iter(|| {
-            let splits = text_split_parallel(&conf, data, Some(false));
+            let splits = text_split_parallel(&conf, data);
             black_box(splits);
         })
     });
@@ -115,8 +116,46 @@ pub fn words_single_split_benchmark(c: &mut Criterion) {
 
     c.bench_function("words_single_split", |b| {
         b.iter(|| {
-            let splits = text_split_parallel(&conf, data, Some(false));
+            let splits = text_split_parallel(&conf, data);
             black_box(splits);
+        })
+    });
+}
+
+pub fn hf_single_tokenize_benchmark(c: &mut Criterion) {
+    let data_path = "tests/test_data/superlinear.txt";
+    let bytes = fs::read(data_path).unwrap();
+    let data = std::str::from_utf8(&bytes).unwrap();
+    tokenizers::utils::parallelism::set_parallelism(true);
+    let hf_tokenizer = init_tokenizer(None, None, false).unwrap();
+
+    c.bench_function("hf_single_tokenize", |b| {
+        b.iter(|| {
+            let encoded = hf_tokenizer.encode(data, false).unwrap();
+            black_box(encoded);
+        })
+    });
+}
+
+pub fn hf_batch_tokenize_benchmark(c: &mut Criterion) {
+    tokenizers::utils::parallelism::set_parallelism(false);
+
+    let data_path = "tests/test_data/superlinear.txt";
+    let bytes = fs::read(data_path).unwrap();
+    let data = std::str::from_utf8(&bytes).unwrap();
+    let ws_splitter = SplitterConfig::<WSTokenizer>::from_params(&ConfigParams::ws_default());
+    let ws_splits = text_split_parallel(&ws_splitter, data);
+    let split_str: Vec<_> = ws_splits
+        .iter()
+        .map(|split| split.split_strings.clone())
+        .collect();
+
+    let hf_tokenizer = init_tokenizer(None, None, false).unwrap();
+
+    c.bench_function("hf_batch_tokenize", |b| {
+        b.iter(|| {
+            let encoded = hf_tokenizer.encode_batch(split_str.clone(), false).unwrap();
+            black_box(encoded);
         })
     });
 }
@@ -133,6 +172,9 @@ pub fn benches() {
     words_single_split_benchmark(&mut criterion);
     #[cfg(feature = "tokenizers")]
     tokenizer_single_split_benchmark(&mut criterion);
+
+    //hf_single_tokenize_benchmark(&mut criterion);
+    //hf_batch_tokenize_benchmark(&mut criterion);
 }
 
 criterion_main!(benches);

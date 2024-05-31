@@ -220,7 +220,7 @@ mod tests {
         }
         assert_eq!(reconstructed_data, data);
 
-        let tokenizer = init_tokenizer(None, Some(data.len())).unwrap();
+        let tokenizer = init_tokenizer(None, Some(data.len()), true).unwrap();
         let once_encoded = tokenizer.encode(data.as_str(), false).unwrap();
         println!("Once Tokens: {:?}", once_encoded.len());
 

@@ -8,7 +8,6 @@ pub struct SplitterConfig<T: Tokenize + Sync> {
     pub pattern: Vec<Vec<String>>,
     pub tokenizer: T,
     pub max_tokens: usize,
-    pub max_depth: usize,
     pub merge_level: Option<usize>,
     pub parallel: bool,
 }
@@ -144,7 +143,6 @@ impl SplitterConfig<WSTokenizer> {
                 .unwrap_or(vec![vec!["\n\n".to_string()], vec!["\n".to_string()]]),
             tokenizer: WSTokenizer {},
             max_tokens: config_params.max_tokens.unwrap_or(384),
-            max_depth: config_params.max_depth.unwrap_or(2),
             merge_level: config_params.merge_level,
             parallel: config_params.parallel.unwrap_or(true),
         }
@@ -162,11 +160,11 @@ impl SplitterConfig<HFTokenizer> {
                 tokenizer: init_tokenizer(
                     config_params.model_path,
                     config_params.tokenizer_max_len,
+                    false,
                 )
                 .unwrap(),
             },
             max_tokens: config_params.max_tokens.unwrap_or(512),
-            max_depth: config_params.max_depth.unwrap_or(2),
             merge_level: config_params.merge_level,
             parallel: config_params.parallel.unwrap_or(true),
         }
@@ -211,7 +209,6 @@ mod test {
         let splitter_config = SplitterConfig::<WSTokenizer>::from_params(&config_params);
 
         assert_eq!(splitter_config.max_tokens, 384);
-        assert_eq!(splitter_config.max_depth, 2);
         assert_eq!(splitter_config.merge_level, Some(1));
         assert_eq!(splitter_config.parallel, true);
     }
@@ -223,7 +220,6 @@ mod test {
         let splitter_config = SplitterConfig::<HFTokenizer>::from_params(config_params);
 
         assert_eq!(splitter_config.max_tokens, 512);
-        assert_eq!(splitter_config.max_depth, 2);
         assert_eq!(splitter_config.merge_level, Some(1));
         assert_eq!(splitter_config.parallel, true);
     }
