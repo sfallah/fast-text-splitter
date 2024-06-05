@@ -1,6 +1,5 @@
 use aho_corasick::Span;
 use rayon::prelude::*;
-use std::str::from_utf8;
 
 use crate::ac_matches::find_patterns_matches;
 use crate::common::{merge_split_results, merge_splits, Split, SplitResults};

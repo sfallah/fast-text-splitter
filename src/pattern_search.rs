@@ -46,6 +46,14 @@ impl<'a> SearchResult<'a> {
         let end = self.splits[self.splits.len() - 1].full_span().end;
         Span { start, end }
     }
+
+    pub fn len(&self) -> usize {
+        self.splits.iter().map(|split| split.len()).sum()
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.splits.iter().all(|split| split.is_empty())
+    }
 }
 
 impl std::fmt::Debug for SearchResult<'_> {
@@ -180,7 +188,7 @@ pub fn find_pattern<'a>(pattern: &'a str, data: &'a [u8], data_span: Span) -> Se
 
     if matches.len() == 1 {
         // If the pattern is not at the end of the data
-        if start < data.len() - 1 {
+        if start < data_span.len() - 1 {
             let split = SearchSplit::new(span(data_span.start + start, data_span.end), data, pattern, 0);
 
             pattern_splits.push(split);
@@ -260,6 +268,21 @@ mod tests {
         };
 
         assert!(!span_within_bounds(end_wrong_span, data.len()));
+
+        Ok(())
+    }
+
+    #[test]
+    fn strange_case_test() -> anyhow::Result<()> {
+        let pattern = "\n";
+        let data = "In fact, the correlation. Between superlinear.\nReturns and inequality is so strong that it yields.";
+        let result = find_pattern(pattern, data.as_bytes(), span(0, data.len()));
+        assert_eq!(result.splits.len(), 2);
+
+        let data1 = "Returns and inequality is so strong that it yields.".as_bytes();
+        let pattern1 = ".";
+        let result1 = find_pattern(pattern1, data1, span(0, data1.len()));
+        assert_eq!(result1.splits.len(), 1);
 
         Ok(())
     }

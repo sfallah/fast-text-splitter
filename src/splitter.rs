@@ -57,13 +57,14 @@ impl SplitNode<'_> {
         self.search_result.reconstruct()
     }
 
-    pub fn merge(&self, merge_level: usize) -> Vec<Span> {
+    pub fn merge(&self, merge_level: usize, filter_empty: bool) -> Vec<Span> {
         let mut result = Vec::new();
-        if self.pattern_id > merge_level {
+        let filter = filter_empty && self.search_result.is_empty();
+        if !filter && self.pattern_id > merge_level {
             result.push(self.search_result.full_span());
         } else {
             for child in &self.children {
-                result.extend(child.merge(merge_level));
+                result.extend(child.merge(merge_level, filter_empty));
             }
         }
         result
@@ -78,15 +79,19 @@ pub fn split<'a>(
 ) -> SplitNode<'a> {
     let pattern = patterns[pattern_id];
     let search_result = find_pattern(pattern, data, data_span);
+    let search_res_reconsted = search_result.reconstruct();
 
     if search_result.matched {
         let children: Vec<_> = search_result
             .splits
             .iter()
             .map(|search_split| {
-                if pattern_id + 1 < patterns.len() {
+                if pattern_id + 1 < patterns.len() && !search_split.is_empty() {
                     split(data, search_split.span, patterns.clone(), pattern_id + 1)
                 } else {
+                    let split_reconsted = search_split.reconstruct();
+                    //println!("res: {:?}", search_res_reconsted);
+                    //println!("split: {:?}", split_reconsted);
                     SplitNode {
                         pattern_id: pattern_id + 1,
                         data_span: search_split.span,
@@ -104,7 +109,7 @@ pub fn split<'a>(
             children,
         }
     } else {
-        if pattern_id + 1 < patterns.len() {
+        if pattern_id + 1 < patterns.len() && !data_span.is_empty()  {
             split(data, data_span, patterns, pattern_id + 1)
         } else {
             SplitNode {
@@ -144,7 +149,7 @@ mod tests {
 
     #[test]
     fn multi_level_split() {
-        let data = "\n\n\
+        let _data_raw = "\n\n\
         \n\n\
         \n\n\
         In fact, the correlation. Between superlinear.\n\
@@ -158,6 +163,12 @@ mod tests {
         A few big winners. \n\
         Outperform everyone else.\n\n"
             .as_bytes();
+
+        let file_path = "tests/splitter_test_data/data_nlnl_01.txt";
+        let binding = std::fs::read(file_path).unwrap();
+        let data = binding.as_slice();
+
+        //assert_eq!(data_raw, data);
 
         let patterns = vec!["\n\n", "\n", "."];
         //let patterns = vec!["\n\n".to_string()];
@@ -174,10 +185,36 @@ mod tests {
         println!("{}", tree.to_string(true));
         assert_eq!(from_utf8(data).unwrap(), tree.reconstruct());
 
-        let merged = tree.merge(1);
-        for span in merged {
+        println!("#### Merged Level 0 Checks ####");
+        let merged_level_0 = tree.merge(0, false);
+        assert_eq!(merged_level_0.len(), 8);
+
+        let merged_no_empty_level_0: Vec<_> = tree.merge(0, true);
+        assert_eq!(merged_no_empty_level_0.len(), 3);
+
+        for span in merged_no_empty_level_0.iter() {
             println!("{:?}", from_utf8(&data[span.start..span.end]).unwrap());
         }
+
+        println!("\n #### Merged Level 1 Checks ####");
+        let merged_level_1 = tree.merge(1, false);
+        assert_eq!(merged_level_1.len(), 8);
+        let merged_no_empty_level_1: Vec<_> = tree.merge(1, true);
+        assert_eq!(merged_no_empty_level_1.len(), 7);
+        for span in merged_no_empty_level_1.iter() {
+            println!("{:?}", from_utf8(&data[span.start..span.end]).unwrap());
+        }
+
+        println!("\n #### Merged Level 2 Checks ####");
+        let merged_level_2 = tree.merge(2, false);
+        for span in merged_level_2.iter() {
+            println!("{:?}", from_utf8(&data[span.start..span.end]).unwrap());
+        }
+        assert_eq!(merged_level_2.len(), 8);
+        let merged_no_empty_level_2: Vec<_> = tree.merge(2, true);
+        assert_eq!(merged_no_empty_level_2.len(), 8);
+
+
     }
 
     #[test]
@@ -207,7 +244,7 @@ mod tests {
         println!("{}", tree.to_string(true));
         assert_eq!(from_utf8(data).unwrap(), tree.reconstruct());
 
-        let merged = tree.merge(1);
+        let merged = tree.merge(1, false);
         for span in merged {
             println!("{:?}", from_utf8(&data[span.start..span.end]).unwrap());
         }
