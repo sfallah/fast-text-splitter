@@ -1,4 +1,6 @@
 use std::fs;
+use std::str::from_utf8;
+use aho_corasick::Span;
 
 use criterion::{black_box, criterion_main, Criterion};
 use tokenizers::normalizers::bert::BertNormalizer;
@@ -10,6 +12,7 @@ use fast_text_splitter::hf_tokenizer::init_tokenizer;
 #[cfg(feature = "tokenizers")]
 use fast_text_splitter::hf_tokenizer::HFTokenizer;
 use fast_text_splitter::normalizer::TextNormalizer;
+use fast_text_splitter::splitter::split;
 use fast_text_splitter::text_split_parallel;
 use fast_text_splitter::ws_tokenizer::WSTokenizer;
 
@@ -122,6 +125,34 @@ pub fn words_single_split_benchmark(c: &mut Criterion) {
     });
 }
 
+#[cfg(feature = "default")]
+pub fn tree_split_benchmark(c: &mut Criterion) {
+    let data_path = "tests/test_data/superlinear.txt";
+    let binding = fs::read(data_path).unwrap();
+    let data = binding.as_slice();
+
+    c.bench_function("tree_split_benchmark", |b| {
+        b.iter(|| {
+            let patterns = vec!["\n\n", "\n", "."];
+            let tree = split(
+                data,
+                Span {
+                    start: 0,
+                    end: data.len(),
+                },
+                patterns,
+                0,
+            );
+            let merged = tree.merge(1);
+            let merged_spans_filtered: Vec<_> = merged.iter().filter(|span| !span.is_empty()).collect();
+            let splits: Vec<_> = merged_spans_filtered.iter().map(|span| {
+                from_utf8(&data[span.start..span.end]).unwrap()
+            }).collect();
+            black_box(splits);
+        })
+    });
+}
+
 pub fn hf_single_tokenize_benchmark(c: &mut Criterion) {
     let data_path = "tests/test_data/superlinear.txt";
     let bytes = fs::read(data_path).unwrap();
@@ -170,8 +201,9 @@ pub fn benches() {
     //text_normalize_benchmark(&mut criterion);
     #[cfg(feature = "default")]
     words_single_split_benchmark(&mut criterion);
-    #[cfg(feature = "tokenizers")]
-    tokenizer_single_split_benchmark(&mut criterion);
+    tree_split_benchmark(&mut criterion);
+    //#[cfg(feature = "tokenizers")]
+    //tokenizer_single_split_benchmark(&mut criterion);
 
     //hf_single_tokenize_benchmark(&mut criterion);
     //hf_batch_tokenize_benchmark(&mut criterion);

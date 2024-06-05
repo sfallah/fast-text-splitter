@@ -32,14 +32,9 @@ pub fn text_split_parallel<T: Tokenize + Sync>(
     let mut first_level_pattern_id = 0;
 
     loop {
-        println!(
-            "Find Matches Pattern ID: {}, Pattern: {:?}",
-            first_level_pattern_id, &conf.pattern[first_level_pattern_id]
-        );
-        println!("Sub Data: {:?}", data);
+
         let match_result =
             find_patterns_matches(&conf.pattern[first_level_pattern_id], data.as_bytes());
-        println!("Match Result: {:?}", match_result.splits);
         matches_offsets = match_result.splits;
         if match_result.matched {
             break;
@@ -204,16 +199,9 @@ pub fn text_split<T: Tokenize + Sync>(
     let mut tokens_span = in_tokens_span;
     let pt_spans = if pattern_id < patterns.len() {
         let data_bytes = &data.as_bytes()[data_span.start..data_span.end];
-        println!(
-            "Find Matches Pattern ID: {}, Pattern: {:?}",
-            pattern_id, patterns[pattern_id]
-        );
-        println!("Sub Data: {:?}", from_utf8(data_bytes).unwrap());
 
         let mt_spans = find_patterns_matches(&patterns[pattern_id], data_bytes).splits;
-        println!("Match Result: {:?}", mt_spans);
         //let mt_spans_offsets = mt_spans.iter().map(|x| span(data_span.start + x.start, data_span.start + x.end)).collect();
-        //println!("Match Result Offsets: {:?}", mt_spans_offsets);
         mt_spans
     } else {
         vec![Span {
