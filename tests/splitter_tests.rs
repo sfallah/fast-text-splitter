@@ -1,7 +1,7 @@
-use std::fs;
-use std::str::from_utf8;
 use aho_corasick::Span;
 use fast_text_splitter::splitter::split;
+use std::fs;
+use std::str::from_utf8;
 
 #[test]
 fn pattern_split_superlinear_test() {
@@ -25,14 +25,17 @@ fn pattern_split_superlinear_test() {
     let reconsted = tree.reconstruct();
     assert_eq!(from_utf8(&data).unwrap(), reconsted);
 
-    let merged_0 = tree.merge(0);
-    let merged_1 = tree.merge(1);
-    let merged_2 = tree.merge(2);
+    let merged_0 = tree.merge(0, false);
+    let splits_len_sum: usize = merged_0.iter().map(|span| span.len()).sum();
+    assert_eq!(data.len(), splits_len_sum);
+
+    let merged_1 = tree.merge(1, false);
+    let merged_2 = tree.merge(2, false);
     println!("Merged 0: {:?}", merged_0.len());
     println!("Merged 1: {:?}", merged_1.len());
     println!("Merged 2: {:?}", merged_2.len());
 
-    let merged_spans_filtered:Vec<_> = merged_1.iter().filter(|span| !span.is_empty()).collect();
+    let merged_spans_filtered: Vec<_> = merged_1.iter().filter(|span| !span.is_empty()).collect();
 
     println!("Merged Spans: {:?}", merged_spans_filtered.len());
     for span in merged_spans_filtered {

@@ -1,6 +1,6 @@
+use aho_corasick::Span;
 use std::fs;
 use std::str::from_utf8;
-use aho_corasick::Span;
 
 use criterion::{black_box, criterion_main, Criterion};
 use tokenizers::normalizers::bert::BertNormalizer;
@@ -143,11 +143,13 @@ pub fn tree_split_benchmark(c: &mut Criterion) {
                 patterns,
                 0,
             );
-            let merged = tree.merge(1);
-            let merged_spans_filtered: Vec<_> = merged.iter().filter(|span| !span.is_empty()).collect();
-            let splits: Vec<_> = merged_spans_filtered.iter().map(|span| {
-                from_utf8(&data[span.start..span.end]).unwrap()
-            }).collect();
+            let merged = tree.merge(0, true);
+            let merged_spans_filtered: Vec<_> =
+                merged.iter().filter(|span| !span.is_empty()).collect();
+            let splits: Vec<_> = merged_spans_filtered
+                .iter()
+                .map(|span| from_utf8(&data[span.start..span.end]).unwrap())
+                .collect();
             black_box(splits);
         })
     });

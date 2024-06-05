@@ -1,8 +1,8 @@
 use std::str::from_utf8;
 
+use crate::span;
 use aho_corasick::Span;
 use memchr::memmem::find_iter;
-use crate::span;
 
 #[derive(Clone, PartialEq, Eq)]
 pub struct SearchResult<'a> {
@@ -42,7 +42,7 @@ impl<'a> SearchResult<'a> {
             .to_string()
     }
     pub fn full_span(&self) -> Span {
-        let start = self.splits[0].full_span().start;
+        let start = self.offset;
         let end = self.splits[self.splits.len() - 1].full_span().end;
         Span { start, end }
     }
@@ -159,13 +159,7 @@ pub fn find_pattern<'a>(pattern: &'a str, data: &'a [u8], data_span: Span) -> Se
             data,
             offset: data_span.start,
             pattern,
-            splits: vec![SearchSplit::new(
-                span(data_span.start,
-                data_span.end),
-                data,
-                pattern,
-                0,
-            )],
+            splits: vec![SearchSplit::new(Span::from(data_span), data, pattern, 0)],
             matched: false,
         };
     }
@@ -176,7 +170,12 @@ pub fn find_pattern<'a>(pattern: &'a str, data: &'a [u8], data_span: Span) -> Se
 
     // If the first match is not at the beginning of the data
     if start > 0 {
-        let split = SearchSplit::new(span(data_span.start, data_span.start + start), data, pattern, 1);
+        let split = SearchSplit::new(
+            span(data_span.start, data_span.start + start),
+            data,
+            pattern,
+            1,
+        );
         pattern_splits.push(split);
     } else {
         // If the first match is at the beginning of the data
@@ -189,7 +188,12 @@ pub fn find_pattern<'a>(pattern: &'a str, data: &'a [u8], data_span: Span) -> Se
     if matches.len() == 1 {
         // If the pattern is not at the end of the data
         if start < data_span.len() - 1 {
-            let split = SearchSplit::new(span(data_span.start + start, data_span.end), data, pattern, 0);
+            let split = SearchSplit::new(
+                span(data_span.start + start, data_span.end),
+                data,
+                pattern,
+                0,
+            );
 
             pattern_splits.push(split);
         }
@@ -204,8 +208,7 @@ pub fn find_pattern<'a>(pattern: &'a str, data: &'a [u8], data_span: Span) -> Se
 
     matches.iter().skip(1).for_each(|&end| {
         let split = SearchSplit::new(
-            span(data_span.start + start,
-            data_span.start + end),
+            span(data_span.start + start, data_span.start + end),
             data,
             pattern,
             1,
@@ -215,7 +218,12 @@ pub fn find_pattern<'a>(pattern: &'a str, data: &'a [u8], data_span: Span) -> Se
     });
 
     if start < data_span.len() - 1 {
-        let split = SearchSplit::new(span(data_span.start + start, data_span.end), data, pattern, 0);
+        let split = SearchSplit::new(
+            span(data_span.start + start, data_span.end),
+            data,
+            pattern,
+            0,
+        );
         pattern_splits.push(split);
     }
 
@@ -288,6 +296,16 @@ mod tests {
     }
 
     #[test]
+    fn search_empty_test() -> anyhow::Result<()> {
+        let pattern = "\n";
+        let data = "";
+        let result = find_pattern(pattern, data.as_bytes(), span(0, data.len()));
+        assert_eq!(result.splits.len(), 1);
+        assert_eq!(result.splits[0].data(), "".to_string());
+        Ok(())
+    }
+
+    #[test]
     fn span_to_string_test() -> anyhow::Result<()> {
         let data = "Hello, you all! How are you?";
         let empty_span = Span { start: 5, end: 5 };
@@ -352,11 +370,16 @@ mod tests {
         assert_eq!(result1.splits[0].span, Span { start: 0, end: 0 });
         assert_eq!(result1.splits[0].stride, 1);
         assert_eq!(result1.splits[0].data(), "".to_string());
+        assert_eq!(result1.splits[0].reconstruct(), "\n\n".to_string());
 
         assert_eq!(result1.splits[1].span.len(), data1.len() - 2);
         assert_eq!(result1.splits[1].stride, 0);
         assert_eq!(
             result1.splits[1].data(),
+            "Hello, you all! How are you?".to_string()
+        );
+        assert_eq!(
+            result1.splits[1].reconstruct(),
             "Hello, you all! How are you?".to_string()
         );
 
@@ -368,6 +391,56 @@ mod tests {
         assert_eq!(
             result2.splits[0].data(),
             "Hello, you all! How are you?".to_string()
+        );
+        assert_eq!(
+            result2.splits[0].reconstruct(),
+            "Hello, you all! How are you?\n\n".to_string()
+        );
+
+        Ok(())
+    }
+
+    #[test]
+    fn offseted_single_ends_test() -> anyhow::Result<()> {
+        let pattern = "\n\n";
+        let before = "<from before NOT IN SEARCH>\n\n";
+        let before_len = before.len();
+        let data_1 = "\n\nHello, you all! How are you?";
+        let binding = before.to_owned() + data_1;
+        let data1 = binding.as_bytes();
+        let result1 = find_pattern(pattern, data1, span(before_len, data1.len()));
+
+        assert_eq!(result1.splits.len(), 2);
+        assert_eq!(result1.splits[0].span, Span { start: before_len, end: before_len });
+        assert_eq!(result1.splits[0].stride, 1);
+        assert_eq!(result1.splits[0].data(), "".to_string());
+        assert_eq!(result1.splits[0].reconstruct(), "\n\n".to_string());
+
+        assert_eq!(result1.splits[1].span.len(), data_1.len() - 2);
+        assert_eq!(result1.splits[1].stride, 0);
+        assert_eq!(
+            result1.splits[1].data(),
+            "Hello, you all! How are you?".to_string()
+        );
+        assert_eq!(
+            result1.splits[1].reconstruct(),
+            "Hello, you all! How are you?".to_string()
+        );
+
+        let data_2 = "Hello, you all! How are you?\n\n";
+        let binding = before.to_owned() + data_2;
+        let data2 = binding.as_bytes();
+        let result2 = find_pattern(pattern, data2, span(before_len, data2.len()));
+        assert_eq!(result2.splits.len(), 1);
+        assert_eq!(result2.splits[0].span.len(), data_2.len() - 2);
+        assert_eq!(result2.splits[0].stride, 1);
+        assert_eq!(
+            result2.splits[0].data(),
+            "Hello, you all! How are you?".to_string()
+        );
+        assert_eq!(
+            result2.splits[0].reconstruct(),
+            "Hello, you all! How are you?\n\n".to_string()
         );
 
         Ok(())
@@ -384,6 +457,23 @@ mod tests {
         assert_eq!(result4.splits[1].stride, 0);
         assert_eq!(result4.splits[0].data(), "Hello, you all!".to_string());
         assert_eq!(result4.splits[1].data(), "How are you ?".to_string());
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_data_nlnl() -> anyhow::Result<()> {
+        let pattern = "\n\n";
+        let file_path = "tests/splitter_test_data/data_nlnl_01.txt";
+        let binding = std::fs::read(file_path).unwrap();
+        let data = binding.as_slice();
+
+        let result = find_pattern(pattern, data, span(0, data.len()));
+        assert_eq!(result.splits.len(), 8);
+
+        for split in result.splits.iter() {
+            println!("{:?}", split.reconstruct());
+        }
 
         Ok(())
     }

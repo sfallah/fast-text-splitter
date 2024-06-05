@@ -79,7 +79,7 @@ pub fn split<'a>(
 ) -> SplitNode<'a> {
     let pattern = patterns[pattern_id];
     let search_result = find_pattern(pattern, data, data_span);
-    let search_res_reconsted = search_result.reconstruct();
+    let _search_res_reconsted = search_result.reconstruct();
 
     if search_result.matched {
         let children: Vec<_> = search_result
@@ -89,7 +89,7 @@ pub fn split<'a>(
                 if pattern_id + 1 < patterns.len() && !search_split.is_empty() {
                     split(data, search_split.span, patterns.clone(), pattern_id + 1)
                 } else {
-                    let split_reconsted = search_split.reconstruct();
+                    let _split_reconsted = search_split.reconstruct();
                     //println!("res: {:?}", search_res_reconsted);
                     //println!("split: {:?}", split_reconsted);
                     SplitNode {
@@ -109,7 +109,7 @@ pub fn split<'a>(
             children,
         }
     } else {
-        if pattern_id + 1 < patterns.len() && !data_span.is_empty()  {
+        if pattern_id + 1 < patterns.len() && !data_span.is_empty() {
             split(data, data_span, patterns, pattern_id + 1)
         } else {
             SplitNode {
@@ -164,11 +164,13 @@ mod tests {
         Outperform everyone else.\n\n"
             .as_bytes();
 
-        let file_path = "tests/splitter_test_data/data_nlnl_01.txt";
-        let binding = std::fs::read(file_path).unwrap();
-        let data = binding.as_slice();
+        //let file_path = "tests/splitter_test_data/data_nlnl_01.txt";
+        //let binding = std::fs::read(file_path).unwrap();
+        //let data = binding.as_slice();
 
         //assert_eq!(data_raw, data);
+
+        let data = _data_raw;
 
         let patterns = vec!["\n\n", "\n", "."];
         //let patterns = vec!["\n\n".to_string()];
@@ -188,6 +190,11 @@ mod tests {
         println!("#### Merged Level 0 Checks ####");
         let merged_level_0 = tree.merge(0, false);
         assert_eq!(merged_level_0.len(), 8);
+        let splits_len_sum: usize = merged_level_0.iter().map(|span| span.len()).sum();
+        for span in merged_level_0.iter() {
+            println!("{:?}", from_utf8(&data[span.start..span.end]).unwrap());
+        }
+        assert_eq!(data.len(), splits_len_sum);
 
         let merged_no_empty_level_0: Vec<_> = tree.merge(0, true);
         assert_eq!(merged_no_empty_level_0.len(), 3);
@@ -213,8 +220,6 @@ mod tests {
         assert_eq!(merged_level_2.len(), 8);
         let merged_no_empty_level_2: Vec<_> = tree.merge(2, true);
         assert_eq!(merged_no_empty_level_2.len(), 8);
-
-
     }
 
     #[test]

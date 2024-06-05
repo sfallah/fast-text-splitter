@@ -31,7 +31,6 @@ pub fn text_split_parallel<T: Tokenize + Sync>(
     let mut first_level_pattern_id = 0;
 
     loop {
-
         let match_result =
             find_patterns_matches(&conf.pattern[first_level_pattern_id], data.as_bytes());
         matches_offsets = match_result.splits;
