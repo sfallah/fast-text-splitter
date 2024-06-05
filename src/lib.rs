@@ -1,5 +1,6 @@
 use aho_corasick::Span;
 use rayon::prelude::*;
+use std::str::from_utf8;
 
 use crate::ac_matches::find_patterns_matches;
 use crate::common::{merge_split_results, merge_splits, Split, SplitResults};
@@ -13,11 +14,13 @@ pub mod encodings;
 #[cfg(feature = "tokenizers")]
 pub mod hf_tokenizer;
 pub mod normalizer;
+pub mod pattern_search;
 mod py_binding;
+pub mod splitter;
 pub mod ws_tokenizer;
 
 #[inline]
-fn span(start: usize, end: usize) -> Span {
+pub fn span(start: usize, end: usize) -> Span {
     Span { start, end }
 }
 
@@ -29,8 +32,14 @@ pub fn text_split_parallel<T: Tokenize + Sync>(
     let mut first_level_pattern_id = 0;
 
     loop {
+        println!(
+            "Find Matches Pattern ID: {}, Pattern: {:?}",
+            first_level_pattern_id, &conf.pattern[first_level_pattern_id]
+        );
+        println!("Sub Data: {:?}", data);
         let match_result =
             find_patterns_matches(&conf.pattern[first_level_pattern_id], data.as_bytes());
+        println!("Match Result: {:?}", match_result.splits);
         matches_offsets = match_result.splits;
         if match_result.matched {
             break;
@@ -44,40 +53,36 @@ pub fn text_split_parallel<T: Tokenize + Sync>(
 
     let patterns = conf.pattern.clone();
 
-    let partition_spans: Vec<_> = matches_offsets;
-
     let splits: Vec<_> = if conf.parallel {
-        partition_spans
+        matches_offsets
             .par_iter()
             .flat_map(|dt_span| {
                 sub_splits(
-                    &conf.tokenizer,
                     conf,
                     data,
                     dt_span.clone(),
                     patterns.clone(),
-                    first_level_pattern_id + 1,
+                    first_level_pattern_id,
                 )
             })
             .collect()
     } else {
-        partition_spans
+        matches_offsets
             .iter()
             .flat_map(|dt_span| {
                 sub_splits(
-                    &conf.tokenizer,
                     conf,
                     data,
                     dt_span.clone(),
                     patterns.clone(),
-                    first_level_pattern_id + 1,
+                    first_level_pattern_id,
                 )
             })
             .collect()
     };
 
     if let Some(merge_level) = conf.merge_level {
-        if splits.len() > 1 && merge_level < first_level_pattern_id + 1 {
+        if splits.len() > 1 && merge_level <= first_level_pattern_id {
             return merge_split_results(&splits, conf.max_tokens);
         }
     }
@@ -86,7 +91,6 @@ pub fn text_split_parallel<T: Tokenize + Sync>(
 }
 
 fn sub_splits<T: Tokenize + Sync>(
-    tokenizer: &T,
     conf: &SplitterConfig<T>,
     data: &str,
     data_span: Span,
@@ -96,7 +100,7 @@ fn sub_splits<T: Tokenize + Sync>(
     let data_bytes = &data.as_bytes()[data_span.start..data_span.end];
     let data_str = std::str::from_utf8(&data_bytes).unwrap();
 
-    let encoded = tokenizer.encode(data_str).unwrap();
+    let encoded = conf.tokenizer.encode(data_str).unwrap();
 
     let tokens_offsets = encoded.get_offsets();
     let tokens_words = encoded.get_word_ids();
@@ -118,21 +122,20 @@ fn sub_splits<T: Tokenize + Sync>(
             data,
         );
 
+        let mut merged_sub_splits = Vec::new();
 
-        /*
         if let Some(merge_level) = conf.merge_level {
-            if sub_splits.len() > 1 && merge_level <= pattern_id + 1 {
+            if sub_splits.len() > 1 && merge_level <= pattern_id {
                 let merged_child_splits = merge_splits(&sub_splits, conf.max_tokens);
                 merged_sub_splits.extend(merged_child_splits);
-            } else {
-                merged_sub_splits.extend(sub_splits);
             }
-        } else {
+        }
+
+        if merged_sub_splits.is_empty() {
             merged_sub_splits.extend(sub_splits);
         }
-         */
 
-        let token_spans = sub_splits
+        let token_spans = merged_sub_splits
             .iter()
             .map(|split| split.tokens_span.clone())
             .collect();
@@ -141,10 +144,10 @@ fn sub_splits<T: Tokenize + Sync>(
 
         let split_spans = actual_offsets
             .iter()
-            .zip(sub_splits.iter())
-            .map(|(span, split)| Split {
+            .zip(merged_sub_splits.iter())
+            .map(|(offset_span, split)| Split {
                 tokens_span: split.tokens_span,
-                data_span: Some(span.clone()),
+                data_span: Some(offset_span.clone()),
             })
             .collect();
 
@@ -158,13 +161,14 @@ fn sub_splits<T: Tokenize + Sync>(
             data,
         )
     } else {
-        encoded.to_split_results(
+        let _unused_res = encoded.to_split_results(
             &vec![Split {
                 tokens_span: Span { start: 0, end: 0 },
                 data_span: Some(data_span),
             }],
             data,
-        )
+        );
+        vec![]
     }
 }
 
@@ -199,11 +203,18 @@ pub fn text_split<T: Tokenize + Sync>(
     let mut splits = Vec::new();
     let mut tokens_span = in_tokens_span;
     let pt_spans = if pattern_id < patterns.len() {
-        find_patterns_matches(
-            &patterns[pattern_id],
-            &data.as_bytes()[data_span.start..data_span.end],
-        )
-        .splits
+        let data_bytes = &data.as_bytes()[data_span.start..data_span.end];
+        println!(
+            "Find Matches Pattern ID: {}, Pattern: {:?}",
+            pattern_id, patterns[pattern_id]
+        );
+        println!("Sub Data: {:?}", from_utf8(data_bytes).unwrap());
+
+        let mt_spans = find_patterns_matches(&patterns[pattern_id], data_bytes).splits;
+        println!("Match Result: {:?}", mt_spans);
+        //let mt_spans_offsets = mt_spans.iter().map(|x| span(data_span.start + x.start, data_span.start + x.end)).collect();
+        //println!("Match Result Offsets: {:?}", mt_spans_offsets);
+        mt_spans
     } else {
         vec![Span {
             start: data_span.start,
@@ -216,12 +227,16 @@ pub fn text_split<T: Tokenize + Sync>(
     loop {
         let split = next_split(tokens_offsets, tokens_span, pt_spans[pt_spans_idx]);
 
+        if split.tokens_span.is_empty() {
+            continue;
+        }
+
         if split.no_tokens() > conf.max_tokens {
             if pattern_id + 1 < conf.pattern.len() {
                 let child_splits = text_split(
                     tokens_offsets,
                     tokens_words,
-                    span(split.tokens_span.start, split.tokens_span.end),
+                    split.tokens_span,
                     pt_spans[pt_spans_idx],
                     patterns.clone(),
                     pattern_id + 1,
@@ -230,7 +245,7 @@ pub fn text_split<T: Tokenize + Sync>(
                 );
 
                 if let Some(merge_level) = conf.merge_level {
-                    if child_splits.len() > 1 && merge_level < pattern_id + 1 {
+                    if child_splits.len() > 1 && merge_level <= pattern_id {
                         let merged_child_splits = merge_splits(&child_splits, conf.max_tokens);
                         splits.extend(merged_child_splits);
                     } else {

@@ -96,7 +96,6 @@ fn tokenize_file_data(
 
     println!("    Total tokens results: {}", total_tk_results);
     assert_eq!(hf_encoding.len(), total_tk_results);
-
     Ok(())
 }
 
@@ -145,27 +144,25 @@ fn hf_local_data_test() -> tokenizers::Result<()> {
 #[test]
 #[cfg(feature = "tokenizers")]
 fn text_normalize_test() -> tokenizers::Result<()> {
-    //let file = "data/dev/Super Bowl 50 halftime show - Wikipedia.txt";
     //let file = "data/dev/List_of_Orange_Is_the_New_Black_characters.txt";
-    //let file = "tests/error_data/Geothermal_gradient.txt";
-    let file = "data/dev/Can't_Get_You_Out_of_My_Head.txt";
+    let file = "data/dev/Border_War_(Kansas–Missouri_rivalry).txt";
     let data = fs::read_to_string(file)?;
 
     let tokenizer = init_tokenizer(None, Some(data.len()), false)?;
 
     let conf_params = ConfigParams::builder()
         .pattern(vec![
-            vec!["\n\n".to_string()],
+            //vec!["\n\n".to_string()],
             vec!["\n".to_string()],
-            //vec![".".to_string(), "!".to_string(), "?".to_string()],
+            vec![".".to_string(), "!".to_string(), "?".to_string()],
         ])
         .tokenizer_max_len(100_000)
-        //.merge_level(1)
+        .merge_level(0)
         //.max_depth(3)
         .build();
 
     let conf = SplitterConfig::<HFTokenizer>::from_params(conf_params);
-    tokenize_file_data(&conf, &tokenizer, false, &data, true, file)?;
+    tokenize_file_data(&conf, &tokenizer, true, &data, true, file)?;
 
     Ok(())
 }
@@ -189,12 +186,9 @@ fn hf_nq_dataset_test() -> tokenizers::Result<()> {
         .build();
     let conf = SplitterConfig::<HFTokenizer>::from_params(conf_params);
 
-    files
-        .par_iter()
-        .skip(654).take(800)
-        .for_each(|file| {
-            tokenize_file(&conf, &tokenizer, file, true, true).unwrap();
-        });
+    files.par_iter().skip(654).take(800).for_each(|file| {
+        tokenize_file(&conf, &tokenizer, file, true, true).unwrap();
+    });
 
     Ok(())
 }

@@ -6,7 +6,7 @@ use crate::hf_tokenizer::divide_encoding;
 #[cfg(feature = "tokenizers")]
 use tokenizers::Encoding;
 
-use crate::{Split, SplitResults};
+use crate::{span, Split, SplitResults};
 use aho_corasick::Span;
 
 use crate::ws_tokenizer::WSEncoding;
@@ -64,15 +64,10 @@ impl EncodingType {
         }
 
         tokens_spans.iter().skip(1).for_each(|tokens_span| {
-            let tokens_offsets = self.get_offsets();
-            let tokens_span = tokens_span.clone();
-            let next_end = tokens_offsets.get(tokens_span.start).unwrap().0;
-            let span = Span {
-                start,
-                end: data_span.start + next_end,
-            };
-            res.push(span);
-            start = data_span.start + next_end;
+            let next_end = self.get_offsets().get(tokens_span.start).unwrap().0;
+            let end = data_span.start + next_end;
+            res.push(span(start, end));
+            start = end;
         });
 
         res.push(Span {
@@ -117,26 +112,6 @@ impl EncodingType {
             .collect();
         res
     }
-}
-
-#[inline]
-pub fn tokens_data_offsets(
-    tokens_offsets: &[(usize, usize)],
-    tokens_span: Span,
-    match_offsets: Span,
-) -> Span {
-    let start = if tokens_span.start > 0 {
-        match_offsets.start + tokens_offsets.get(tokens_span.start).unwrap().0
-    } else {
-        match_offsets.start
-    };
-
-    let end = if tokens_span.end - 1 < tokens_offsets.len() {
-        match_offsets.start + tokens_offsets.get(tokens_span.end - 1).unwrap().1
-    } else {
-        match_offsets.end
-    };
-    Span { start, end }
 }
 
 #[inline(always)]

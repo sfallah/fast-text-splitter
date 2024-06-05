@@ -1,7 +1,7 @@
 use aho_corasick::{AhoCorasick, MatchKind, Span};
 use memchr::memmem::find_iter;
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub struct MatchResult {
     pub splits: Vec<Span>,
     pub matched: bool,
