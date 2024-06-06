@@ -1,7 +1,7 @@
 use aho_corasick::Span;
 use std::str::from_utf8;
 
-use crate::pattern_search::{find_pattern, SearchResult};
+use crate::pattern_search::{PatternSearcher, SearchResult};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct SplitNode<'a> {
@@ -73,9 +73,9 @@ pub fn split<'a>(
     patterns: &Vec<Vec<&'a str>>,
     pattern_id: usize,
     split_span: Span,
+    searchers: &'a Vec<PatternSearcher<'a>>
 ) -> SplitNode<'a> {
-    let pattern = &patterns[pattern_id];
-    let search_result = find_pattern(&pattern, data, search_span);
+    let search_result = searchers[pattern_id].find_pattern(data, search_span);
 
     if search_result.matched {
         let children: Vec<_> = search_result
@@ -89,6 +89,7 @@ pub fn split<'a>(
                         patterns,
                         pattern_id + 1,
                         search_split.full_span(),
+                        searchers
                     )
                 } else {
                     SplitNode {
@@ -111,7 +112,7 @@ pub fn split<'a>(
         }
     } else {
         if pattern_id + 1 < patterns.len() && !search_span.is_empty() {
-            split(data, search_span, patterns, pattern_id + 1, split_span)
+            split(data, search_span, patterns, pattern_id + 1, split_span, searchers)
         } else {
             SplitNode {
                 data,

@@ -12,6 +12,7 @@ use fast_text_splitter::hf_tokenizer::init_tokenizer;
 #[cfg(feature = "tokenizers")]
 use fast_text_splitter::hf_tokenizer::HFTokenizer;
 use fast_text_splitter::normalizer::TextNormalizer;
+use fast_text_splitter::pattern_search::PatternSearcher;
 use fast_text_splitter::splitter::split;
 use fast_text_splitter::text_split_parallel;
 use fast_text_splitter::ws_tokenizer::WSTokenizer;
@@ -56,7 +57,7 @@ pub fn text_normalize_benchmark(c: &mut Criterion) {
     c.bench_function("text_normalize", |b| {
         b.iter(|| {
             let normalized = normalizer.normalize(&data);
-            black_box(normalized);
+            let _ = black_box(normalized);
         })
     });
 }
@@ -67,7 +68,7 @@ pub fn hf_text_normalize_benchmark(c: &mut Criterion) {
 
     let data = fs::read_to_string(data_path).unwrap();
 
-    let mut bert_normalizer = BertNormalizer::new(true, false, None, false);
+    let bert_normalizer = BertNormalizer::new(true, false, None, false);
 
     c.bench_function("hf_text_normalize", |b| {
         b.iter(|| {
@@ -99,8 +100,6 @@ pub fn aho_corasick_init_benchmark(c: &mut Criterion) {
 #[cfg(feature = "default")]
 pub fn words_single_split_benchmark(c: &mut Criterion) {
     let data_path = "tests/test_data/superlinear.txt";
-    //let data_path = "data/train/Commonwealth_of_Nations.txt";
-    //let data_path = "data/dev/Electroencephalography - Wikipedia.txt";
     let bytes = fs::read(data_path).unwrap();
     let data = std::str::from_utf8(&bytes).unwrap();
 
@@ -128,11 +127,13 @@ pub fn words_single_split_benchmark(c: &mut Criterion) {
 #[cfg(feature = "default")]
 pub fn tree_split_benchmark(c: &mut Criterion) {
     let data_path = "tests/test_data/superlinear.txt";
+
     let binding = fs::read(data_path).unwrap();
     let data = binding.as_slice();
-    //let patterns = vec![vec!["\n\n"], vec!["\n"], vec![".", "!", "?"]];
-    let patterns = vec![vec!["\n\n","\n"], vec!["."]];
+    let patterns = vec![vec!["\n\n"], vec!["\n"], vec![".", "!", "?"]];
+    //let patterns = vec![vec![".", "!", "?"]];
 
+    let searchers: Vec<_> = patterns.iter().map(|p| PatternSearcher::new(p)).collect();
 
     c.bench_function("tree_split_benchmark", |b| {
         b.iter(|| {
@@ -140,7 +141,7 @@ pub fn tree_split_benchmark(c: &mut Criterion) {
                 start: 0,
                 end: data.len(),
             };
-            let tree = split(data, span, &patterns, 0, span);
+            let tree = split(data, span, &patterns, 0, span, &searchers);
             let merged = tree.merge(0, true);
             let merged_spans_filtered: Vec<_> =
                 merged.iter().filter(|span| !span.is_empty()).collect();
