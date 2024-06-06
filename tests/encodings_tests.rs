@@ -1,8 +1,8 @@
+use fast_text_splitter::common::span;
 use fast_text_splitter::common::Split;
 use fast_text_splitter::config::{ConfigParams, SplitterConfig};
 use fast_text_splitter::encodings::Tokenize;
 use fast_text_splitter::hf_tokenizer::HFTokenizer;
-use fast_text_splitter::span;
 
 #[test]
 fn test_encodings_tests() {

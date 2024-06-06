@@ -6,7 +6,8 @@ use crate::hf_tokenizer::divide_encoding;
 #[cfg(feature = "tokenizers")]
 use tokenizers::Encoding;
 
-use crate::{span, Split, SplitResults};
+use crate::common::span;
+use crate::{Split, SplitResults};
 use aho_corasick::Span;
 
 use crate::ws_tokenizer::WSEncoding;

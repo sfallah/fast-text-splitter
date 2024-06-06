@@ -18,11 +18,6 @@ mod py_binding;
 pub mod splitter;
 pub mod ws_tokenizer;
 
-#[inline]
-pub fn span(start: usize, end: usize) -> Span {
-    Span { start, end }
-}
-
 pub fn text_split_parallel<T: Tokenize + Sync>(
     conf: &SplitterConfig<T>,
     data: &str,
@@ -170,7 +165,7 @@ pub fn next_split(tokens_offsets: &[(usize, usize)], tokens_span: Span, pt_span:
 
     match tk_next_pos_opt {
         Some(tk_pos) => {
-            let tk_span = span(tokens_span.start, tokens_span.start + tk_pos);
+            let tk_span = common::span(tokens_span.start, tokens_span.start + tk_pos);
             Split {
                 tokens_span: tk_span,
                 data_span: None,
@@ -250,7 +245,7 @@ pub fn text_split<T: Tokenize + Sync>(
 
         pt_spans_idx += 1;
         if pt_spans_idx < pt_spans.len() && split.tokens_span.end < in_tokens_span.end {
-            tokens_span = span(split.tokens_span.end, in_tokens_span.end);
+            tokens_span = common::span(split.tokens_span.end, in_tokens_span.end);
         } else {
             break;
         }
@@ -276,7 +271,7 @@ pub fn split_tokens_len(
             }
 
             if split_end >= in_tokens_span.end {
-                splits.push(Split::new(span(split_start, in_tokens_span.end)));
+                splits.push(Split::new(common::span(split_start, in_tokens_span.end)));
                 break;
             }
 
@@ -293,17 +288,17 @@ pub fn split_tokens_len(
 
                 if let Some(split_end_pos) = split_end_pos_opt {
                     let nw_split_end = split_end - split_end_pos;
-                    splits.push(Split::new(span(split_start, nw_split_end)));
+                    splits.push(Split::new(common::span(split_start, nw_split_end)));
                     split_start = nw_split_end;
                     split_end = split_start + max_tokens;
                 } else {
-                    splits.push(Split::new(span(split_start, split_end)));
+                    splits.push(Split::new(common::span(split_start, split_end)));
                     split_start = split_end;
                     split_end = split_start + max_tokens;
                 }
             } else {
                 splits.push(Split {
-                    tokens_span: span(split_start, split_end),
+                    tokens_span: common::span(split_start, split_end),
                     data_span: None,
                 });
                 split_start = split_end;

@@ -1,4 +1,3 @@
-use crate::span;
 use aho_corasick::Span;
 use std::fmt;
 
@@ -281,4 +280,9 @@ mod tests {
         assert!(tk_res.attention_mask.is_empty());
         assert!(tk_res.offsets.is_empty());
     }
+}
+
+#[inline]
+pub fn span(start: usize, end: usize) -> Span {
+    Span { start, end }
 }

@@ -6,18 +6,12 @@ use std::str::from_utf8;
 #[test]
 fn single_level_split() {
     let data = "Hello, you all.\n How are you.\n".as_bytes();
-    let patterns = vec!["\n\n", "\n" , "."];
+    let patterns = vec!["\n\n", "\n", "."];
     let span = Span {
         start: 0,
         end: data.len(),
     };
-    let tree = split(
-        data,
-        span,
-        patterns,
-        0,
-        span,
-    );
+    let tree = split(data, span, patterns, 0, span);
     println!("{:?}", tree);
     println!("{}", tree.to_string(true));
     let reconsted = tree.reconstruct();
@@ -67,7 +61,6 @@ fn multi_level_split() {
         Outperform everyone else.\n\n"
         .as_bytes();
 
-
     let data = _data_raw;
 
     let patterns = vec!["\n\n", "\n", "."];
@@ -75,13 +68,7 @@ fn multi_level_split() {
         start: 0,
         end: data.len(),
     };
-    let tree = split(
-        data,
-        span,
-        patterns,
-        0,
-        span,
-    );
+    let tree = split(data, span, patterns, 0, span);
     println!("{}", tree.to_string(true));
     assert_eq!(from_utf8(data).unwrap(), tree.reconstruct());
 
@@ -97,7 +84,6 @@ fn multi_level_split() {
 
     let merged_no_empty_level_0: Vec<_> = tree.merge(0, true);
     assert_eq!(merged_no_empty_level_0.len(), 3);
-
 
     for span in merged_no_empty_level_0.iter() {
         println!("{:?}", from_utf8(&data[span.start..span.end]).unwrap());
@@ -142,13 +128,7 @@ fn first_pattern_no_match_split() {
         start: 0,
         end: data.len(),
     };
-    let tree = split(
-        data,
-        span,
-        patterns,
-        0,
-        span,
-    );
+    let tree = split(data, span, patterns, 0, span);
     println!("{}", tree.to_string(true));
     assert_eq!(from_utf8(data).unwrap(), tree.reconstruct());
 
@@ -172,7 +152,7 @@ fn pattern_split_superlinear_test() {
         end: data.len(),
     };
 
-    let tree = split(data, span, patterns, 0,span);
+    let tree = split(data, span, patterns, 0, span);
     println!("{}", tree.to_string(true));
     let reconsted = tree.reconstruct();
     assert_eq!(from_utf8(&data).unwrap(), reconsted);

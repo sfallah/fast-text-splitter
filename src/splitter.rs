@@ -1,5 +1,5 @@
-use std::str::from_utf8;
 use aho_corasick::Span;
+use std::str::from_utf8;
 
 use crate::pattern_search::{find_pattern, SearchResult};
 
@@ -25,11 +25,7 @@ impl SplitNode<'_> {
                 result.push_str(&child.to_string_with_indent(indent + 4, reconstruct));
             });
             if reconstruct {
-                result.push_str(&format!(
-                    "{} orig: {:?}\n",
-                    indent_str,
-                    self.reconstruct()
-                ));
+                result.push_str(&format!("{} orig: {:?}\n", indent_str, self.reconstruct()));
             }
             result
         } else {
@@ -42,11 +38,7 @@ impl SplitNode<'_> {
                 self.search_result.data()
             );
             if reconstruct {
-                result.push_str(&format!(
-                    "{} orig: {:?}\n",
-                    indent_str,
-                    self.reconstruct()
-                ));
+                result.push_str(&format!("{} orig: {:?}\n", indent_str, self.reconstruct()));
             }
             result
         }
@@ -84,7 +76,6 @@ pub fn split<'a>(
 ) -> SplitNode<'a> {
     let pattern = patterns[pattern_id];
     let search_result = find_pattern(pattern, data, search_span);
-    let _search_res_reconsted = search_result.reconstruct();
 
     if search_result.matched {
         let children: Vec<_> = search_result
@@ -92,11 +83,14 @@ pub fn split<'a>(
             .iter()
             .map(|search_split| {
                 if pattern_id + 1 < patterns.len() && !search_split.is_empty() {
-                    split(data, search_split.span, patterns.clone(), pattern_id + 1, search_split.full_span())
+                    split(
+                        data,
+                        search_split.span,
+                        patterns.clone(),
+                        pattern_id + 1,
+                        search_split.full_span(),
+                    )
                 } else {
-                    let _split_reconsted = search_split.reconstruct();
-                    //println!("res: {:?}", search_res_reconsted);
-                    //println!("split: {:?}", split_reconsted);
                     SplitNode {
                         data,
                         pattern_id: pattern_id + 1,

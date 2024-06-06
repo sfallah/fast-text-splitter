@@ -1,8 +1,9 @@
 use std::str::from_utf8;
 
-use crate::span;
-use aho_corasick::Span;
+use aho_corasick::{AhoCorasick, MatchKind, Span};
 use memchr::memmem::find_iter;
+
+use crate::common::span;
 
 #[derive(Clone, PartialEq, Eq)]
 pub struct SearchResult<'a> {
@@ -149,6 +150,48 @@ fn span_to_string(data: &str, span: Span) -> Option<String> {
     }
 }
 
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct SearchMatch<'a> {
+    pub pattern: &'a str,
+    pub span: Span,
+}
+
+pub fn get_aho_corasick<'a>(patterns: Vec<&'a str>) -> AhoCorasick {
+    AhoCorasick::builder()
+        .match_kind(MatchKind::LeftmostFirst)
+        .build(patterns)
+        .unwrap()
+}
+
+pub fn search_patterns<'a>(
+    patterns: Vec<&'a str>,
+    data: &'a [u8],
+    data_span: Span,
+) -> Vec<SearchMatch<'a>> {
+    if patterns.is_empty() || data_span.is_empty() || data.is_empty() {
+        return Vec::new();
+    }
+
+    if patterns.len() == 1 {
+        let pattern = patterns.first().unwrap();
+        let pattern_len = pattern.len();
+        find_iter(&data[data_span.start..data_span.end], pattern.as_bytes())
+            .map(|start| SearchMatch {
+                pattern,
+                span: span(start, start + pattern_len),
+            })
+            .collect()
+    } else {
+        let ac = get_aho_corasick(patterns.clone());
+        ac.find_iter(&data[data_span.start..data_span.end])
+            .map(|mt| SearchMatch {
+                pattern: &patterns[mt.pattern().as_usize()],
+                span: span(mt.start(), mt.end()),
+            })
+            .collect()
+    }
+}
+
 pub fn find_pattern<'a>(pattern: &'a str, data: &'a [u8], data_span: Span) -> SearchResult<'a> {
     let pattern_len = pattern.len();
     let matches: Vec<_> =
@@ -238,8 +281,9 @@ pub fn find_pattern<'a>(pattern: &'a str, data: &'a [u8], data_span: Span) -> Se
 
 #[cfg(test)]
 mod tests {
+    use crate::common::span;
+
     use super::*;
-    use crate::span;
 
     #[test]
     fn span_bounds_test() -> anyhow::Result<()> {
@@ -411,7 +455,13 @@ mod tests {
         let result1 = find_pattern(pattern, data1, span(before_len, data1.len()));
 
         assert_eq!(result1.splits.len(), 2);
-        assert_eq!(result1.splits[0].span, Span { start: before_len, end: before_len });
+        assert_eq!(
+            result1.splits[0].span,
+            Span {
+                start: before_len,
+                end: before_len,
+            }
+        );
         assert_eq!(result1.splits[0].stride, 1);
         assert_eq!(result1.splits[0].data(), "".to_string());
         assert_eq!(result1.splits[0].reconstruct(), "\n\n".to_string());
@@ -507,6 +557,60 @@ mod tests {
         );
         assert_eq!(result2.splits[3].stride, 1);
         assert_eq!(result2.splits[3].data(), "".to_string());
+        Ok(())
+    }
+
+    #[test]
+    fn search_pattern_test() -> anyhow::Result<()> {
+        let patterns = vec!["\n\n"];
+        let data = "Hello, you all!\n\n How are you? \n\n".as_bytes();
+        let data_span = span(0, data.len());
+        let matches = search_patterns(patterns, data, data_span);
+        assert_eq!(matches.len(), 2);
+        assert_eq!(matches[0].pattern, "\n\n");
+        assert_eq!(matches[0].span, span(15, 17));
+        assert_eq!(matches[1].pattern, "\n\n");
+        assert_eq!(matches[1].span, span(31, 33));
+
+        Ok(())
+    }
+
+    #[test]
+    fn search_patterns_test() -> anyhow::Result<()> {
+        let patterns = vec![".", "!", "?"];
+        let data = "Hello, you all! How are you? Nice to be here.".as_bytes();
+        let data_span = span(0, data.len());
+        let matches = search_patterns(patterns, data, data_span);
+        assert_eq!(matches.len(), 3);
+        assert_eq!(matches[0].pattern, "!");
+        assert_eq!(matches[0].span, span(14, 15));
+        assert_eq!(matches[1].pattern, "?");
+        assert_eq!(matches[1].span, span(27, 28));
+        assert_eq!(matches[2].pattern, ".");
+        assert_eq!(matches[2].span, span(44, 45));
+
+        let data = "Hello, you all!\n\n How are you? \n\n".as_bytes();
+        let patterns = vec!["\n\n", "\n"];
+        let matches = search_patterns(patterns, data, span(0, data.len()));
+        assert_eq!(matches.len(), 2);
+        assert_eq!(matches[0].pattern, "\n\n");
+        assert_eq!(matches[0].span, span(15, 17));
+        assert_eq!(matches[1].pattern, "\n\n");
+        assert_eq!(matches[1].span, span(31, 33));
+
+        let data = "Hello, you all!\n\n How are you? \n\n".as_bytes();
+        let patterns = vec!["\n", "\n\n"];
+        let matches = search_patterns(patterns, data, span(0, data.len()));
+        assert_eq!(matches.len(), 4);
+        assert_eq!(matches[0].pattern, "\n");
+        assert_eq!(matches[0].span, span(15, 16));
+        assert_eq!(matches[1].pattern, "\n");
+        assert_eq!(matches[1].span, span(16, 17));
+        assert_eq!(matches[2].pattern, "\n");
+        assert_eq!(matches[2].span, span(31, 32));
+        assert_eq!(matches[3].pattern, "\n");
+        assert_eq!(matches[3].span, span(32, 33));
+
         Ok(())
     }
 
