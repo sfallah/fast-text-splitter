@@ -70,12 +70,12 @@ impl SplitNode<'_> {
 pub fn split<'a>(
     data: &'a [u8],
     search_span: Span,
-    patterns: Vec<&'a str>,
+    patterns: &Vec<Vec<&'a str>>,
     pattern_id: usize,
     split_span: Span,
 ) -> SplitNode<'a> {
-    let pattern = patterns[pattern_id];
-    let search_result = find_pattern(pattern, data, search_span);
+    let pattern = &patterns[pattern_id];
+    let search_result = find_pattern(&pattern, data, search_span);
 
     if search_result.matched {
         let children: Vec<_> = search_result
@@ -86,7 +86,7 @@ pub fn split<'a>(
                     split(
                         data,
                         search_split.span,
-                        patterns.clone(),
+                        patterns,
                         pattern_id + 1,
                         search_split.full_span(),
                     )

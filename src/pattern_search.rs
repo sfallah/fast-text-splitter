@@ -9,7 +9,6 @@ use crate::common::span;
 pub struct SearchResult<'a> {
     pub data: &'a [u8],
     pub offset: usize,
-    pub pattern: &'a str,
     pub splits: Vec<SearchSplit<'a>>,
     pub matched: bool,
 }
@@ -21,7 +20,6 @@ impl<'a> From<SearchSplit<'a>> for SearchResult<'a> {
         Self {
             data: split.data,
             offset: split.span.start,
-            pattern: split.pattern,
             splits: vec![split],
             matched: false,
         }
@@ -61,7 +59,6 @@ impl std::fmt::Debug for SearchResult<'_> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("SearchResult")
             .field("offset", &self.offset)
-            .field("pattern", &self.pattern)
             .field("splits", &self.splits)
             .field("matched", &self.matched)
             .finish()
@@ -127,14 +124,14 @@ impl std::fmt::Debug for SearchSplit<'_> {
     }
 }
 
-fn span_within_bounds(span: Span, data_len: usize) -> bool {
+pub fn span_within_bounds(span: Span, data_len: usize) -> bool {
     // the span is valid
     span.start <= span.end &&
         // the span is within the bounds of the data
         span.start < data_len && span.end <= data_len
 }
 
-fn span_to_string(data: &str, span: Span) -> Option<String> {
+pub fn span_to_string(data: &str, span: Span) -> Option<String> {
     if span_within_bounds(span, data.len()) {
         if span.is_empty() {
             Some("".to_string())
@@ -156,7 +153,19 @@ pub struct SearchMatch<'a> {
     pub span: Span,
 }
 
-pub fn get_aho_corasick<'a>(patterns: Vec<&'a str>) -> AhoCorasick {
+impl SearchMatch<'_> {
+    pub fn len(&self) -> usize {
+        self.span.len()
+    }
+    pub fn start(&self) -> usize {
+        self.span.start
+    }
+    pub fn end(&self) -> usize {
+        self.span.end
+    }
+}
+
+pub fn get_aho_corasick(patterns: &Vec<&str>) -> AhoCorasick {
     AhoCorasick::builder()
         .match_kind(MatchKind::LeftmostFirst)
         .build(patterns)
@@ -164,7 +173,7 @@ pub fn get_aho_corasick<'a>(patterns: Vec<&'a str>) -> AhoCorasick {
 }
 
 pub fn search_patterns<'a>(
-    patterns: Vec<&'a str>,
+    patterns: &Vec<&'a str>,
     data: &'a [u8],
     data_span: Span,
 ) -> Vec<SearchMatch<'a>> {
@@ -182,59 +191,65 @@ pub fn search_patterns<'a>(
             })
             .collect()
     } else {
-        let ac = get_aho_corasick(patterns.clone());
+        let ac = get_aho_corasick(patterns);
         ac.find_iter(&data[data_span.start..data_span.end])
             .map(|mt| SearchMatch {
                 pattern: &patterns[mt.pattern().as_usize()],
-                span: span(mt.start(), mt.end()),
+                span: mt.span().into(),
             })
             .collect()
     }
 }
 
-pub fn find_pattern<'a>(pattern: &'a str, data: &'a [u8], data_span: Span) -> SearchResult<'a> {
-    let pattern_len = pattern.len();
-    let matches: Vec<_> =
-        find_iter(&data[data_span.start..data_span.end], pattern.as_bytes()).collect();
+pub fn find_pattern<'a>(
+    patterns: &Vec<&'a str>,
+    data: &'a [u8],
+    data_span: Span,
+) -> SearchResult<'a> {
+    let matches: Vec<_> = search_patterns(patterns, data, data_span);
 
     if matches.is_empty() {
         return SearchResult {
             data,
             offset: data_span.start,
-            pattern,
-            splits: vec![SearchSplit::new(Span::from(data_span), data, pattern, 0)],
+            splits: vec![SearchSplit::new(Span::from(data_span), data, "", 0)],
             matched: false,
         };
     }
 
     let mut pattern_splits: Vec<SearchSplit> = Vec::new();
 
-    let mut start = matches[0];
+    let mut cur_match = matches.first().unwrap();
 
     // If the first match is not at the beginning of the data
-    if start > 0 {
+    if cur_match.start() > 0 {
         let split = SearchSplit::new(
-            span(data_span.start, data_span.start + start),
+            span(data_span.start, data_span.start + cur_match.start()),
             data,
-            pattern,
+            cur_match.pattern,
             1,
         );
         pattern_splits.push(split);
     } else {
         // If the first match is at the beginning of the data
-        let split = SearchSplit::new(span(data_span.start, data_span.start), data, pattern, 1);
+        let split = SearchSplit::new(
+            span(data_span.start, data_span.start),
+            data,
+            cur_match.pattern,
+            1,
+        );
 
         pattern_splits.push(split);
     }
-    start += pattern_len;
+    //cur_match += pattern_len;
 
     if matches.len() == 1 {
         // If the pattern is not at the end of the data
-        if start < data_span.len() - 1 {
+        if cur_match.end() < data_span.len() - 1 {
             let split = SearchSplit::new(
-                span(data_span.start + start, data_span.end),
+                span(data_span.start + cur_match.end(), data_span.end),
                 data,
-                pattern,
+                cur_match.pattern,
                 0,
             );
 
@@ -243,28 +258,30 @@ pub fn find_pattern<'a>(pattern: &'a str, data: &'a [u8], data_span: Span) -> Se
         return SearchResult {
             data,
             offset: data_span.start,
-            pattern,
             splits: pattern_splits,
             matched: true,
         };
     }
 
-    matches.iter().skip(1).for_each(|&end| {
+    matches.iter().skip(1).for_each(|end| {
         let split = SearchSplit::new(
-            span(data_span.start + start, data_span.start + end),
+            span(
+                data_span.start + cur_match.end(),
+                data_span.start + end.start(),
+            ),
             data,
-            pattern,
+            cur_match.pattern,
             1,
         );
         pattern_splits.push(split);
-        start = end + pattern_len;
+        cur_match = end;
     });
 
-    if start < data_span.len() - 1 {
+    if cur_match.end() < data_span.len() - 1 {
         let split = SearchSplit::new(
-            span(data_span.start + start, data_span.end),
+            span(data_span.start + cur_match.end(), data_span.end),
             data,
-            pattern,
+            cur_match.pattern,
             0,
         );
         pattern_splits.push(split);
@@ -273,471 +290,8 @@ pub fn find_pattern<'a>(pattern: &'a str, data: &'a [u8], data_span: Span) -> Se
     SearchResult {
         data,
         offset: data_span.start,
-        pattern,
         splits: pattern_splits,
         matched: true,
     }
 }
 
-#[cfg(test)]
-mod tests {
-    use crate::common::span;
-
-    use super::*;
-
-    #[test]
-    fn span_bounds_test() -> anyhow::Result<()> {
-        let data = "Hello, you all! How are you?";
-        assert_eq!(data.len(), 28);
-        let data_span = Span {
-            start: 0,
-            end: data.len(),
-        };
-        assert!(span_within_bounds(data_span, data.len()));
-
-        let start_empty_span = Span { start: 0, end: 0 };
-        assert!(span_within_bounds(start_empty_span, data.len()));
-
-        let valid_span = Span { start: 5, end: 10 };
-
-        assert!(span_within_bounds(valid_span, data.len()));
-
-        let empty_span = Span { start: 5, end: 5 };
-        assert!(span_within_bounds(empty_span, data.len()));
-
-        let wrong_span = Span { start: 5, end: 2 };
-        assert!(!span_within_bounds(wrong_span, data.len()));
-
-        let end_empty_span = Span {
-            start: data.len(),
-            end: data.len(),
-        };
-        assert!(!span_within_bounds(end_empty_span, data.len()));
-
-        let end_wrong_span = Span {
-            start: data.len() - 3,
-            end: data.len() + 1,
-        };
-
-        assert!(!span_within_bounds(end_wrong_span, data.len()));
-
-        Ok(())
-    }
-
-    #[test]
-    fn strange_case_test() -> anyhow::Result<()> {
-        let pattern = "\n";
-        let data = "In fact, the correlation. Between superlinear.\nReturns and inequality is so strong that it yields.";
-        let result = find_pattern(pattern, data.as_bytes(), span(0, data.len()));
-        assert_eq!(result.splits.len(), 2);
-
-        let data1 = "Returns and inequality is so strong that it yields.".as_bytes();
-        let pattern1 = ".";
-        let result1 = find_pattern(pattern1, data1, span(0, data1.len()));
-        assert_eq!(result1.splits.len(), 1);
-
-        Ok(())
-    }
-
-    #[test]
-    fn search_empty_test() -> anyhow::Result<()> {
-        let pattern = "\n";
-        let data = "";
-        let result = find_pattern(pattern, data.as_bytes(), span(0, data.len()));
-        assert_eq!(result.splits.len(), 1);
-        assert_eq!(result.splits[0].data(), "".to_string());
-        Ok(())
-    }
-
-    #[test]
-    fn span_to_string_test() -> anyhow::Result<()> {
-        let data = "Hello, you all! How are you?";
-        let empty_span = Span { start: 5, end: 5 };
-        let empty_str = span_to_string(data, empty_span);
-        assert_eq!(empty_str, Some("".to_string()));
-
-        let valid_span = Span { start: 5, end: 10 };
-        let valid_str = span_to_string(data, valid_span);
-        assert_eq!(valid_str, Some(", you".to_string()));
-
-        let data_span = Span {
-            start: 0,
-            end: data.len(),
-        };
-        let data_str = span_to_string(data, data_span);
-        assert_eq!(data_str, Some(data.to_string()));
-
-        let wrong_span = Span { start: 5, end: 2 };
-        let wrong_str = span_to_string(data, wrong_span);
-        assert_eq!(wrong_str, None);
-
-        let end_span = Span {
-            start: data.len() - 3,
-            end: data.len() + 1,
-        };
-        let end_str = span_to_string(data, end_span);
-        assert_eq!(end_str, None);
-
-        Ok(())
-    }
-
-    #[test]
-    fn no_matches_test() -> anyhow::Result<()> {
-        let pattern = "\n\n";
-        let data1 = "Hello, you all! How are you?";
-
-        let no_match_res = find_pattern(pattern, data1.as_bytes(), span(0, data1.len()));
-        assert!(!no_match_res.matched);
-
-        assert_eq!(no_match_res.data()[0], data1.to_string());
-        Ok(())
-    }
-
-    #[test]
-    fn empty_data_test() -> anyhow::Result<()> {
-        let pattern = "\n\n";
-        let data1 = "";
-
-        let result = find_pattern(pattern, data1.as_bytes(), span(0, data1.len()));
-        assert!(!result.matched);
-
-        Ok(())
-    }
-
-    #[test]
-    fn single_ends_test() -> anyhow::Result<()> {
-        let pattern = "\n\n";
-        let data1 = "\n\nHello, you all! How are you?".as_bytes();
-        let result1 = find_pattern(pattern, data1, span(0, data1.len()));
-
-        assert_eq!(result1.splits.len(), 2);
-        assert_eq!(result1.splits[0].span, Span { start: 0, end: 0 });
-        assert_eq!(result1.splits[0].stride, 1);
-        assert_eq!(result1.splits[0].data(), "".to_string());
-        assert_eq!(result1.splits[0].reconstruct(), "\n\n".to_string());
-
-        assert_eq!(result1.splits[1].span.len(), data1.len() - 2);
-        assert_eq!(result1.splits[1].stride, 0);
-        assert_eq!(
-            result1.splits[1].data(),
-            "Hello, you all! How are you?".to_string()
-        );
-        assert_eq!(
-            result1.splits[1].reconstruct(),
-            "Hello, you all! How are you?".to_string()
-        );
-
-        let data2 = "Hello, you all! How are you?\n\n".as_bytes();
-        let result2 = find_pattern(pattern, data2, span(0, data2.len()));
-        assert_eq!(result2.splits.len(), 1);
-        assert_eq!(result2.splits[0].span.len(), data2.len() - 2);
-        assert_eq!(result2.splits[0].stride, 1);
-        assert_eq!(
-            result2.splits[0].data(),
-            "Hello, you all! How are you?".to_string()
-        );
-        assert_eq!(
-            result2.splits[0].reconstruct(),
-            "Hello, you all! How are you?\n\n".to_string()
-        );
-
-        Ok(())
-    }
-
-    #[test]
-    fn offseted_single_ends_test() -> anyhow::Result<()> {
-        let pattern = "\n\n";
-        let before = "<from before NOT IN SEARCH>\n\n";
-        let before_len = before.len();
-        let data_1 = "\n\nHello, you all! How are you?";
-        let binding = before.to_owned() + data_1;
-        let data1 = binding.as_bytes();
-        let result1 = find_pattern(pattern, data1, span(before_len, data1.len()));
-
-        assert_eq!(result1.splits.len(), 2);
-        assert_eq!(
-            result1.splits[0].span,
-            Span {
-                start: before_len,
-                end: before_len,
-            }
-        );
-        assert_eq!(result1.splits[0].stride, 1);
-        assert_eq!(result1.splits[0].data(), "".to_string());
-        assert_eq!(result1.splits[0].reconstruct(), "\n\n".to_string());
-
-        assert_eq!(result1.splits[1].span.len(), data_1.len() - 2);
-        assert_eq!(result1.splits[1].stride, 0);
-        assert_eq!(
-            result1.splits[1].data(),
-            "Hello, you all! How are you?".to_string()
-        );
-        assert_eq!(
-            result1.splits[1].reconstruct(),
-            "Hello, you all! How are you?".to_string()
-        );
-
-        let data_2 = "Hello, you all! How are you?\n\n";
-        let binding = before.to_owned() + data_2;
-        let data2 = binding.as_bytes();
-        let result2 = find_pattern(pattern, data2, span(before_len, data2.len()));
-        assert_eq!(result2.splits.len(), 1);
-        assert_eq!(result2.splits[0].span.len(), data_2.len() - 2);
-        assert_eq!(result2.splits[0].stride, 1);
-        assert_eq!(
-            result2.splits[0].data(),
-            "Hello, you all! How are you?".to_string()
-        );
-        assert_eq!(
-            result2.splits[0].reconstruct(),
-            "Hello, you all! How are you?\n\n".to_string()
-        );
-
-        Ok(())
-    }
-
-    #[test]
-    fn single_middle_test() -> anyhow::Result<()> {
-        let pattern = "\n\n";
-
-        let data4 = "Hello, you all!\n\nHow are you ?".as_bytes();
-        let result4 = find_pattern(pattern, data4, span(0, data4.len()));
-        assert_eq!(result4.splits.len(), 2);
-        assert_eq!(result4.splits[0].stride, 1);
-        assert_eq!(result4.splits[1].stride, 0);
-        assert_eq!(result4.splits[0].data(), "Hello, you all!".to_string());
-        assert_eq!(result4.splits[1].data(), "How are you ?".to_string());
-
-        Ok(())
-    }
-
-    #[test]
-    fn test_data_nlnl() -> anyhow::Result<()> {
-        let pattern = "\n\n";
-        let file_path = "tests/splitter_test_data/data_nlnl_01.txt";
-        let binding = std::fs::read(file_path).unwrap();
-        let data = binding.as_slice();
-
-        let result = find_pattern(pattern, data, span(0, data.len()));
-        assert_eq!(result.splits.len(), 8);
-
-        for split in result.splits.iter() {
-            println!("{:?}", split.reconstruct());
-        }
-
-        Ok(())
-    }
-
-    #[test]
-    fn find_multiple_patterns_ends_test() -> anyhow::Result<()> {
-        let pattern = "\n\n";
-        let data1 = "\n\nHello, you all! How are you? \n\n".as_bytes();
-        let result1 = find_pattern(pattern, data1, span(0, data1.len()));
-
-        assert_eq!(result1.splits.len(), 2);
-        assert_eq!(result1.splits[0].stride, 1);
-        assert_eq!(result1.splits[0].data(), "".to_string());
-        assert_eq!(result1.splits[1].stride, 1);
-        assert_eq!(
-            result1.splits[1].data(),
-            "Hello, you all! How are you? ".to_string()
-        );
-
-        let data2 = "\n\n\n\nHello, you all! How are you? \n\n\n\n".as_bytes();
-        let result2 = find_pattern(pattern, data2, span(0, data2.len()));
-        assert_eq!(result2.splits.len(), 4);
-        assert_eq!(result2.splits[0].stride, 1);
-        assert_eq!(result2.splits[0].data(), "".to_string());
-        assert_eq!(result2.splits[1].stride, 1);
-        assert_eq!(result2.splits[1].data(), "".to_string());
-        assert_eq!(result2.splits[2].stride, 1);
-        assert_eq!(
-            result2.splits[2].data(),
-            "Hello, you all! How are you? ".to_string()
-        );
-        assert_eq!(result2.splits[3].stride, 1);
-        assert_eq!(result2.splits[3].data(), "".to_string());
-        Ok(())
-    }
-
-    #[test]
-    fn search_pattern_test() -> anyhow::Result<()> {
-        let patterns = vec!["\n\n"];
-        let data = "Hello, you all!\n\n How are you? \n\n".as_bytes();
-        let data_span = span(0, data.len());
-        let matches = search_patterns(patterns, data, data_span);
-        assert_eq!(matches.len(), 2);
-        assert_eq!(matches[0].pattern, "\n\n");
-        assert_eq!(matches[0].span, span(15, 17));
-        assert_eq!(matches[1].pattern, "\n\n");
-        assert_eq!(matches[1].span, span(31, 33));
-
-        Ok(())
-    }
-
-    #[test]
-    fn search_patterns_test() -> anyhow::Result<()> {
-        let patterns = vec![".", "!", "?"];
-        let data = "Hello, you all! How are you? Nice to be here.".as_bytes();
-        let data_span = span(0, data.len());
-        let matches = search_patterns(patterns, data, data_span);
-        assert_eq!(matches.len(), 3);
-        assert_eq!(matches[0].pattern, "!");
-        assert_eq!(matches[0].span, span(14, 15));
-        assert_eq!(matches[1].pattern, "?");
-        assert_eq!(matches[1].span, span(27, 28));
-        assert_eq!(matches[2].pattern, ".");
-        assert_eq!(matches[2].span, span(44, 45));
-
-        let data = "Hello, you all!\n\n How are you? \n\n".as_bytes();
-        let patterns = vec!["\n\n", "\n"];
-        let matches = search_patterns(patterns, data, span(0, data.len()));
-        assert_eq!(matches.len(), 2);
-        assert_eq!(matches[0].pattern, "\n\n");
-        assert_eq!(matches[0].span, span(15, 17));
-        assert_eq!(matches[1].pattern, "\n\n");
-        assert_eq!(matches[1].span, span(31, 33));
-
-        let data = "Hello, you all!\n\n How are you? \n\n".as_bytes();
-        let patterns = vec!["\n", "\n\n"];
-        let matches = search_patterns(patterns, data, span(0, data.len()));
-        assert_eq!(matches.len(), 4);
-        assert_eq!(matches[0].pattern, "\n");
-        assert_eq!(matches[0].span, span(15, 16));
-        assert_eq!(matches[1].pattern, "\n");
-        assert_eq!(matches[1].span, span(16, 17));
-        assert_eq!(matches[2].pattern, "\n");
-        assert_eq!(matches[2].span, span(31, 32));
-        assert_eq!(matches[3].pattern, "\n");
-        assert_eq!(matches[3].span, span(32, 33));
-
-        Ok(())
-    }
-
-    #[test]
-    fn find_multiple_patterns_test() -> anyhow::Result<()> {
-        let pattern = "\n\n";
-        let data1 = "Hello, you all!\n\n How are you? \n\n".as_bytes();
-
-        let result1 = find_pattern(pattern, data1, span(0, data1.len()));
-        assert_eq!(result1.splits.len(), 2);
-        assert_eq!(result1.splits[0].stride, 1);
-        assert_eq!(result1.splits[0].data(), "Hello, you all!".to_string());
-        assert_eq!(result1.splits[1].stride, 1);
-        assert_eq!(result1.splits[1].data(), " How are you? ".to_string());
-
-        let data2 = "Hello, you all!\n\n How are you? \n\n Nice to meet you all!".as_bytes();
-        let result2 = find_pattern(pattern, data2, span(0, data2.len()));
-        assert_eq!(result2.splits.len(), 3);
-        assert_eq!(result2.splits[0].stride, 1);
-        assert_eq!(result2.splits[0].data(), "Hello, you all!".to_string());
-        assert_eq!(result2.splits[1].stride, 1);
-        assert_eq!(result2.splits[1].data(), " How are you? ".to_string());
-        assert_eq!(result2.splits[2].stride, 0);
-        assert_eq!(
-            result2.splits[2].data(),
-            " Nice to meet you all!".to_string()
-        );
-
-        let data3 = "\n\nHello, you all!\n\n How are you? \n\n Nice to meet you all!\n\n I hope you are all doing well!".as_bytes();
-        let result2 = find_pattern(pattern, data3, span(0, data3.len()));
-        assert_eq!(result2.splits.len(), 5);
-        assert_eq!(result2.splits[0].stride, 1);
-        assert_eq!(result2.splits[0].data(), "".to_string());
-        assert_eq!(result2.splits[1].stride, 1);
-        assert_eq!(result2.splits[1].data(), "Hello, you all!".to_string());
-        assert_eq!(result2.splits[2].stride, 1);
-        assert_eq!(result2.splits[2].data(), " How are you? ".to_string());
-        assert_eq!(result2.splits[3].stride, 1);
-        assert_eq!(
-            result2.splits[3].data(),
-            " Nice to meet you all!".to_string()
-        );
-        assert_eq!(result2.splits[4].stride, 0);
-        assert_eq!(
-            result2.splits[4].data(),
-            " I hope you are all doing well!".to_string()
-        );
-
-        println!("{:?}", result2);
-
-        let data4 =
-            "Hello, you all!\n\n How are you? \n\n\n\n Nice to meet you all!\n\n".as_bytes();
-        let result3 = find_pattern(pattern, data4, span(0, data4.len()));
-        assert_eq!(result3.splits.len(), 4);
-        assert_eq!(result3.splits[0].stride, 1);
-        assert_eq!(result3.splits[0].data(), "Hello, you all!".to_string());
-        assert_eq!(result3.splits[1].stride, 1);
-        assert_eq!(result3.splits[1].data(), " How are you? ".to_string());
-        assert_eq!(result3.splits[2].stride, 1);
-        assert_eq!(result3.splits[2].data(), "".to_string());
-        assert_eq!(result3.splits[3].stride, 1);
-        assert_eq!(
-            result3.splits[3].data(),
-            " Nice to meet you all!".to_string()
-        );
-
-        let data5 =
-            "\n\n\n\nHello, you all!\n\n How are you? \n\n\n\n Nice to meet you all!\n\n\n\n"
-                .as_bytes();
-        let result4 = find_pattern(pattern, data5, span(0, data5.len()));
-        assert_eq!(result4.splits.len(), 7);
-        assert_eq!(result4.splits[0].stride, 1);
-        assert_eq!(result4.splits[0].data(), "".to_string());
-        assert_eq!(result4.splits[1].stride, 1);
-        assert_eq!(result4.splits[1].data(), "".to_string());
-        assert_eq!(result4.splits[2].stride, 1);
-        assert_eq!(result4.splits[2].data(), "Hello, you all!".to_string());
-        assert_eq!(result4.splits[3].stride, 1);
-        assert_eq!(result4.splits[3].data(), " How are you? ".to_string());
-        assert_eq!(result4.splits[4].stride, 1);
-        assert_eq!(result4.splits[4].data(), "".to_string());
-        assert_eq!(result4.splits[5].stride, 1);
-        assert_eq!(
-            result4.splits[5].data(),
-            " Nice to meet you all!".to_string()
-        );
-        assert_eq!(result4.splits[6].stride, 1);
-        assert_eq!(result4.splits[6].data(), "".to_string());
-
-        Ok(())
-    }
-
-    #[test]
-    fn reconstruct_test() -> anyhow::Result<()> {
-        let pattern = "\n\n";
-        let data1 = "Hello, you all!\n\n How are you? \n\n";
-        let result1 = find_pattern(pattern, data1.as_bytes(), span(0, data1.len()));
-        let reconsted1 = result1.reconstruct();
-        assert_eq!(reconsted1, data1);
-
-        let data2 = "Hello, you all!\n\n How are you? \n\n Nice to meet you all!";
-        let result2 = find_pattern(pattern, data2.as_bytes(), span(0, data2.len()));
-        let reconsted2 = result2.reconstruct();
-        assert_eq!(reconsted2, data2);
-
-        let data3 =
-            "\n\n\n\nHello, you all!\n\n How are you? \n\n\n\n Nice to meet you all!\n\n\n\n";
-
-        let result3 = find_pattern(pattern, data3.as_bytes(), span(0, data3.len()));
-        let reconsted3 = result3.reconstruct();
-        assert_eq!(reconsted3, data3);
-
-        let data4 = "\n\nHello, you all! How are you?";
-        let result4 = find_pattern(pattern, data4.as_bytes(), span(0, data4.len()));
-        let reconsted4 = result4.reconstruct();
-        assert_eq!(reconsted4, data4);
-
-        let data5 = "Hello, you all! How are you?";
-        let result5 = find_pattern(pattern, data5.as_bytes(), span(0, data5.len()));
-        let reconsted5 = result5.reconstruct();
-        assert_eq!(reconsted5, data5);
-
-        let data6 = "Hello, you all! How are you?\n\n";
-        let result6 = find_pattern(pattern, data6.as_bytes(), span(0, data6.len()));
-        let reconsted6 = result6.reconstruct();
-        assert_eq!(reconsted6, data6);
-
-        Ok(())
-    }
-}

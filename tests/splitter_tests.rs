@@ -6,12 +6,12 @@ use std::str::from_utf8;
 #[test]
 fn single_level_split() {
     let data = "Hello, you all.\n How are you.\n".as_bytes();
-    let patterns = vec!["\n\n", "\n", "."];
+    let patterns = vec![vec!["\n\n"], vec!["\n"], vec![".", "!", "?"]];
     let span = Span {
         start: 0,
         end: data.len(),
     };
-    let tree = split(data, span, patterns, 0, span);
+    let tree = split(data, span, &patterns, 0, span);
     println!("{:?}", tree);
     println!("{}", tree.to_string(true));
     let reconsted = tree.reconstruct();
@@ -63,12 +63,12 @@ fn multi_level_split() {
 
     let data = _data_raw;
 
-    let patterns = vec!["\n\n", "\n", "."];
+    let patterns = vec![vec!["\n\n"], vec!["\n"], vec![".", "!", "?"]];
     let span = Span {
         start: 0,
         end: data.len(),
     };
-    let tree = split(data, span, patterns, 0, span);
+    let tree = split(data, span, &patterns, 0, span);
     println!("{}", tree.to_string(true));
     assert_eq!(from_utf8(data).unwrap(), tree.reconstruct());
 
@@ -121,14 +121,14 @@ fn first_pattern_no_match_split() {
         Outperform everyone else.\n"
         .as_bytes();
 
-    let patterns = vec!["\n\n", "\n", "."];
+    let patterns = vec![vec!["\n\n"], vec!["\n"], vec![".", "!", "?"]];
     //let patterns = vec!["\n\n".to_string()];
     //let patterns = vec!["\n\n".to_string(), "\n".to_string()];
     let span = Span {
         start: 0,
         end: data.len(),
     };
-    let tree = split(data, span, patterns, 0, span);
+    let tree = split(data, span, &patterns, 0, span);
     println!("{}", tree.to_string(true));
     assert_eq!(from_utf8(data).unwrap(), tree.reconstruct());
 
@@ -145,14 +145,14 @@ fn pattern_split_superlinear_test() {
     let binding = fs::read_to_string(data_path).unwrap();
     let data = binding.as_bytes();
 
-    let patterns = vec!["\n\n", "\n", "."];
+    let patterns = vec![vec!["\n\n"], vec!["\n"], vec!["."]];
 
     let span = Span {
         start: 0,
         end: data.len(),
     };
 
-    let tree = split(data, span, patterns, 0, span);
+    let tree = split(data, span, &patterns, 0, span);
     println!("{}", tree.to_string(true));
     let reconsted = tree.reconstruct();
     assert_eq!(from_utf8(&data).unwrap(), reconsted);

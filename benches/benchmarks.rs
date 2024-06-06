@@ -22,7 +22,7 @@ pub fn tokenizer_single_split_benchmark(c: &mut Criterion) {
     //let data_path = "data/train/Commonwealth_of_Nations.txt";
     //let data_path = "data/dev/Electroencephalography - Wikipedia.txt";
     let bytes = fs::read(data_path).unwrap();
-    let data = std::str::from_utf8(&bytes).unwrap();
+    let data = from_utf8(&bytes).unwrap();
 
     let conf_params = ConfigParams::builder()
         .pattern(vec![
@@ -130,15 +130,17 @@ pub fn tree_split_benchmark(c: &mut Criterion) {
     let data_path = "tests/test_data/superlinear.txt";
     let binding = fs::read(data_path).unwrap();
     let data = binding.as_slice();
+    //let patterns = vec![vec!["\n\n"], vec!["\n"], vec![".", "!", "?"]];
+    let patterns = vec![vec!["\n\n","\n"], vec!["."]];
+
 
     c.bench_function("tree_split_benchmark", |b| {
         b.iter(|| {
-            let patterns = vec!["\n\n", "\n", "."];
             let span = Span {
                 start: 0,
                 end: data.len(),
             };
-            let tree = split(data, span, patterns, 0, span);
+            let tree = split(data, span, &patterns, 0, span);
             let merged = tree.merge(0, true);
             let merged_spans_filtered: Vec<_> =
                 merged.iter().filter(|span| !span.is_empty()).collect();
