@@ -141,7 +141,7 @@ pub fn tree_split_benchmark(c: &mut Criterion) {
                 start: 0,
                 end: data.len(),
             };
-            let tree = split(data, span, &patterns, 0, span, &searchers);
+            let tree = split(data, span, &patterns, 0, span, &searchers, None);
             let merged = tree.merge(0, true);
             let merged_spans_filtered: Vec<_> =
                 merged.iter().filter(|span| !span.is_empty()).collect();

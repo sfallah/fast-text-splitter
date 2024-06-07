@@ -1,8 +1,8 @@
 use aho_corasick::Span;
+use fast_text_splitter::pattern_search::PatternSearcher;
 use fast_text_splitter::splitter::split;
 use std::fs;
 use std::str::from_utf8;
-use fast_text_splitter::pattern_search::PatternSearcher;
 
 #[test]
 fn single_level_split() {
@@ -13,7 +13,7 @@ fn single_level_split() {
         start: 0,
         end: data.len(),
     };
-    let tree = split(data, span, &patterns, 0, span, &searchers);
+    let tree = split(data, span, &patterns, 0, span, &searchers, None);
     println!("{:?}", tree);
     println!("{}", tree.to_string(true));
     let reconsted = tree.reconstruct();
@@ -53,11 +53,10 @@ fn multi_level_split() {
         \n\n\
         In fact, the correlation. Between superlinear.\n\
         Returns and inequality is so strong that it yields.\n\n\
-        Another heuristic for.\n\
+        Another heuristic for.\n\n\
         \n\n\
         \n\n\
-        \n\n\
-        Finding work of this type.\n\
+        \nFinding work of this type.\n\
         Look for fields where.\n\
         A few big winners. \n\
         Outperform everyone else.\n\n"
@@ -71,7 +70,7 @@ fn multi_level_split() {
         end: data.len(),
     };
     let searchers: Vec<_> = patterns.iter().map(|p| PatternSearcher::new(p)).collect();
-    let tree = split(data, span, &patterns, 0, span, &searchers);
+    let tree = split(data, span, &patterns, 0, span, &searchers, None);
 
     println!("{}", tree.to_string(true));
     assert_eq!(from_utf8(data).unwrap(), tree.reconstruct());
@@ -114,6 +113,55 @@ fn multi_level_split() {
 }
 
 #[test]
+fn max_len_splits() {
+    let _data_raw = "\n\n\
+        \n\n\
+        \n\n\
+        In fact, the correlation. Between superlinear.\n\
+        Returns and inequality is so strong that it yields.\n\n\
+        Another heuristic for.\n\
+        \n\n\
+        \n\n\
+        \n\n\
+        Finding work of this type.\n\
+        Look for fields where.\n\
+        A few big winners. \n\
+        Outperform everyone else.\n\n"
+        .as_bytes();
+
+    let data = _data_raw;
+
+    let patterns = vec![vec!["\n\n"], vec!["\n"], vec![".", "!", "?"]];
+    let span = Span {
+        start: 0,
+        end: data.len(),
+    };
+    let searchers: Vec<_> = patterns.iter().map(|p| PatternSearcher::new(p)).collect();
+    let tree = split(data, span, &patterns, 0, span, &searchers, None);
+
+    println!("{}", tree.to_string(true));
+    assert_eq!(from_utf8(data).unwrap(), tree.reconstruct());
+
+    /*
+    let merged_level_0 = tree.merge(0, false);
+    for span in merged_level_0.iter() {
+        println!("{:?}", from_utf8(&data[span.start..span.end]).unwrap());
+    }
+     */
+
+
+
+    let tree_leaves = tree.all_leaves();
+    for span in tree_leaves.iter() {
+        println!("{:?}", from_utf8(&data[span.start..span.end]).unwrap());
+    }
+    let total_len: usize = tree_leaves.iter().map(|span| span.len()).sum();
+    let leaves_concatenated: String = tree_leaves.iter().map(|span| from_utf8(&data[span.start..span.end]).unwrap()).collect();
+    println!("{:?}", leaves_concatenated);
+
+}
+
+#[test]
 fn first_pattern_no_match_split() {
     let data = "\n\
         In fact, the correlation. Between superlinear.\n\
@@ -133,7 +181,7 @@ fn first_pattern_no_match_split() {
         end: data.len(),
     };
     let searchers: Vec<_> = patterns.iter().map(|p| PatternSearcher::new(p)).collect();
-    let tree = split(data, span, &patterns, 0, span, &searchers);
+    let tree = split(data, span, &patterns, 0, span, &searchers, None);
     println!("{}", tree.to_string(true));
     assert_eq!(from_utf8(data).unwrap(), tree.reconstruct());
 
@@ -158,7 +206,7 @@ fn pattern_split_superlinear_test() {
     };
 
     let searchers: Vec<_> = patterns.iter().map(|p| PatternSearcher::new(p)).collect();
-    let tree = split(data, span, &patterns, 0, span, &searchers);
+    let tree = split(data, span, &patterns, 0, span, &searchers, None);
     println!("{}", tree.to_string(true));
     let reconsted = tree.reconstruct();
     assert_eq!(from_utf8(&data).unwrap(), reconsted);
@@ -183,6 +231,30 @@ fn pattern_split_superlinear_test() {
 
     println!("Merged Spans: {:?}", merged_spans_filtered.len());
     for span in merged_spans_filtered {
+        println!("{:?}", from_utf8(&data[span.start..span.end]).unwrap());
+    }
+}
+
+#[test]
+fn pattern_split_superlinear_print() {
+    let data_path = "tests/test_data/superlinear.txt";
+
+    let binding = fs::read_to_string(data_path).unwrap();
+    let data = binding.as_bytes();
+
+    let patterns = vec![vec!["\n\n"], vec!["\n"], vec!["."]];
+
+    let span = Span {
+        start: 0,
+        end: data.len(),
+    };
+
+    let searchers: Vec<_> = patterns.iter().map(|p| PatternSearcher::new(p)).collect();
+    let tree = split(data, span, &patterns, 0, span, &searchers, Some(128));
+    println!("{}", tree.to_string(true));
+
+    let end_splits = tree.merge(3, false);
+    for span in end_splits.iter() {
         println!("{:?}", from_utf8(&data[span.start..span.end]).unwrap());
     }
 }

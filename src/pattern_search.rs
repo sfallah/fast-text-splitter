@@ -83,7 +83,7 @@ impl<'a> SearchSplit<'a> {
         }
     }
     pub fn len(&self) -> usize {
-        self.span.len()
+        self.full_span().len()
     }
     pub fn is_empty(&self) -> bool {
         self.span.is_empty()
@@ -187,11 +187,7 @@ impl<'a> PatternSearcher<'a> {
         Self { patterns, engine }
     }
 
-    pub fn search_patterns(
-        &self,
-        data: &'a [u8],
-        data_span: Span,
-    ) -> Vec<SearchMatch<'a>> {
+    pub fn search_patterns(&self, data: &'a [u8], data_span: Span) -> Vec<SearchMatch<'a>> {
         if self.patterns.is_empty() || data_span.is_empty() || data.is_empty() {
             return Vec::new();
         }
@@ -216,10 +212,7 @@ impl<'a> PatternSearcher<'a> {
         }
     }
 
-    pub fn find_pattern(&self,
-                        data: &'a [u8],
-                        data_span: Span,
-    ) -> SearchResult<'a> {
+    pub fn find_pattern(&self, data: &'a [u8], data_span: Span) -> SearchResult<'a> {
         let matches: Vec<_> = self.search_patterns(data, data_span);
 
         if matches.is_empty() {
@@ -309,5 +302,3 @@ impl<'a> PatternSearcher<'a> {
         }
     }
 }
-
-
