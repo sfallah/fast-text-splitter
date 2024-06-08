@@ -169,11 +169,12 @@ fn pattern_split_superlinear_test() {
 #[test]
 fn pattern_split_superlinear_print() {
     let data_path = "tests/test_data/superlinear.txt";
+    //let data_path = "data/train/List_of_Game_of_Thrones_characters.txt";
 
     let patterns = vec![vec!["\n\n"], vec!["\n"], vec![".", "!", "?"]];
     let searchers: Vec<_> = patterns.iter().map(|p| PatternSearcher::new(p)).collect();
 
-    let (data_len, splits) = split_file(data_path, &patterns, &searchers, 200, 1, true);
+    let (data_len, splits) = split_file(data_path, &patterns, &searchers, 1024, true);
 
     let total_len: usize = splits.iter().map(|span| span.len()).sum();
     assert_eq!(data_len, total_len);
@@ -186,7 +187,6 @@ fn split_file<'a>(
     patterns: &Vec<Vec<&str>>,
     searchers: &Vec<PatternSearcher>,
     max_len: usize,
-    merge_level: usize,
     _print: bool,
 ) -> (usize, Vec<Span>) {
     let binding = fs::read_to_string(data_path).unwrap();
@@ -197,7 +197,9 @@ fn split_file<'a>(
         end: data.len(),
     };
     let tree = split(data, span, &patterns, 0, span, &searchers, Some(max_len));
-    let splits = tree.merge_splits(0, Some(max_len));
+    let leaf_level = tree.leaf_level().unwrap_or(0);
+    println!("Leaf Level: {:?}", leaf_level);
+    let splits = tree.merge_splits(leaf_level, Some(max_len));
     for span in splits.iter() {
         assert!(span.len() <= max_len, "Failed File: {} \n Span {:?} \n {}", span.len(), span, from_utf8(&data[span.start..span.end]).unwrap());
     }
@@ -222,7 +224,7 @@ fn hf_nq_dataset_test() -> tokenizers::Result<()> {
     let searchers: Vec<_> = patterns.iter().map(|p| PatternSearcher::new(p)).collect();
 
     files.choose_multiple(&mut rng, 400).for_each(|file| {
-        let (data_len, splits) = split_file(file, &patterns, &searchers, 512, 1, false);
+        let (data_len, splits) = split_file(file, &patterns, &searchers, 512, false);
         let total_len: usize = splits.iter().map(|span| span.len()).sum();
         assert_eq!(data_len, total_len, "Failed File: {}", file);
         println!("File: {} \n Total Length: {}", file, total_len);

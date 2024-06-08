@@ -142,7 +142,8 @@ pub fn tree_split_benchmark(c: &mut Criterion) {
                 end: data.len(),
             };
             let tree = split(data, span, &patterns, 0, span, &searchers, Some(512));
-            let splits = tree.merge_splits(0, Some(512));
+            let merge_level = tree.leaf_level().unwrap_or(0);
+            let splits = tree.merge_splits(merge_level, Some(512));
             black_box(splits);
         })
     });

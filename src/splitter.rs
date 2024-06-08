@@ -64,7 +64,7 @@ impl SplitNode<'_> {
         let max_len_value = max_len.unwrap_or(0);
 
         let mut splits = Vec::new();
-        if self.pattern_id > merge_level {
+        if self.pattern_id >= merge_level {
             if max_len_check {
                 splits.extend(chunk_spans(&self.all_leaves(), max_len_value));
             } else {
@@ -75,8 +75,21 @@ impl SplitNode<'_> {
                 splits.extend(child.merge_splits(merge_level, max_len));
             }
         }
-
         splits
+    }
+
+    //FIXME: This needs more testing, and see if it can be combined with merge_splits
+    pub fn leaf_level(&self) -> Option<usize> {
+        if self.children.is_empty() {
+            Some(self.pattern_id)
+        } else {
+            let leaf_found = self.children.iter().find(|child| child.children.is_empty());
+            if let Some(leaf) = leaf_found {
+                Some(leaf.pattern_id)
+            } else {
+                self.children.iter().find(|child| child.leaf_level().is_some()).map(|leaf| leaf.pattern_id)
+            }
+        }
     }
 
     pub fn all_leaves(&self) -> Vec<Span> {
