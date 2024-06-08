@@ -33,7 +33,7 @@ fn single_level_split() {
         start: 0,
         end: data.len(),
     };
-    let tree = split(data, span, &patterns, 0, span, &searchers, None);
+    let tree = split(data, span, &patterns, 0, span, &searchers, None,None);
     println!("{:?}", tree);
     println!("{}", tree.to_string(true));
     let reconsted = tree.reconstruct();
@@ -64,7 +64,7 @@ fn multi_level_split() {
         end: data.len(),
     };
     let searchers: Vec<_> = patterns.iter().map(|p| PatternSearcher::new(p)).collect();
-    let tree = split(data, span, &patterns, 0, span, &searchers, None);
+    let tree = split(data, span, &patterns, 0, span, &searchers, None,None);
 
     println!("{}", tree.to_string(true));
     assert_eq!(from_utf8(data).unwrap(), tree.reconstruct());
@@ -95,7 +95,7 @@ fn max_len_splits() {
         end: data.len(),
     };
     let searchers: Vec<_> = patterns.iter().map(|p| PatternSearcher::new(p)).collect();
-    let tree = split(data, span, &patterns, 0, span, &searchers, None);
+    let tree = split(data, span, &patterns, 0, span, &searchers, None,None);
 
     println!("{}", tree.to_string(true));
     assert_eq!(from_utf8(data).unwrap(), tree.reconstruct());
@@ -140,7 +140,7 @@ fn first_pattern_no_match_split() {
         end: data.len(),
     };
     let searchers: Vec<_> = patterns.iter().map(|p| PatternSearcher::new(p)).collect();
-    let tree = split(data, span, &patterns, 0, span, &searchers, None);
+    let tree = split(data, span, &patterns, 0, span, &searchers, None,None);
     println!("{}", tree.to_string(true));
     assert_eq!(from_utf8(data).unwrap(), tree.reconstruct());
 }
@@ -160,7 +160,7 @@ fn pattern_split_superlinear_test() {
     };
 
     let searchers: Vec<_> = patterns.iter().map(|p| PatternSearcher::new(p)).collect();
-    let tree = split(data, span, &patterns, 0, span, &searchers, None);
+    let tree = split(data, span, &patterns, 0, span, &searchers, None,None);
     println!("{}", tree.to_string(true));
     let reconsted = tree.reconstruct();
     assert_eq!(from_utf8(&data).unwrap(), reconsted);
@@ -168,8 +168,8 @@ fn pattern_split_superlinear_test() {
 
 #[test]
 fn pattern_split_superlinear_print() {
-    let data_path = "tests/test_data/superlinear.txt";
-    //let data_path = "data/train/List_of_Game_of_Thrones_characters.txt";
+    //let data_path = "tests/test_data/superlinear.txt";
+    let data_path = "data/train/List_of_Game_of_Thrones_characters.txt";
 
     let patterns = vec![vec!["\n\n"], vec!["\n"], vec![".", "!", "?"]];
     let searchers: Vec<_> = patterns.iter().map(|p| PatternSearcher::new(p)).collect();
@@ -196,7 +196,7 @@ fn split_file<'a>(
         start: 0,
         end: data.len(),
     };
-    let tree = split(data, span, &patterns, 0, span, &searchers, Some(max_len));
+    let tree = split(data, span, &patterns, 0, span, &searchers, Some(max_len), None);
     let leaf_level = tree.leaf_level().unwrap_or(0);
     println!("Leaf Level: {:?}", leaf_level);
     let splits = tree.merge_splits(leaf_level, Some(max_len));

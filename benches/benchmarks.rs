@@ -126,8 +126,10 @@ pub fn words_single_split_benchmark(c: &mut Criterion) {
 
 #[cfg(feature = "default")]
 pub fn tree_split_benchmark(c: &mut Criterion) {
-    let data_path = "tests/test_data/superlinear.txt";
-    //let data_path = "data/dev/List_of_Game_of_Thrones_characters.txt";
+    //let data_path = "tests/test_data/superlinear.txt";
+    let data_path = "data/dev/List_of_Game_of_Thrones_characters.txt";
+    //let data_path = "data/train/List_of_Game_of_Thrones_characters.txt";
+
 
     let binding = fs::read(data_path).unwrap();
     let data = binding.as_slice();
@@ -141,7 +143,7 @@ pub fn tree_split_benchmark(c: &mut Criterion) {
                 start: 0,
                 end: data.len(),
             };
-            let tree = split(data, span, &patterns, 0, span, &searchers, Some(512));
+            let tree = split(data, span, &patterns, 0, span, &searchers, Some(512), Some(0));
             let merge_level = tree.leaf_level().unwrap_or(0);
             let splits = tree.merge_splits(merge_level, Some(512));
             black_box(splits);

@@ -4,6 +4,7 @@ use aho_corasick::Span;
 
 use crate::common::span;
 use crate::pattern_search::{PatternSearcher, SearchSplit};
+use rayon::prelude::*;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct SplitNode<'a> {
@@ -112,6 +113,7 @@ pub fn split<'a>(
     split_span: Span,
     searchers: &'a Vec<PatternSearcher<'a>>,
     max_len: Option<usize>,
+    parallel_level: Option<usize>,
 ) -> SplitNode<'a> {
     let max_len_check = max_len.is_some();
     let max_len_value = max_len.unwrap_or(0);
@@ -127,13 +129,28 @@ pub fn split<'a>(
     let search_result = searchers[pattern_id].find_pattern(data, search_span);
 
     if search_result.matched {
-        let children: Vec<_> = search_result
-            .splits
-            .iter()
-            .flat_map(|search_split| {
-                sub_split(data, patterns, pattern_id, searchers, max_len, search_split)
-            })
-            .collect();
+        let parallelize = match parallel_level {
+            Some(level) => if level > 0 { false } else { true },
+            None => false,
+        };
+
+        let children: Vec<_> = if parallelize {
+            search_result
+                .splits
+                .par_iter()
+                .flat_map(|search_split| {
+                    sub_split(data, patterns, pattern_id, searchers, max_len, search_split, Some(pattern_id + 1))
+                })
+                .collect()
+        } else {
+            search_result
+                .splits
+                .iter()
+                .flat_map(|search_split| {
+                    sub_split(data, patterns, pattern_id, searchers, max_len, search_split, parallel_level)
+                })
+                .collect()
+        };
 
         SplitNode {
             data,
@@ -151,6 +168,7 @@ pub fn split<'a>(
                 split_span,
                 searchers,
                 max_len,
+                parallel_level,
             )
         } else {
             if max_len_check {
@@ -180,6 +198,7 @@ fn sub_split<'a>(
     searchers: &'a Vec<PatternSearcher<'a>>,
     max_len: Option<usize>,
     search_split: &SearchSplit,
+    parallel_level: Option<usize>,
 ) -> Vec<SplitNode<'a>> {
     let max_len_check = max_len.is_some();
     let max_len_value = max_len.unwrap_or(0);
@@ -195,6 +214,7 @@ fn sub_split<'a>(
             search_split.span,
             searchers,
             max_len,
+            parallel_level,
         );
         child_nodes.push(child_node);
 
