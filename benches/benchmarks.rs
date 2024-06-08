@@ -127,11 +127,11 @@ pub fn words_single_split_benchmark(c: &mut Criterion) {
 #[cfg(feature = "default")]
 pub fn tree_split_benchmark(c: &mut Criterion) {
     let data_path = "tests/test_data/superlinear.txt";
+    //let data_path = "data/dev/List_of_Game_of_Thrones_characters.txt";
 
     let binding = fs::read(data_path).unwrap();
     let data = binding.as_slice();
     let patterns = vec![vec!["\n\n"], vec!["\n"], vec![".", "!", "?"]];
-    //let patterns = vec![vec![".", "!", "?"]];
 
     let searchers: Vec<_> = patterns.iter().map(|p| PatternSearcher::new(p)).collect();
 
@@ -141,14 +141,8 @@ pub fn tree_split_benchmark(c: &mut Criterion) {
                 start: 0,
                 end: data.len(),
             };
-            let tree = split(data, span, &patterns, 0, span, &searchers, None);
-            let merged = tree.merge(0, true);
-            let merged_spans_filtered: Vec<_> =
-                merged.iter().filter(|span| !span.is_empty()).collect();
-            let splits: Vec<_> = merged_spans_filtered
-                .iter()
-                .map(|span| from_utf8(&data[span.start..span.end]).unwrap())
-                .collect();
+            let tree = split(data, span, &patterns, 0, span, &searchers, Some(512));
+            let splits = tree.merge_splits(0, Some(512));
             black_box(splits);
         })
     });
@@ -200,8 +194,8 @@ pub fn benches() {
     //aho_corasick_init_benchmark(&mut criterion);
     //hf_text_normalize_benchmark(&mut criterion);
     //text_normalize_benchmark(&mut criterion);
-    #[cfg(feature = "default")]
-    words_single_split_benchmark(&mut criterion);
+    //#[cfg(feature = "default")]
+    //words_single_split_benchmark(&mut criterion);
     tree_split_benchmark(&mut criterion);
     //#[cfg(feature = "tokenizers")]
     //tokenizer_single_split_benchmark(&mut criterion);

@@ -1,8 +1,28 @@
-use aho_corasick::Span;
-use fast_text_splitter::pattern_search::PatternSearcher;
-use fast_text_splitter::splitter::split;
-use std::fs;
 use std::str::from_utf8;
+use std::{fs, io};
+
+use aho_corasick::Span;
+
+use fast_text_splitter::pattern_search::PatternSearcher;
+use fast_text_splitter::splitter::{chunk_spans, split};
+
+use fast_text_splitter::common::span;
+use rand::seq::SliceRandom;
+use rand::thread_rng;
+
+fn list_text_files(dir: &str) -> io::Result<Vec<String>> {
+    let mut files = Vec::new();
+
+    for entry in fs::read_dir(dir)? {
+        let entry = entry?;
+        let path = entry.path();
+        if path.is_file() && path.extension().and_then(|s| s.to_str()) == Some("txt") {
+            files.push(String::from(path.to_str().unwrap()));
+        }
+    }
+
+    Ok(files)
+}
 
 #[test]
 fn single_level_split() {
@@ -18,32 +38,6 @@ fn single_level_split() {
     println!("{}", tree.to_string(true));
     let reconsted = tree.reconstruct();
     assert_eq!(from_utf8(data).unwrap(), reconsted);
-
-    let merged_0 = tree.merge(0, false);
-    assert_eq!(merged_0.len(), 1);
-    assert_eq!(data.len(), merged_0[0].len());
-
-    println!("#### Merged Level 0 Checks ####");
-    for span in merged_0.iter() {
-        println!("\t {:?}", from_utf8(&data[span.start..span.end]).unwrap());
-    }
-
-    println!("#### Merged Level 1 Checks ####");
-    let merged_1 = tree.merge(1, false);
-    assert_eq!(merged_1.len(), 2);
-    let merged_1_len_sum: usize = merged_1.iter().map(|span| span.len()).sum();
-    assert_eq!(data.len(), merged_1_len_sum);
-
-    for span in merged_1.iter() {
-        println!("\t {:?}", from_utf8(&data[span.start..span.end]).unwrap());
-    }
-
-    println!("#### Merged Level 2 Checks ####");
-    let merged_2 = tree.merge(2, false);
-    assert_eq!(merged_2.len(), 2);
-    for span in merged_2.iter() {
-        println!("\t {:?}", from_utf8(&data[span.start..span.end]).unwrap());
-    }
 }
 
 #[test]
@@ -74,42 +68,6 @@ fn multi_level_split() {
 
     println!("{}", tree.to_string(true));
     assert_eq!(from_utf8(data).unwrap(), tree.reconstruct());
-
-    println!("#### Merged Level 0 Checks ####");
-    let merged_level_0 = tree.merge(0, false);
-    assert_eq!(merged_level_0.len(), 8);
-    let splits_len_sum: usize = merged_level_0.iter().map(|span| span.len()).sum();
-    assert_eq!(data.len(), splits_len_sum);
-
-    for span in merged_level_0.iter() {
-        println!("{:?}", from_utf8(&data[span.start..span.end]).unwrap());
-    }
-
-    let merged_no_empty_level_0: Vec<_> = tree.merge(0, true);
-    assert_eq!(merged_no_empty_level_0.len(), 3);
-
-    for span in merged_no_empty_level_0.iter() {
-        println!("{:?}", from_utf8(&data[span.start..span.end]).unwrap());
-    }
-
-    println!("\n #### Merged Level 1 Checks ####");
-    let merged_level_1 = tree.merge(1, false);
-    assert_eq!(merged_level_1.len(), 8);
-    let merged_no_empty_level_1: Vec<_> = tree.merge(1, true);
-    assert_eq!(merged_no_empty_level_1.len(), 7);
-
-    for span in merged_no_empty_level_1.iter() {
-        println!("{:?}", from_utf8(&data[span.start..span.end]).unwrap());
-    }
-
-    println!("\n #### Merged Level 2 Checks ####");
-    let merged_level_2 = tree.merge(2, false);
-    for span in merged_level_2.iter() {
-        println!("{:?}", from_utf8(&data[span.start..span.end]).unwrap());
-    }
-    assert_eq!(merged_level_2.len(), 8);
-    let merged_no_empty_level_2: Vec<_> = tree.merge(2, true);
-    assert_eq!(merged_no_empty_level_2.len(), 8);
 }
 
 #[test]
@@ -149,16 +107,17 @@ fn max_len_splits() {
     }
      */
 
-
-
     let tree_leaves = tree.all_leaves();
     for span in tree_leaves.iter() {
         println!("{:?}", from_utf8(&data[span.start..span.end]).unwrap());
     }
     let total_len: usize = tree_leaves.iter().map(|span| span.len()).sum();
-    let leaves_concatenated: String = tree_leaves.iter().map(|span| from_utf8(&data[span.start..span.end]).unwrap()).collect();
+    let leaves_concatenated: String = tree_leaves
+        .iter()
+        .map(|span| from_utf8(&data[span.start..span.end]).unwrap())
+        .collect();
     println!("{:?}", leaves_concatenated);
-
+    assert_eq!(data.len(), total_len);
 }
 
 #[test]
@@ -184,11 +143,6 @@ fn first_pattern_no_match_split() {
     let tree = split(data, span, &patterns, 0, span, &searchers, None);
     println!("{}", tree.to_string(true));
     assert_eq!(from_utf8(data).unwrap(), tree.reconstruct());
-
-    let merged = tree.merge(1, false);
-    for span in merged {
-        println!("{:?}", from_utf8(&data[span.start..span.end]).unwrap());
-    }
 }
 
 #[test]
@@ -210,51 +164,92 @@ fn pattern_split_superlinear_test() {
     println!("{}", tree.to_string(true));
     let reconsted = tree.reconstruct();
     assert_eq!(from_utf8(&data).unwrap(), reconsted);
-
-    let merged_0 = tree.merge(0, false);
-    let splits_len_sum: usize = merged_0.iter().map(|span| span.len()).sum();
-    assert_eq!(data.len(), splits_len_sum);
-    let merged_0_filtered: Vec<_> = tree.merge(0, true);
-
-    let merged_1 = tree.merge(1, false);
-    let merged_1_filtered: Vec<_> = tree.merge(1, true);
-    let merged_2 = tree.merge(2, false);
-    let merged_2_filtered: Vec<_> = tree.merge(2, true);
-    println!("Merged 0: {:?}", merged_0.len());
-    println!("Merged 0 Filtered: {:?}", merged_0_filtered.len());
-    println!("Merged 1: {:?}", merged_1.len());
-    println!("Merged 1 Filtered: {:?}", merged_1_filtered.len());
-    println!("Merged 2: {:?}", merged_2.len());
-    println!("Merged 2 Filtered: {:?}", merged_2_filtered.len());
-
-    let merged_spans_filtered: Vec<_> = merged_1.iter().filter(|span| !span.is_empty()).collect();
-
-    println!("Merged Spans: {:?}", merged_spans_filtered.len());
-    for span in merged_spans_filtered {
-        println!("{:?}", from_utf8(&data[span.start..span.end]).unwrap());
-    }
 }
 
 #[test]
 fn pattern_split_superlinear_print() {
     let data_path = "tests/test_data/superlinear.txt";
 
+    let patterns = vec![vec!["\n\n"], vec!["\n"], vec![".", "!", "?"]];
+    let searchers: Vec<_> = patterns.iter().map(|p| PatternSearcher::new(p)).collect();
+
+    let (data_len, splits) = split_file(data_path, &patterns, &searchers, 200, 1, true);
+
+    let total_len: usize = splits.iter().map(|span| span.len()).sum();
+    assert_eq!(data_len, total_len);
+    println!("Total Leaves: {:?}", splits.len());
+    println!("Total Length: {:?}", total_len);
+}
+
+fn split_file<'a>(
+    data_path: &str,
+    patterns: &Vec<Vec<&str>>,
+    searchers: &Vec<PatternSearcher>,
+    max_len: usize,
+    merge_level: usize,
+    _print: bool,
+) -> (usize, Vec<Span>) {
     let binding = fs::read_to_string(data_path).unwrap();
     let data = binding.as_bytes();
-
-    let patterns = vec![vec!["\n\n"], vec!["\n"], vec!["."]];
 
     let span = Span {
         start: 0,
         end: data.len(),
     };
-
-    let searchers: Vec<_> = patterns.iter().map(|p| PatternSearcher::new(p)).collect();
-    let tree = split(data, span, &patterns, 0, span, &searchers, Some(128));
-    println!("{}", tree.to_string(true));
-
-    let end_splits = tree.merge(3, false);
-    for span in end_splits.iter() {
-        println!("{:?}", from_utf8(&data[span.start..span.end]).unwrap());
+    let tree = split(data, span, &patterns, 0, span, &searchers, Some(max_len));
+    let splits = tree.merge_splits(0, Some(max_len));
+    for span in splits.iter() {
+        assert!(span.len() <= max_len, "Failed File: {} \n Span {:?} \n {}", span.len(), span, from_utf8(&data[span.start..span.end]).unwrap());
     }
+
+    if _print {
+        for span in splits.iter() {
+            println!("{:?}", from_utf8(&data[span.start..span.end]).unwrap());
+        }
+    }
+    (data.len(), splits)
+}
+
+#[test]
+#[cfg(feature = "tokenizers")]
+fn hf_nq_dataset_test() -> tokenizers::Result<()> {
+    let mut rng = thread_rng();
+
+    tokenizers::utils::parallelism::set_parallelism(true);
+    let files = list_text_files("data/dev/")?;
+
+    let patterns = vec![vec!["\n\n"], vec!["\n"], vec![".", "!", "?"]];
+    let searchers: Vec<_> = patterns.iter().map(|p| PatternSearcher::new(p)).collect();
+
+    files.choose_multiple(&mut rng, 400).for_each(|file| {
+        let (data_len, splits) = split_file(file, &patterns, &searchers, 512, 1, false);
+        let total_len: usize = splits.iter().map(|span| span.len()).sum();
+        assert_eq!(data_len, total_len, "Failed File: {}", file);
+        println!("File: {} \n Total Length: {}", file, total_len);
+        println!("Number of Splits: {:?}", splits.len());
+    });
+
+    Ok(())
+}
+
+#[test]
+fn chunk_spans_test() {
+    let single_span = vec![span(0, 10)];
+    let chunked = chunk_spans(&single_span, 10);
+    assert_eq!(chunked.len(), 1);
+    assert_eq!(chunked[0].len(), 10);
+
+    let even_spans = vec![span(0, 10), span(10, 16), span(16, 36), span(36, 45)];
+    let chunked = chunk_spans(&even_spans, 20);
+    assert_eq!(chunked.len(), 3);
+    assert_eq!(chunked[0], span(0, 16));
+    assert_eq!(chunked[0].len(), 16);
+    assert_eq!(chunked[1], span(16, 36));
+    assert_eq!(chunked[1].len(), 20);
+    assert_eq!(chunked[2], span(36, 45));
+    assert_eq!(chunked[2].len(), 9);
+
+    let odd_spans = vec![span(0, 10), span(10, 16), span(16, 30), span(30, 35), span(35, 40)];
+    let chunked = chunk_spans(&odd_spans, 20);
+    assert_eq!(chunked.len(), 3);
 }

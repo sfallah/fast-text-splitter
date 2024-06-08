@@ -72,7 +72,7 @@ fn no_matches_test() -> anyhow::Result<()> {
     let no_match_res = searcher.find_pattern(data1.as_bytes(), span(0, data1.len()));
     assert!(!no_match_res.matched);
 
-    assert_eq!(no_match_res.data()[0], data1.to_string());
+    assert_eq!(no_match_res.splits[0].data(), data1.to_string());
     Ok(())
 }
 
@@ -126,6 +126,16 @@ fn single_ends_test() -> anyhow::Result<()> {
         "Hello, you all! How are you?\n\n".to_string()
     );
 
+    Ok(())
+}
+
+#[test]
+fn space_single_ends_test() -> anyhow::Result<()> {
+    let pattern = vec!["!"];
+    let searcher = PatternSearcher::new(&pattern);
+    let data1 = "Hello, you all!0".as_bytes();
+    let result1 = searcher.find_pattern(data1, span(0, data1.len()));
+    assert_eq!(result1.splits.len(), 2);
     Ok(())
 }
 
@@ -390,44 +400,6 @@ fn find_multiple_patterns_test() -> anyhow::Result<()> {
     );
     assert_eq!(result4.splits[6].stride, 1);
     assert_eq!(result4.splits[6].data(), "".to_string());
-
-    Ok(())
-}
-
-#[test]
-fn reconstruct_test() -> anyhow::Result<()> {
-    let pattern = vec!["\n\n"];
-    let searcher = PatternSearcher::new(&pattern);
-    let data1 = "Hello, you all!\n\n How are you? \n\n";
-    let result1 = searcher.find_pattern(data1.as_bytes(), span(0, data1.len()));
-    let reconsted1 = result1.reconstruct();
-    assert_eq!(reconsted1, data1);
-
-    let data2 = "Hello, you all!\n\n How are you? \n\n Nice to meet you all!";
-    let result2 = searcher.find_pattern(data2.as_bytes(), span(0, data2.len()));
-    let reconsted2 = result2.reconstruct();
-    assert_eq!(reconsted2, data2);
-
-    let data3 = "\n\n\n\nHello, you all!\n\n How are you? \n\n\n\n Nice to meet you all!\n\n\n\n";
-
-    let result3 = searcher.find_pattern(data3.as_bytes(), span(0, data3.len()));
-    let reconsted3 = result3.reconstruct();
-    assert_eq!(reconsted3, data3);
-
-    let data4 = "\n\nHello, you all! How are you?";
-    let result4 = searcher.find_pattern(data4.as_bytes(), span(0, data4.len()));
-    let reconsted4 = result4.reconstruct();
-    assert_eq!(reconsted4, data4);
-
-    let data5 = "Hello, you all! How are you?";
-    let result5 = searcher.find_pattern(data5.as_bytes(), span(0, data5.len()));
-    let reconsted5 = result5.reconstruct();
-    assert_eq!(reconsted5, data5);
-
-    let data6 = "Hello, you all! How are you?\n\n";
-    let result6 = searcher.find_pattern(data6.as_bytes(), span(0, data6.len()));
-    let reconsted6 = result6.reconstruct();
-    assert_eq!(reconsted6, data6);
 
     Ok(())
 }

@@ -33,26 +33,6 @@ impl<'a> SearchResult<'a> {
     pub fn offsets(&self) -> Vec<Span> {
         self.splits.iter().map(|split| split.span).collect()
     }
-
-    pub fn reconstruct(&self) -> String {
-        let full_span = self.full_span();
-        from_utf8(&self.data[full_span.start..full_span.end])
-            .unwrap()
-            .to_string()
-    }
-    pub fn full_span(&self) -> Span {
-        let start = self.offset;
-        let end = self.splits[self.splits.len() - 1].full_span().end;
-        Span { start, end }
-    }
-
-    pub fn len(&self) -> usize {
-        self.splits.iter().map(|split| split.len()).sum()
-    }
-
-    pub fn is_empty(&self) -> bool {
-        self.splits.iter().all(|split| split.is_empty())
-    }
 }
 
 impl std::fmt::Debug for SearchResult<'_> {
@@ -81,12 +61,6 @@ impl<'a> SearchSplit<'a> {
             stride,
             span,
         }
-    }
-    pub fn len(&self) -> usize {
-        self.full_span().len()
-    }
-    pub fn is_empty(&self) -> bool {
-        self.span.is_empty()
     }
     pub fn data(&self) -> String {
         from_utf8(&self.data[self.span.start..self.span.end])
@@ -252,7 +226,7 @@ impl<'a> PatternSearcher<'a> {
 
         if matches.len() == 1 {
             // If the pattern is not at the end of the data
-            if cur_match.end() < data_span.len() - 1 {
+            if cur_match.end() < data_span.len() {
                 let split = SearchSplit::new(
                     span(data_span.start + cur_match.end(), data_span.end),
                     data,
@@ -284,7 +258,7 @@ impl<'a> PatternSearcher<'a> {
             cur_match = end;
         });
 
-        if cur_match.end() < data_span.len() - 1 {
+        if cur_match.end() < data_span.len() {
             let split = SearchSplit::new(
                 span(data_span.start + cur_match.end(), data_span.end),
                 data,
