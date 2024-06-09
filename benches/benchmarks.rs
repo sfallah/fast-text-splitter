@@ -143,9 +143,15 @@ pub fn tree_split_benchmark(c: &mut Criterion) {
                 start: 0,
                 end: data.len(),
             };
-            let tree = split(data, span, &patterns, 0, span, &searchers, Some(512), Some(0));
+            let config = fast_text_splitter::splitter::SplitterConfig {
+                data,
+                patterns: &patterns,
+                searchers: &searchers,
+                max_len: Some(1024),
+            };
+            let tree = split(&config, span, 0, span, Some(false));
             let merge_level = tree.leaf_level().unwrap_or(0);
-            let splits = tree.merge_splits(merge_level, Some(512));
+            let splits = tree.merge_splits(merge_level, Some(1024));
             black_box(splits);
         })
     });

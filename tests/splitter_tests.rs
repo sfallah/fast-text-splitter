@@ -1,14 +1,12 @@
-use std::str::from_utf8;
 use std::{fs, io};
+use std::str::from_utf8;
 
 use aho_corasick::Span;
-
-use fast_text_splitter::pattern_search::PatternSearcher;
-use fast_text_splitter::splitter::{chunk_spans, split};
-
-use fast_text_splitter::common::span;
 use rand::seq::SliceRandom;
 use rand::thread_rng;
+
+use fast_text_splitter::pattern_search::PatternSearcher;
+use fast_text_splitter::splitter::{split, SplitterConfig};
 
 fn list_text_files(dir: &str) -> io::Result<Vec<String>> {
     let mut files = Vec::new();
@@ -33,10 +31,16 @@ fn single_level_split() {
         start: 0,
         end: data.len(),
     };
-    let tree = split(data, span, &patterns, 0, span, &searchers, None,None);
+    let config = SplitterConfig {
+        data,
+        patterns: &patterns,
+        searchers: &searchers,
+        max_len: None,
+    };
+    let tree = split(&config, span,0, span,None);
     println!("{:?}", tree);
-    println!("{}", tree.to_string(true));
-    let reconsted = tree.reconstruct();
+    println!("{}", tree.to_string(data,true));
+    let reconsted = tree.reconstruct(data);
     assert_eq!(from_utf8(data).unwrap(), reconsted);
 }
 
@@ -64,10 +68,15 @@ fn multi_level_split() {
         end: data.len(),
     };
     let searchers: Vec<_> = patterns.iter().map(|p| PatternSearcher::new(p)).collect();
-    let tree = split(data, span, &patterns, 0, span, &searchers, None,None);
-
-    println!("{}", tree.to_string(true));
-    assert_eq!(from_utf8(data).unwrap(), tree.reconstruct());
+    let config = SplitterConfig {
+        data,
+        patterns: &patterns,
+        searchers: &searchers,
+        max_len: None,
+    };
+    let tree = split(&config, span,0, span,None);
+    println!("{}", tree.to_string(data,true));
+    assert_eq!(from_utf8(data).unwrap(), tree.reconstruct(data));
 }
 
 #[test]
@@ -95,10 +104,15 @@ fn max_len_splits() {
         end: data.len(),
     };
     let searchers: Vec<_> = patterns.iter().map(|p| PatternSearcher::new(p)).collect();
-    let tree = split(data, span, &patterns, 0, span, &searchers, None,None);
-
-    println!("{}", tree.to_string(true));
-    assert_eq!(from_utf8(data).unwrap(), tree.reconstruct());
+    let config = SplitterConfig {
+        data,
+        patterns: &patterns,
+        searchers: &searchers,
+        max_len: None,
+    };
+    let tree = split(&config, span,0, span,None);
+    println!("{}", tree.to_string(data,true));
+    assert_eq!(from_utf8(data).unwrap(), tree.reconstruct(data));
 
     /*
     let merged_level_0 = tree.merge(0, false);
@@ -140,9 +154,15 @@ fn first_pattern_no_match_split() {
         end: data.len(),
     };
     let searchers: Vec<_> = patterns.iter().map(|p| PatternSearcher::new(p)).collect();
-    let tree = split(data, span, &patterns, 0, span, &searchers, None,None);
-    println!("{}", tree.to_string(true));
-    assert_eq!(from_utf8(data).unwrap(), tree.reconstruct());
+    let config = SplitterConfig {
+        data,
+        patterns: &patterns,
+        searchers: &searchers,
+        max_len: None,
+    };
+    let tree = split(&config, span,0, span,None);
+    println!("{}", tree.to_string(data,true));
+    assert_eq!(from_utf8(data).unwrap(), tree.reconstruct(data));
 }
 
 #[test]
@@ -160,16 +180,22 @@ fn pattern_split_superlinear_test() {
     };
 
     let searchers: Vec<_> = patterns.iter().map(|p| PatternSearcher::new(p)).collect();
-    let tree = split(data, span, &patterns, 0, span, &searchers, None,None);
-    println!("{}", tree.to_string(true));
-    let reconsted = tree.reconstruct();
+    let config = SplitterConfig {
+        data,
+        patterns: &patterns,
+        searchers: &searchers,
+        max_len: None,
+    };
+    let tree = split(&config, span,0, span,None);
+    println!("{}", tree.to_string(data,true));
+    let reconsted = tree.reconstruct(data);
     assert_eq!(from_utf8(&data).unwrap(), reconsted);
 }
 
 #[test]
 fn pattern_split_superlinear_print() {
-    //let data_path = "tests/test_data/superlinear.txt";
-    let data_path = "data/train/List_of_Game_of_Thrones_characters.txt";
+    let data_path = "tests/test_data/superlinear.txt";
+    //let data_path = "data/train/List_of_Game_of_Thrones_characters.txt";
 
     let patterns = vec![vec!["\n\n"], vec!["\n"], vec![".", "!", "?"]];
     let searchers: Vec<_> = patterns.iter().map(|p| PatternSearcher::new(p)).collect();
@@ -196,7 +222,14 @@ fn split_file<'a>(
         start: 0,
         end: data.len(),
     };
-    let tree = split(data, span, &patterns, 0, span, &searchers, Some(max_len), None);
+    let config = SplitterConfig {
+        data,
+        patterns,
+        searchers,
+        max_len: Some(max_len),
+    };
+    let tree = split(&config, span,0, span,None);
+
     let leaf_level = tree.leaf_level().unwrap_or(0);
     println!("Leaf Level: {:?}", leaf_level);
     let splits = tree.merge_splits(leaf_level, Some(max_len));
@@ -232,26 +265,4 @@ fn hf_nq_dataset_test() -> tokenizers::Result<()> {
     });
 
     Ok(())
-}
-
-#[test]
-fn chunk_spans_test() {
-    let single_span = vec![span(0, 10)];
-    let chunked = chunk_spans(&single_span, 10);
-    assert_eq!(chunked.len(), 1);
-    assert_eq!(chunked[0].len(), 10);
-
-    let even_spans = vec![span(0, 10), span(10, 16), span(16, 36), span(36, 45)];
-    let chunked = chunk_spans(&even_spans, 20);
-    assert_eq!(chunked.len(), 3);
-    assert_eq!(chunked[0], span(0, 16));
-    assert_eq!(chunked[0].len(), 16);
-    assert_eq!(chunked[1], span(16, 36));
-    assert_eq!(chunked[1].len(), 20);
-    assert_eq!(chunked[2], span(36, 45));
-    assert_eq!(chunked[2].len(), 9);
-
-    let odd_spans = vec![span(0, 10), span(10, 16), span(16, 30), span(30, 35), span(35, 40)];
-    let chunked = chunk_spans(&odd_spans, 20);
-    assert_eq!(chunked.len(), 3);
 }

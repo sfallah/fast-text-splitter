@@ -1,21 +1,20 @@
 use std::str::from_utf8;
 
 use aho_corasick::Span;
-
-use crate::common::span;
-use crate::pattern_search::{PatternSearcher, SearchSplit};
 use rayon::prelude::*;
 
+use crate::common::{chunk_spans, span};
+use crate::pattern_search::{PatternSearcher, SearchSplit};
+
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct SplitNode<'a> {
+pub struct SplitNode {
     pub split_span: Span,
-    pub data: &'a [u8],
     pub pattern_id: usize,
-    pub children: Vec<SplitNode<'a>>,
+    pub children: Vec<SplitNode>,
 }
 
-impl SplitNode<'_> {
-    pub fn to_string_with_indent(&self, indent: usize, reconstruct: bool) -> String {
+impl SplitNode {
+    pub fn to_string_with_indent(&self, data: &[u8], indent: usize, reconstruct: bool) -> String {
         let indent_str = " ".repeat(indent);
 
         if !self.children.is_empty() {
@@ -29,10 +28,10 @@ impl SplitNode<'_> {
                 indent_str
             );
             self.children.iter().for_each(|child| {
-                result.push_str(&child.to_string_with_indent(indent + 4, reconstruct));
+                result.push_str(&child.to_string_with_indent(data, indent + 4, reconstruct));
             });
             if reconstruct {
-                result.push_str(&format!("{} orig: {:?}\n", indent_str, self.reconstruct()));
+                result.push_str(&format!("{} orig: {:?}\n", indent_str, self.reconstruct(data)));
             }
             result
         } else {
@@ -45,17 +44,17 @@ impl SplitNode<'_> {
                 self.split_span.len(),
             );
             if reconstruct {
-                result.push_str(&format!("{} orig: {:?}\n", indent_str, self.reconstruct()));
+                result.push_str(&format!("{} orig: {:?}\n", indent_str, self.reconstruct(data)));
             }
             result
         }
     }
-    pub fn to_string(&self, reconstruct: bool) -> String {
-        self.to_string_with_indent(0, reconstruct)
+    pub fn to_string(&self, data: &[u8], reconstruct: bool) -> String {
+        self.to_string_with_indent(data, 0, reconstruct)
     }
 
-    pub fn reconstruct(&self) -> String {
-        from_utf8(&self.data[self.split_span.start..self.split_span.end])
+    pub fn reconstruct(&self, data: &[u8]) -> String {
+        from_utf8(&data[self.split_span.start..self.split_span.end])
             .unwrap()
             .to_string()
     }
@@ -105,41 +104,40 @@ impl SplitNode<'_> {
     }
 }
 
-pub fn split<'a>(
-    data: &'a [u8],
-    search_span: Span,
-    patterns: &Vec<Vec<&'a str>>,
-    pattern_id: usize,
-    split_span: Span,
-    searchers: &'a Vec<PatternSearcher<'a>>,
-    max_len: Option<usize>,
-    parallel_level: Option<usize>,
-) -> SplitNode<'a> {
-    let max_len_check = max_len.is_some();
-    let max_len_value = max_len.unwrap_or(0);
+pub struct SplitterConfig<'a> {
+    pub data: &'a [u8],
+    pub patterns: &'a Vec<Vec<&'a str>>,
+    pub searchers: &'a Vec<PatternSearcher<'a>>,
+    pub max_len: Option<usize>,
+}
+
+pub fn split(config: &SplitterConfig,
+             search_span: Span,
+             pattern_id: usize,
+             split_span: Span,
+             parallel: Option<bool>,
+) -> SplitNode {
+    let max_len_check = config.max_len.is_some();
+    let max_len_value = config.max_len.unwrap_or(0);
     if max_len_check && split_span.len() <= max_len_value {
         return SplitNode {
-            data,
             pattern_id,
             split_span,
             children: Vec::new(),
         };
     }
 
-    let search_result = searchers[pattern_id].find_pattern(data, search_span);
+    let search_result = config.searchers[pattern_id].find_pattern(config.data, search_span);
 
     if search_result.matched {
-        let parallelize = match parallel_level {
-            Some(level) => if level > 0 { false } else { true },
-            None => false,
-        };
+        let parallelize = parallel.unwrap_or_else(|| false);
 
         let children: Vec<_> = if parallelize {
             search_result
                 .splits
                 .par_iter()
                 .flat_map(|search_split| {
-                    sub_split(data, patterns, pattern_id, searchers, max_len, search_split, Some(pattern_id + 1))
+                    sub_split(config, pattern_id, search_split, None)
                 })
                 .collect()
         } else {
@@ -147,41 +145,33 @@ pub fn split<'a>(
                 .splits
                 .iter()
                 .flat_map(|search_split| {
-                    sub_split(data, patterns, pattern_id, searchers, max_len, search_split, parallel_level)
+                    sub_split(config, pattern_id, search_split, None)
                 })
                 .collect()
         };
 
         SplitNode {
-            data,
             pattern_id,
             split_span,
             children,
         }
     } else {
-        if pattern_id + 1 < patterns.len() && !search_span.is_empty() {
-            split(
-                data,
-                search_span,
-                patterns,
-                pattern_id + 1,
-                split_span,
-                searchers,
-                max_len,
-                parallel_level,
+        if pattern_id + 1 < config.patterns.len() && !search_span.is_empty() {
+            split(config,
+                  search_span,
+                  pattern_id + 1,
+                  split_span, parallel,
             )
         } else {
             if max_len_check {
-                let children = split_chunk(data, pattern_id, split_span, max_len_value);
+                let children = split_chunk(pattern_id, split_span, max_len_value);
                 SplitNode {
-                    data,
                     pattern_id,
                     split_span,
                     children,
                 }
             } else {
                 SplitNode {
-                    data,
                     pattern_id,
                     split_span,
                     children: Vec::new(),
@@ -191,36 +181,28 @@ pub fn split<'a>(
     }
 }
 
-fn sub_split<'a>(
-    data: &'a [u8],
-    patterns: &Vec<Vec<&'a str>>,
-    pattern_id: usize,
-    searchers: &'a Vec<PatternSearcher<'a>>,
-    max_len: Option<usize>,
-    search_split: &SearchSplit,
-    parallel_level: Option<usize>,
-) -> Vec<SplitNode<'a>> {
-    let max_len_check = max_len.is_some();
-    let max_len_value = max_len.unwrap_or(0);
-    if pattern_id + 1 < patterns.len() && !search_split.span.is_empty() {
+
+fn sub_split(config: &SplitterConfig,
+             pattern_id: usize,
+             search_split: &SearchSplit,
+             parallel: Option<bool>,
+) -> Vec<SplitNode> {
+    let max_len_check = config.max_len.is_some();
+    let max_len_value = config.max_len.unwrap_or(0);
+    if pattern_id + 1 < config.patterns.len() && !search_split.span.is_empty() {
         //FIXME: add split pattern as child node
         let mut child_nodes = Vec::new();
 
-        let child_node = split(
-            data,
-            search_split.span,
-            patterns,
-            pattern_id + 1,
-            search_split.span,
-            searchers,
-            max_len,
-            parallel_level,
+        let child_node = split(config,
+                               search_split.span,
+                               pattern_id + 1,
+                               search_split.span,
+                               parallel,
         );
         child_nodes.push(child_node);
 
         if search_split.stride > 0 {
             let child_node = SplitNode {
-                data,
                 pattern_id: pattern_id + 1,
                 split_span: span(
                     search_split.span.end,
@@ -235,7 +217,6 @@ fn sub_split<'a>(
         if max_len_check {
             if search_split.full_span().len() <= max_len_value {
                 let child_node = SplitNode {
-                    data,
                     pattern_id: pattern_id + 1,
                     split_span: search_split.full_span(),
                     children: Vec::new(),
@@ -243,7 +224,6 @@ fn sub_split<'a>(
                 vec![child_node]
             } else {
                 split_chunk(
-                    data,
                     pattern_id + 1,
                     search_split.full_span(),
                     max_len_value,
@@ -251,7 +231,6 @@ fn sub_split<'a>(
             }
         } else {
             let child_node = SplitNode {
-                data,
                 pattern_id: pattern_id + 1,
                 split_span: search_split.full_span(),
                 children: Vec::new(),
@@ -261,24 +240,21 @@ fn sub_split<'a>(
     }
 }
 
-pub fn split_chunk(
-    data: &[u8],
-    pattern_id: usize,
-    split_span: Span,
-    max_len: usize,
+pub fn split_chunk(pattern_id: usize,
+                   split_span: Span,
+                   max_len_value: usize,
 ) -> Vec<SplitNode> {
     let mut result = Vec::new();
     let mut start = split_span.start;
     let end = split_span.end;
     while start < end {
-        let chunk_end = if end - start > max_len {
-            start + max_len
+        let chunk_end = if end - start > max_len_value {
+            start + max_len_value
         } else {
             end
         };
         let chunk_span = Span::from(start..chunk_end);
         result.push(SplitNode {
-            data,
             pattern_id,
             split_span: chunk_span,
             children: Vec::new(),
@@ -286,55 +262,4 @@ pub fn split_chunk(
         start = chunk_end;
     }
     result
-}
-
-pub fn chunk_spans(spans: &Vec<Span>, max_len: usize) -> Vec<Span> {
-    if spans.is_empty() {
-        return Vec::new();
-    }
-
-    let mut cur_split = spans[0];
-    let mut cur_len: usize = cur_split.len();
-    assert!(
-        cur_len <= max_len,
-        "First Span: {:?} with len: {} is larger than max_len: {}",
-        cur_split,
-        cur_split.len(),
-        max_len
-    );
-    if spans.len() == 1 {
-        return vec![cur_split];
-    }
-
-    let mut chunked_splits = Vec::new();
-
-    for (idx, leaf) in spans.iter().enumerate().skip(1) {
-        assert!(
-            cur_split.len() <= max_len,
-            "Current Span: {:?} with len: {} is larger than max_len: {}",
-            cur_split,
-            cur_split.len(),
-            max_len
-        );
-
-        assert_eq!(
-            cur_split.end, leaf.start,
-            "Next Span: {:?} doesn't continue the Current Span: {:?}",
-            leaf, cur_split
-        );
-
-        if cur_len + leaf.len() > max_len {
-            chunked_splits.push(cur_split);
-            cur_split = leaf.clone();
-            cur_len = leaf.len();
-        } else {
-            cur_split = span(cur_split.start, leaf.end);
-            cur_len += leaf.len();
-        }
-        if idx == spans.len() - 1 {
-            chunked_splits.push(cur_split);
-        }
-    }
-
-    chunked_splits
 }
