@@ -16,10 +16,19 @@ pub trait Tokenize {
     fn encode(&self, data: &str) -> anyhow::Result<EncodingType>;
 }
 
+pub struct NoneTokenizer;
+
+impl Tokenize for NoneTokenizer {
+    fn encode(&self, _data: &str) -> anyhow::Result<EncodingType> {
+        Ok(EncodingType::NoneEncoding)
+    }
+}
+
 pub enum EncodingType {
     #[cfg(feature = "tokenizers")]
     HFEncoding(Encoding),
     WSEncoding(WSEncoding),
+    NoneEncoding,
 }
 
 impl EncodingType {
@@ -28,6 +37,7 @@ impl EncodingType {
             #[cfg(feature = "tokenizers")]
             EncodingType::HFEncoding(enc) => enc.get_offsets(),
             EncodingType::WSEncoding(enc) => &*enc.offsets,
+            EncodingType::NoneEncoding => &[],
         }
     }
 
@@ -36,6 +46,7 @@ impl EncodingType {
             #[cfg(feature = "tokenizers")]
             EncodingType::HFEncoding(enc) => enc.get_word_ids(),
             EncodingType::WSEncoding(enc) => &*enc.word_ids,
+            EncodingType::NoneEncoding => &[],
         }
     }
 
@@ -44,6 +55,7 @@ impl EncodingType {
             #[cfg(feature = "tokenizers")]
             EncodingType::HFEncoding(enc) => enc.len(),
             EncodingType::WSEncoding(enc) => enc.offsets.len(),
+            EncodingType::NoneEncoding => 0,
         }
     }
 
@@ -52,6 +64,7 @@ impl EncodingType {
             #[cfg(feature = "tokenizers")]
             EncodingType::HFEncoding(enc) => enc.is_empty(),
             EncodingType::WSEncoding(enc) => enc.offsets.is_empty(),
+            EncodingType::NoneEncoding => true,
         }
     }
 
@@ -79,12 +92,25 @@ impl EncodingType {
         res
     }
 
+    pub fn to_data_offsets_new(&self, tokens_spans: Vec<Span>, offset: usize) -> Vec<Span> {
+        let mut res = Vec::new();
+
+        tokens_spans.iter().for_each(|tokens_span| {
+            let start = self.get_offsets().get(tokens_span.start).unwrap().0;
+            let end = self.get_offsets().get(tokens_span.end).unwrap().1;
+            res.push(span(start + offset, end + offset));
+        });
+
+        res
+    }
+
     pub fn to_split_results(&self, splits: &Vec<Split>, data: &str) -> Vec<SplitResults> {
         #[cfg(feature = "tokenizers")]
-        let encodings: Vec<TokensResults> = match self {
+            let encodings: Vec<TokensResults> = match self {
             #[cfg(feature = "tokenizers")]
             EncodingType::HFEncoding(enc) => divide_encoding(enc, splits),
             EncodingType::WSEncoding(_) => vec![],
+            EncodingType::NoneEncoding => vec![],
         };
 
         let split_strings: Vec<_> = splits

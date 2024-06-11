@@ -1,19 +1,20 @@
-use aho_corasick::Span;
 use std::fs;
 use std::str::from_utf8;
 
+use aho_corasick::Span;
 use criterion::{black_box, criterion_main, Criterion};
 use tokenizers::normalizers::bert::BertNormalizer;
 use tokenizers::{NormalizedString, Normalizer};
 
 use fast_text_splitter::ac_matches::init_aho_corasick;
 use fast_text_splitter::config::{ConfigParams, SplitterConfig};
+use fast_text_splitter::encodings::NoneTokenizer;
 use fast_text_splitter::hf_tokenizer::init_tokenizer;
 #[cfg(feature = "tokenizers")]
 use fast_text_splitter::hf_tokenizer::HFTokenizer;
 use fast_text_splitter::normalizer::TextNormalizer;
-use fast_text_splitter::pattern_search::PatternSearcher;
-use fast_text_splitter::splitter::split;
+use fast_text_splitter::pattern_search::pattern_searcher::PatternSearcher;
+use fast_text_splitter::splitter::Splitter;
 use fast_text_splitter::text_split_parallel;
 use fast_text_splitter::ws_tokenizer::WSTokenizer;
 
@@ -126,16 +127,19 @@ pub fn words_single_split_benchmark(c: &mut Criterion) {
 
 #[cfg(feature = "default")]
 pub fn tree_split_benchmark(c: &mut Criterion) {
-    //let data_path = "tests/test_data/superlinear.txt";
-    let data_path = "data/dev/List_of_Game_of_Thrones_characters.txt";
+    let data_path = "tests/test_data/superlinear.txt";
+    //let data_path = "data/dev/List_of_Game_of_Thrones_characters.txt";
     //let data_path = "data/train/List_of_Game_of_Thrones_characters.txt";
-
 
     let binding = fs::read(data_path).unwrap();
     let data = binding.as_slice();
     let patterns = vec![vec!["\n\n"], vec!["\n"], vec![".", "!", "?"]];
 
     let searchers: Vec<_> = patterns.iter().map(|p| PatternSearcher::new(p)).collect();
+    let ws_tokenizer = WSTokenizer {};
+    let hf_tokenizer = HFTokenizer {
+        tokenizer: init_tokenizer(None, None, false).unwrap(),
+    };
 
     c.bench_function("tree_split_benchmark", |b| {
         b.iter(|| {
@@ -143,13 +147,19 @@ pub fn tree_split_benchmark(c: &mut Criterion) {
                 start: 0,
                 end: data.len(),
             };
-            let config = fast_text_splitter::splitter::SplitterConfig {
-                data,
-                patterns: &patterns,
-                searchers: &searchers,
-                max_len: Some(1024),
-            };
-            let tree = split(&config, span, 0, span, Some(false));
+            let config =
+                fast_text_splitter::splitter::splitter_config::SplitterConfig::<NoneTokenizer> {
+                    data,
+                    patterns: &patterns,
+                    searchers: &searchers,
+                    max_len: None,
+                    //max_len: Some(256),
+                    //tokenizer: Some(&hf_tokenizer),
+                    //tokenizer: Some(&ws_tokenizer),
+                    tokenizer: None,
+                };
+            let splitter = Splitter::new(&config, span, 0, span, Some(false), None, None);
+            let tree = splitter.split();
             let merge_level = tree.leaf_level().unwrap_or(0);
             let splits = tree.merge_splits(merge_level, Some(1024));
             black_box(splits);

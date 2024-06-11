@@ -119,6 +119,54 @@ pub fn chunk_spans(spans: &Vec<Span>, max_len: usize) -> Vec<Span> {
     chunked_splits
 }
 
+pub fn chunk_encoding_splits(spans: &Vec<(Span, Span)>, max_len: usize) -> Vec<(Span, Span)> {
+    if spans.is_empty() {
+        return Vec::new();
+    }
+
+    let mut cur_split = spans[0];
+    let mut cur_tokens_len: usize = cur_split.0.len();
+    assert!(
+        cur_tokens_len <= max_len,
+        "First Span: {:?} with len: {} is larger than max_len: {}",
+        cur_split.0,
+        cur_split.0.len(),
+        max_len
+    );
+    if spans.len() == 1 {
+        return vec![cur_split];
+    }
+
+    let mut chunked_splits = Vec::new();
+
+    for (idx, leaf) in spans.iter().enumerate().skip(1) {
+        assert!(
+            cur_split.0.len() <= max_len,
+            "Current Span: {:?} with len: {} is larger than max_len: {}",
+            cur_split,
+            cur_split.0.len(),
+            max_len
+        );
+
+        if cur_tokens_len + leaf.0.len() > max_len {
+            chunked_splits.push(cur_split);
+            cur_split = leaf.clone();
+            cur_tokens_len = leaf.0.len();
+        } else {
+            cur_split = (
+                span(cur_split.0.start, leaf.0.end),
+                span(cur_split.1.start, leaf.1.end),
+            );
+            cur_tokens_len += leaf.0.len();
+        }
+        if idx == spans.len() - 1 {
+            chunked_splits.push(cur_split);
+        }
+    }
+
+    chunked_splits
+}
+
 #[derive(PartialEq, Clone)]
 pub struct SplitResults {
     pub split: Split,
@@ -349,7 +397,13 @@ mod tests {
         assert_eq!(chunked[2], span(36, 45));
         assert_eq!(chunked[2].len(), 9);
 
-        let odd_spans = vec![span(0, 10), span(10, 16), span(16, 30), span(30, 35), span(35, 40)];
+        let odd_spans = vec![
+            span(0, 10),
+            span(10, 16),
+            span(16, 30),
+            span(30, 35),
+            span(35, 40),
+        ];
         let chunked = chunk_spans(&odd_spans, 20);
         assert_eq!(chunked.len(), 3);
     }
@@ -357,5 +411,11 @@ mod tests {
 
 #[inline]
 pub fn span(start: usize, end: usize) -> Span {
+    Span { start, end }
+}
+
+pub fn span_min_offset(span: Span, offset: usize) -> Span {
+    let start = span.start - offset;
+    let end = span.end - offset;
     Span { start, end }
 }
