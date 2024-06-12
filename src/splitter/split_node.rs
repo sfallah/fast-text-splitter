@@ -3,7 +3,7 @@ use std::sync::Arc;
 
 use aho_corasick::Span;
 
-use crate::common::{chunk_encoding_splits, chunk_spans, span};
+use crate::common::{chunk_encoding_splits, chunk_spans, span, Split, SplitResults};
 use crate::splitter::split_encoding::SplitEncoding;
 
 #[derive(Clone)]
@@ -127,6 +127,47 @@ impl SplitNode {
             }
         }
         splits
+    }
+
+    pub fn merge_encoding_result(
+        &self,
+        merge_level: usize,
+        max_len: Option<usize>,
+        data: &str,
+    ) -> Vec<SplitResults> {
+        let max_len_check = max_len.is_some();
+        let max_len_value = max_len.unwrap_or(0);
+
+        let mut split_results = Vec::new();
+        if self.pattern_id >= merge_level {
+            let raw_splits = if max_len_check {
+                let leaves = self.all_leaves_split();
+                chunk_encoding_splits(&leaves, max_len_value)
+            } else {
+                self.all_leaves_split()
+            };
+
+            let splits: Vec<_> = raw_splits
+                .iter()
+                .map(|(tokens_span, data_span)| Split {
+                    tokens_span: tokens_span.clone(),
+                    data_span: Some(data_span.clone()),
+                })
+                .collect();
+            let split_res = self
+                .split_encoding
+                .clone()
+                .unwrap()
+                .encoding
+                .to_split_results(&splits, data);
+
+            split_results.extend(split_res);
+        } else {
+            for child in &self.children {
+                split_results.extend(child.merge_encoding_result(merge_level, max_len, data));
+            }
+        }
+        split_results
     }
 
     //FIXME: This needs more testing, and see if it can be combined with merge_splits

@@ -2,12 +2,14 @@
 mod tests {
     use std::str::from_utf8;
     use std::{fs, io};
+    use std::io::Write;
 
     use aho_corasick::Span;
     use rand::seq::SliceRandom;
     use rand::thread_rng;
 
     use crate::encodings::{NoneTokenizer, Tokenize};
+    use crate::hf_tokenizer::{init_tokenizer, HFTokenizer};
     use crate::pattern_search::pattern_searcher::PatternSearcher;
     use crate::splitter::{Splitter, SplitterConfig};
     use crate::ws_tokenizer::WSTokenizer;
@@ -223,16 +225,27 @@ mod tests {
         let searchers: Vec<_> = patterns.iter().map(|p| PatternSearcher::new(p)).collect();
         let ws_tokenizer = WSTokenizer {};
 
-        let config = SplitterConfig::<WSTokenizer> {
+        let hf_tokenizer = HFTokenizer {
+            tokenizer: init_tokenizer(None, None, false).unwrap(),
+        };
+
+        let config = SplitterConfig::<HFTokenizer> {
             data,
             patterns: &patterns,
             searchers: &searchers,
             max_len: Some(40),
-            tokenizer: Some(&ws_tokenizer),
+            //tokenizer: Some(&ws_tokenizer),
+            tokenizer: Some(&hf_tokenizer),
         };
-        let splitter = Splitter::new(&config, span, 0, span, None, None, None);
+        let splitter = Splitter::new(&config, span, 0, span, Some(true), None, None);
         let tree = splitter.split();
-        println!("{}", tree.to_string(data, true));
+
+        //write to file
+        let mut file = fs::File::create("output/test_data/superlinear_tree.txt").unwrap();
+        //if file doesn't exist, create it
+
+        file.write_all(tree.to_string(data, true).as_bytes()).unwrap();
+        //println!("{}", tree.to_string(data, true));
 
         let leaf_level_opt = tree.leaf_level();
         assert_eq!(leaf_level_opt, Some(1));
@@ -245,15 +258,34 @@ mod tests {
             .collect();
 
         let total_len: usize = splits.iter().map(|span| span.len()).sum();
-        //assert_eq!(data.len(), total_len);
+        assert_eq!(data.len(), total_len);
         println!("Number of Splits: {:?}", splits.len());
 
+        let split_results =
+            tree.merge_encoding_result(leaf_level_opt.unwrap(), Some(40), from_utf8(data).unwrap());
+
+        println!("Number of Split Results: {:?}", split_results.len());
+        assert_eq!(split_results.len(), splits.len());
+
         let ws_tokenizer = WSTokenizer {};
-        for span in splits.iter() {
-            let split_str = from_utf8(&data[*span]).unwrap();
+        for (span, result) in splits_encoding.iter().zip(split_results.iter()) {
+            let split_str = from_utf8(&data[span.1.range()]).unwrap();
             println!("{:?}", split_str);
-            let encoded = ws_tokenizer.encode(split_str).unwrap();
-            println!("Tokens len: {:?}", encoded.len());
+            let ws_encoded = ws_tokenizer.encode(split_str).unwrap();
+            println!("WS Tokens len: {:?}", ws_encoded.len());
+
+            let hf_encoded = hf_tokenizer.encode(split_str).unwrap();
+            println!("HF Tokens len: {:?}", hf_encoded.len());
+
+            println!("{:?}", result);
+            assert_eq!(
+                hf_encoded.len(),
+                result.clone().results.unwrap().ids.len(),
+                "Failed Split: {:?}\n Tokens-Result: {:?}\n Tokens Spans: {:?}",
+                split_str,
+                result.results,
+                span
+            );
         }
     }
 

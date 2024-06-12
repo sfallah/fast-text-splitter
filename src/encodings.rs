@@ -136,7 +136,7 @@ impl EncodingType {
             .map(|split| {
                 let data_span = split.data_span.unwrap();
                 //FIXME: This is not working non-ascii characters
-                let data_bytes = &data.as_bytes()[data_span.start..data_span.end];
+                let data_bytes = &data.as_bytes()[data_span];
                 std::str::from_utf8(data_bytes).unwrap().to_string()
             })
             .collect();

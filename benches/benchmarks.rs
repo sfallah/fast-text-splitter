@@ -148,17 +148,17 @@ pub fn tree_split_benchmark(c: &mut Criterion) {
                 end: data.len(),
             };
             let config =
-                fast_text_splitter::splitter::splitter_config::SplitterConfig::<WSTokenizer> {
+                fast_text_splitter::splitter::splitter_config::SplitterConfig::<HFTokenizer> {
                     data,
                     patterns: &patterns,
                     searchers: &searchers,
                     //max_len: None,
                     max_len: Some(40),
-                    //tokenizer: Some(&hf_tokenizer),
-                    tokenizer: Some(&ws_tokenizer),
+                    tokenizer: Some(&hf_tokenizer),
+                    //tokenizer: Some(&ws_tokenizer),
                     //tokenizer: None,
                 };
-            let splitter = Splitter::new(&config, span, 0, span, Some(false), None, None);
+            let splitter = Splitter::new(&config, span, 0, span, Some(true), None, None);
             let tree = splitter.split();
             let merge_level = tree.leaf_level().unwrap_or(0);
             let splits = tree.merge_splits_encoding(merge_level, Some(40));

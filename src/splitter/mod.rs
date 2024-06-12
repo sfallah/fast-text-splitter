@@ -168,9 +168,9 @@ impl<'a, T: Tokenize + Sync> Splitter<'a, T> {
                                     .unwrap()
                                     .split_tokens_span(
                                         search_split.full_span(),
+                                        //search_split.span.clone(),
                                         tokens_span.clone(),
-                                    )
-                                    .unwrap_or(*tokens_span);
+                                    );
 
                                 *tokens_span = if sub_tokens_span == *tokens_span {
                                     *tokens_span
@@ -259,11 +259,11 @@ impl<'a, T: Tokenize + Sync> Splitter<'a, T> {
                     search_split.span.end + search_split.pattern.len(),
                 );
 
-                let pattern_tokens_span = self.split_encoding.as_ref().and_then(|encoding| {
-                    encoding.split_tokens_span(
+                let pattern_tokens_span= self.split_encoding.as_ref().and_then(|encoding| {
+                    Some(encoding.split_tokens_span(
                         pattern_data_span,
                         self.split_tokens_span.clone().unwrap(),
-                    )
+                    ))
                 });
 
                 let pattern_encoding =

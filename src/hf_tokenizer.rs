@@ -67,17 +67,17 @@ impl Tokenize for HFTokenizer {
 #[cfg(feature = "tokenizers")]
 pub fn divide_encoding(encoded: &Encoding, splits: &[Split]) -> Vec<TokensResults> {
     let mut results = Vec::new();
-    let mut start = 0;
     for split in splits {
-        let end = split.tokens_span.end;
-        let result = if split.tokens_span.is_empty() {
-            TokensResults::default()
-        } else {
-            let ids = encoded.get_ids()[start..end].to_vec();
-            let type_ids = encoded.get_type_ids()[start..end].to_vec();
-            let attention_mask = encoded.get_attention_mask()[start..end].to_vec();
-            let offsets = encoded.get_offsets()[start..end].to_vec();
-            let tokens = encoded.get_tokens()[start..end].to_vec();
+        let result = {
+            //if split.tokens_span.is_empty() {
+            //TokensResults::default()
+            //} else {
+            let split_range = split.tokens_span.range();
+            let ids = encoded.get_ids()[split_range.clone()].to_vec();
+            let type_ids = encoded.get_type_ids()[split_range.clone()].to_vec();
+            let attention_mask = encoded.get_attention_mask()[split_range.clone()].to_vec();
+            let offsets = encoded.get_offsets()[split_range.clone()].to_vec();
+            let tokens = encoded.get_tokens()[split_range.clone()].to_vec();
 
             TokensResults {
                 ids,
@@ -88,7 +88,6 @@ pub fn divide_encoding(encoded: &Encoding, splits: &[Split]) -> Vec<TokensResult
             }
         };
         results.push(result);
-        start = end;
     }
     results
 }
