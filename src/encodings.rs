@@ -92,13 +92,31 @@ impl EncodingType {
         res
     }
 
-    pub fn to_data_offsets_new(&self, tokens_spans: Vec<Span>, offset: usize) -> Vec<Span> {
+    pub fn to_data_offsets_new(
+        &self,
+        tokens_spans: Vec<Span>,
+        offset: usize,
+        data_span: Span,
+    ) -> Vec<Span> {
         let mut res = Vec::new();
 
-        tokens_spans.iter().for_each(|tokens_span| {
-            let start = self.get_offsets().get(tokens_span.start).unwrap().0;
-            let end = self.get_offsets().get(tokens_span.end).unwrap().1;
-            res.push(span(start + offset, end + offset));
+        if tokens_spans.len() <= 1 {
+            res.push(data_span.clone());
+            return res;
+        }
+
+        let mut start = data_span.start;
+
+        tokens_spans.iter().skip(1).for_each(|tokens_span| {
+            let next_end = self.get_offsets().get(tokens_span.start).unwrap().0;
+            let end = next_end + offset;
+            res.push(span(start, end));
+            start = end;
+        });
+
+        res.push(Span {
+            start,
+            end: data_span.end,
         });
 
         res
@@ -106,7 +124,7 @@ impl EncodingType {
 
     pub fn to_split_results(&self, splits: &Vec<Split>, data: &str) -> Vec<SplitResults> {
         #[cfg(feature = "tokenizers")]
-            let encodings: Vec<TokensResults> = match self {
+        let encodings: Vec<TokensResults> = match self {
             #[cfg(feature = "tokenizers")]
             EncodingType::HFEncoding(enc) => divide_encoding(enc, splits),
             EncodingType::WSEncoding(_) => vec![],

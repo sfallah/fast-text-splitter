@@ -166,7 +166,10 @@ impl<'a, T: Tokenize + Sync> Splitter<'a, T> {
                                     .split_encoding
                                     .as_ref()
                                     .unwrap()
-                                    .split_tokens_span(search_split.span, tokens_span.clone())
+                                    .split_tokens_span(
+                                        search_split.full_span(),
+                                        tokens_span.clone(),
+                                    )
                                     .unwrap_or(*tokens_span);
 
                                 *tokens_span = if sub_tokens_span == *tokens_span {
@@ -251,17 +254,28 @@ impl<'a, T: Tokenize + Sync> Splitter<'a, T> {
             child_nodes.push(child_node);
 
             if search_split.stride > 0 {
+                let pattern_data_span = span(
+                    search_split.span.end,
+                    search_split.span.end + search_split.pattern.len(),
+                );
+
+                let pattern_tokens_span = self.split_encoding.as_ref().and_then(|encoding| {
+                    encoding.split_tokens_span(
+                        pattern_data_span,
+                        self.split_tokens_span.clone().unwrap(),
+                    )
+                });
+
+                let pattern_encoding =
+                    pattern_tokens_span.and_then(|_| self.split_encoding.clone());
 
                 let child_node = SplitNode::new(
                     self.pattern_id + 1,
-                    span(
-                        search_split.span.end,
-                        search_split.span.end + search_split.pattern.len(),
-                    ),
+                    pattern_data_span,
                     Vec::new(),
                     //FIXME: this will give an issue with encoding
-                    None,
-                    None,
+                    pattern_encoding,
+                    pattern_tokens_span,
                 );
                 child_nodes.push(child_node);
             }
@@ -305,17 +319,19 @@ impl<'a, T: Tokenize + Sync> Splitter<'a, T> {
                 max_len_val,
             );
 
-            let encoding_offset= self.split_encoding.as_ref().unwrap().encoding_data_span.start;
+            let encoding_offset = self
+                .split_encoding
+                .as_ref()
+                .unwrap()
+                .encoding_data_span
+                .start;
 
             let tokens_offsets = self
                 .split_encoding
                 .clone()
                 .unwrap()
                 .encoding
-                .to_data_offsets_new(
-                    split_spans.clone(),
-                    encoding_offset,
-                );
+                .to_data_offsets_new(split_spans.clone(), encoding_offset, data_span);
 
             split_spans
                 .iter()

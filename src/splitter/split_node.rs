@@ -160,7 +160,7 @@ impl SplitNode {
     pub fn all_leaves_split(&self) -> Vec<(Span, Span)> {
         if self.children.is_empty() {
             vec![(
-                self.split_tokens_span.clone().unwrap_or(span(0,0)),
+                self.split_tokens_span.clone().unwrap_or(span(0, 0)),
                 self.split_data_span.clone(),
             )]
         } else {

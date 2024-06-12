@@ -211,6 +211,7 @@ mod tests {
         A few big winners. \n\
         Outperform everyone else.\n\n"
             .as_bytes();
+        //let data = _data;
 
         println!("error data {:?}", from_utf8(&data[135..161]).unwrap());
 
@@ -226,7 +227,7 @@ mod tests {
             data,
             patterns: &patterns,
             searchers: &searchers,
-            max_len: Some(20),
+            max_len: Some(40),
             tokenizer: Some(&ws_tokenizer),
         };
         let splitter = Splitter::new(&config, span, 0, span, None, None, None);
@@ -236,7 +237,7 @@ mod tests {
         let leaf_level_opt = tree.leaf_level();
         assert_eq!(leaf_level_opt, Some(1));
 
-        let splits_encoding = tree.merge_splits_encoding(leaf_level_opt.unwrap(), Some(20));
+        let splits_encoding = tree.merge_splits_encoding(leaf_level_opt.unwrap(), Some(40));
 
         let splits: Vec<_> = splits_encoding
             .iter()
