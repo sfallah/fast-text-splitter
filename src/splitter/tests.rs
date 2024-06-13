@@ -241,10 +241,10 @@ mod tests {
         let tree = splitter.split();
 
         //write to file
-        let mut file = fs::File::create("output/test_data/superlinear_tree.txt").unwrap();
+        //let mut file = fs::File::create("output/test_data/superlinear_tree.txt").unwrap();
         //if file doesn't exist, create it
 
-        file.write_all(tree.to_string(data, true).as_bytes()).unwrap();
+        //file.write_all(tree.to_string(data, true).as_bytes()).unwrap();
         //println!("{}", tree.to_string(data, true));
 
         let leaf_level_opt = tree.leaf_level();
