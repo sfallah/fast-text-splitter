@@ -1,5 +1,6 @@
 #[cfg(test)]
 mod tests {
+    use std::str::from_utf8;
     use crate::common::span;
     use crate::pattern_search::pattern_searcher::PatternSearcher;
     use crate::pattern_search::span_to_string;
@@ -139,6 +140,21 @@ mod tests {
         let data1 = "Hello, you all!0".as_bytes();
         let result1 = searcher.find_pattern(data1, span(0, data1.len()));
         assert_eq!(result1.splits.len(), 2);
+
+        let data2 = "Hello, you all! 0".as_bytes();
+
+        let pattern = vec!["\n"];
+        let searcher = PatternSearcher::new(&pattern);
+
+        let file_path = "tests/error_data/nbsp_lines.txt";
+        let binding = std::fs::read(file_path).unwrap();
+        let data3 = binding.as_slice();
+        let result3 = searcher.find_pattern(data3, span(0, data3.len()));
+        for split in result3.splits.iter() {
+            println!("{:?}", from_utf8(&data3[split.full_span().range()]));
+        }
+        let total_len = result3.splits.iter().fold(0usize, |acc, split| acc + split.full_span().len());
+        assert_eq!(total_len, data3.len());
         Ok(())
     }
 

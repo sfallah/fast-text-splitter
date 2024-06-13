@@ -108,7 +108,7 @@ impl<'a, T: Tokenize + Sync> Splitter<'a, T> {
                     .flat_map(|search_split| {
                         let (new_split_encoding, new_split_tokens_span) =
                             self.config.get_split_encoding(
-                                &search_split.span,
+                                &search_split.full_span(),
                                 &self.split_encoding,
                                 &self.split_tokens_span,
                             );
@@ -136,7 +136,7 @@ impl<'a, T: Tokenize + Sync> Splitter<'a, T> {
                         .flat_map(|search_split| {
                             let (new_split_encoding, new_split_tokens_span) =
                                 self.config.get_split_encoding(
-                                    &search_split.span,
+                                    &search_split.full_span(),
                                     &self.split_encoding,
                                     &self.split_tokens_span,
                                 );
@@ -155,44 +155,53 @@ impl<'a, T: Tokenize + Sync> Splitter<'a, T> {
                 } else {
                     // no encoding needed
                     // using the existing encoding to split the tokens
-                    search_result
-                        .splits
-                        .iter()
-                        .scan(
-                            self.split_tokens_span.clone().unwrap(),
-                            |tokens_span, search_split| {
-                                //FIXME: there must be some issue with the offsets
-                                let sub_tokens_span = self
-                                    .split_encoding
-                                    .as_ref()
-                                    .unwrap()
-                                    .split_tokens_span(
-                                        search_split.full_span(),
-                                        //search_split.span.clone(),
-                                        tokens_span.clone(),
-                                    );
+                    if self.split_encoding.is_some() {
+                        let splits_data_full_spans: Vec<Span> = search_result
+                            .splits
+                            .iter()
+                            .map(|split| split.full_span())
+                            .collect();
+                        let split_encoding = self.split_encoding.clone().unwrap();
+                        let tokens_offset =
+                            self.split_tokens_span.clone().map_or(0, |span| span.start);
+                        let split_tokens_spans = split_encoding
+                            .split_encoding_tokens_spans(&splits_data_full_spans, tokens_offset);
 
-                                *tokens_span = if sub_tokens_span == *tokens_span {
-                                    *tokens_span
-                                } else {
-                                    span(sub_tokens_span.end, tokens_span.end)
-                                };
-
+                        search_result
+                            .splits
+                            .iter()
+                            .zip(split_tokens_spans.iter())
+                            .flat_map(|(search_split, tokens_span)| {
                                 let sub_splitter = self.to_sub_splitter(
                                     search_split,
                                     self.pattern_id,
                                     None,
                                     self.split_encoding.clone(),
-                                    Some(sub_tokens_span),
+                                    Some(*tokens_span),
                                 );
 
                                 let children = sub_splitter.sub_split(search_split);
+                                children
+                            })
+                            .collect()
+                    } else {
+                        search_result
+                            .splits
+                            .iter()
+                            .flat_map(|search_split| {
+                                let sub_splitter = self.to_sub_splitter(
+                                    search_split,
+                                    self.pattern_id,
+                                    None,
+                                    self.split_encoding.clone(),
+                                    self.split_tokens_span.clone(),
+                                );
 
-                                Some(children)
-                            },
-                        )
-                        .flat_map(|x| x)
-                        .collect()
+                                let children = sub_splitter.sub_split(search_split);
+                                children
+                            })
+                            .collect()
+                    }
                 }
             };
 
@@ -259,22 +268,23 @@ impl<'a, T: Tokenize + Sync> Splitter<'a, T> {
                     search_split.span.end + search_split.pattern.len(),
                 );
 
-                let pattern_tokens_span= self.split_encoding.as_ref().and_then(|encoding| {
-                    Some(encoding.split_tokens_span(
-                        pattern_data_span,
-                        self.split_tokens_span.clone().unwrap(),
-                    ))
-                });
-
-                let pattern_encoding =
-                    pattern_tokens_span.and_then(|_| self.split_encoding.clone());
+                let pattern_tokens_span = if self.split_encoding.is_some() {
+                    let split_encoding = self.split_encoding.clone().unwrap();
+                    let tokens_offset = self.split_tokens_span.clone().map_or(0, |span| span.end);
+                    split_encoding
+                        .split_encoding_tokens_spans(&vec![pattern_data_span], tokens_offset)
+                        .first()
+                        .cloned()
+                } else {
+                    self.split_tokens_span.clone()
+                };
 
                 let child_node = SplitNode::new(
                     self.pattern_id + 1,
                     pattern_data_span,
                     Vec::new(),
                     //FIXME: this will give an issue with encoding
-                    pattern_encoding,
+                    self.split_encoding.clone(),
                     pattern_tokens_span,
                 );
                 child_nodes.push(child_node);

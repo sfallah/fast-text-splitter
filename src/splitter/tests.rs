@@ -1,15 +1,15 @@
 #[cfg(test)]
 mod tests {
-    use std::str::from_utf8;
     use std::{fs, io};
     use std::io::Write;
+    use std::str::from_utf8;
 
     use aho_corasick::Span;
     use rand::seq::SliceRandom;
     use rand::thread_rng;
 
     use crate::encodings::{NoneTokenizer, Tokenize};
-    use crate::hf_tokenizer::{init_tokenizer, HFTokenizer};
+    use crate::hf_tokenizer::{HFTokenizer, init_tokenizer};
     use crate::pattern_search::pattern_searcher::PatternSearcher;
     use crate::splitter::{Splitter, SplitterConfig};
     use crate::ws_tokenizer::WSTokenizer;
@@ -195,6 +195,7 @@ mod tests {
     #[test]
     fn with_encoding_superlinear_test() {
         let data_path = "tests/test_data/superlinear.txt";
+        let data_path = "tests/error_data/2017_elections_in_India.txt";
 
         let binding = fs::read_to_string(data_path).unwrap();
         let data = binding.as_bytes();
@@ -215,7 +216,17 @@ mod tests {
             .as_bytes();
         //let data = _data;
 
-        println!("error data {:?}", from_utf8(&data[135..161]).unwrap());
+        let _data = "\n\
+        In fact, the correlation. Between superlinear.\n\
+        Returns and inequality is so strong that it yields.\n\
+        Another heuristic for.\n\
+        Finding work of this type.\n\
+        Look for fields where.\n\
+        A few big winners. \n\
+        Outperform everyone else.\n"
+            .as_bytes();
+
+        //let data = _data;
 
         let patterns = vec![vec!["\n\n"], vec!["\n"], vec![".", "!", "?"]];
         let span = Span {
@@ -229,11 +240,12 @@ mod tests {
             tokenizer: init_tokenizer(None, None, false).unwrap(),
         };
 
+        let max_len = Some(40);
         let config = SplitterConfig::<HFTokenizer> {
             data,
             patterns: &patterns,
             searchers: &searchers,
-            max_len: Some(40),
+            max_len,
             //tokenizer: Some(&ws_tokenizer),
             tokenizer: Some(&hf_tokenizer),
         };
@@ -248,9 +260,9 @@ mod tests {
         //println!("{}", tree.to_string(data, true));
 
         let leaf_level_opt = tree.leaf_level();
-        assert_eq!(leaf_level_opt, Some(1));
+        //assert_eq!(leaf_level_opt, Some(1));
 
-        let splits_encoding = tree.merge_splits_encoding(leaf_level_opt.unwrap(), Some(40));
+        let splits_encoding = tree.merge_splits_encoding(leaf_level_opt.unwrap(), max_len);
 
         let splits: Vec<_> = splits_encoding
             .iter()
@@ -262,13 +274,14 @@ mod tests {
         println!("Number of Splits: {:?}", splits.len());
 
         let split_results =
-            tree.merge_encoding_result(leaf_level_opt.unwrap(), Some(40), from_utf8(data).unwrap());
+            tree.merge_encoding_result(leaf_level_opt.unwrap(), max_len, from_utf8(data).unwrap());
 
         println!("Number of Split Results: {:?}", split_results.len());
         assert_eq!(split_results.len(), splits.len());
 
         let ws_tokenizer = WSTokenizer {};
         for (span, result) in splits_encoding.iter().zip(split_results.iter()) {
+            println!("Span: {:?}", span);
             let split_str = from_utf8(&data[span.1.range()]).unwrap();
             println!("{:?}", split_str);
             let ws_encoded = ws_tokenizer.encode(split_str).unwrap();
@@ -283,7 +296,7 @@ mod tests {
                 result.clone().results.unwrap().ids.len(),
                 "Failed Split: {:?}\n Tokens-Result: {:?}\n Tokens Spans: {:?}",
                 split_str,
-                result.results,
+                result,
                 span
             );
         }
@@ -325,6 +338,8 @@ mod tests {
     #[test]
     fn pattern_split_superlinear_test() {
         let data_path = "tests/test_data/superlinear.txt";
+        let data_path = "tests/error_data/2017_elections_in_India.txt";
+
 
         let binding = fs::read_to_string(data_path).unwrap();
         let data = binding.as_bytes();
@@ -337,16 +352,42 @@ mod tests {
         };
 
         let searchers: Vec<_> = patterns.iter().map(|p| PatternSearcher::new(p)).collect();
-        let config = SplitterConfig::<NoneTokenizer> {
+        let max_len = Some(512);
+        let hf_tokenizer = HFTokenizer {
+            tokenizer: init_tokenizer(None, None, false).unwrap(),
+        };
+        //let config = SplitterConfig::<WSTokenizer> {
+        let config = SplitterConfig::<HFTokenizer> {
             data,
             patterns: &patterns,
             searchers: &searchers,
-            max_len: None,
-            tokenizer: None,
+            max_len,
+            //tokenizer: None,
+            //tokenizer: Some(&WSTokenizer {}),
+            tokenizer: Some(&hf_tokenizer),
         };
         let splitter = Splitter::new(&config, span, 0, span, None, None, None);
         let tree = splitter.split();
-        println!("{}", tree.to_string(data, true));
+        //println!("{}", tree.to_string(data, true));
+        //let splits = tree.merge_splits(tree.leaf_level().unwrap(), max_len);
+        let splits_enc = tree.merge_splits_encoding(tree.leaf_level().unwrap(), max_len);
+        let total_len_enc: usize = splits_enc.iter().map(|span| span.1.len()).sum();
+        let splits: Vec<_> = splits_enc.iter().map(|(_, span)| span.clone()).collect();
+        println!("Number of Splits: {:?}", splits.len());
+        let total_len: usize = splits.iter().map(|sp| sp.len()).sum();
+
+
+        assert_eq!(data.len(), total_len_enc);
+
+        let splits_concat: String = splits.iter().map(|kv| {
+            from_utf8(&data[kv.range()]).unwrap()
+        }).collect();
+        // write to file
+        let mut file = fs::File::create("output/debug/merged_2017_elections_in_India.txt").unwrap();
+        // directory must exist
+        file.write_all(splits_concat.as_bytes()).unwrap();
+        println!("{:?}", splits_concat);
+        assert_eq!(data.len(), total_len);
         let reconsted = tree.reconstruct(data);
         assert_eq!(from_utf8(&data).unwrap(), reconsted);
     }

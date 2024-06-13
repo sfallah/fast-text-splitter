@@ -414,7 +414,7 @@ pub fn span(start: usize, end: usize) -> Span {
     Span { start, end }
 }
 
-pub fn span_min_offset(span: Span, offset: usize) -> Span {
+pub fn span_ge_offset(span: Span, offset: usize) -> Span {
     let start = span.start - offset;
     let end = span.end - offset;
     Span { start, end }
