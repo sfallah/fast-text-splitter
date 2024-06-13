@@ -1,10 +1,10 @@
 #[cfg(test)]
 mod tests {
-    use std::str::from_utf8;
     use crate::common::span;
     use crate::pattern_search::pattern_searcher::PatternSearcher;
     use crate::pattern_search::span_to_string;
     use aho_corasick::Span;
+    use std::str::from_utf8;
 
     #[test]
     fn strange_case_test() -> anyhow::Result<()> {
@@ -153,7 +153,10 @@ mod tests {
         for split in result3.splits.iter() {
             println!("{:?}", from_utf8(&data3[split.full_span().range()]));
         }
-        let total_len = result3.splits.iter().fold(0usize, |acc, split| acc + split.full_span().len());
+        let total_len = result3
+            .splits
+            .iter()
+            .fold(0usize, |acc, split| acc + split.full_span().len());
         assert_eq!(total_len, data3.len());
         Ok(())
     }

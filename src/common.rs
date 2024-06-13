@@ -102,7 +102,6 @@ pub fn chunk_spans(spans: &Vec<Span>, max_len: usize) -> Vec<Span> {
             "Next Span: {:?} doesn't continue the Current Span: {:?}",
             leaf, cur_split
         );
-
         if cur_len + leaf.len() > max_len {
             chunked_splits.push(cur_split);
             cur_split = leaf.clone();
@@ -148,7 +147,9 @@ pub fn chunk_encoding_splits(spans: &Vec<(Span, Span)>, max_len: usize) -> Vec<(
             max_len
         );
 
-        if cur_tokens_len + leaf.0.len() > max_len {
+        if leaf.0.is_empty() {
+            cur_split = (cur_split.0, span(cur_split.1.start, leaf.1.end));
+        } else if cur_tokens_len + leaf.0.len() > max_len {
             chunked_splits.push(cur_split);
             cur_split = leaf.clone();
             cur_tokens_len = leaf.0.len();

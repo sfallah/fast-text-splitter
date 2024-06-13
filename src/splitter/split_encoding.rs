@@ -41,7 +41,8 @@ pub fn data_to_token_offsets(offsets: &[(usize, usize)], data_spans: &Vec<Span>)
     let fold_res = data_spans.iter().fold((0usize, Vec::new()), |mut acc, sp| {
         let start = acc.0;
         if start >= offsets.len() {
-            acc
+            acc.1.push(span(start, start));
+            (start, acc.1)
         } else {
             let mut end = offsets
                 .iter()
@@ -77,6 +78,16 @@ mod tests {
 
         let res = data_to_token_offsets(&offsets, &data_spans);
         assert_eq!(res, vec![span(0, 2), span(2, 4), span(4, 5)]);
+    }
+
+    #[test]
+    fn no_tokens_data_span() {
+        let offsets = vec![(0, 1), (1, 2), (2, 3), (3, 4)];
+        let data_spans = vec![span(0, 2), span(2, 4), span(4, 5)];
+        let data_offset = 0;
+
+        let res = data_to_token_offsets(&offsets, &data_spans);
+        assert_eq!(res, vec![span(0, 2), span(2, 4), span(4,4)]);
     }
 
     #[test]

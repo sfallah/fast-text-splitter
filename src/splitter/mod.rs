@@ -167,6 +167,10 @@ impl<'a, T: Tokenize + Sync> Splitter<'a, T> {
                         let split_tokens_spans = split_encoding
                             .split_encoding_tokens_spans(&splits_data_full_spans, tokens_offset);
 
+                        if split_tokens_spans.len() != search_result.splits.len() {
+                            panic!("split_tokens_spans.len() != search_result.splits.len()");
+                        }
+
                         search_result
                             .splits
                             .iter()

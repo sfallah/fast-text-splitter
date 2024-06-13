@@ -107,17 +107,19 @@ impl EncodingType {
 
         let mut start = data_span.start;
 
-        tokens_spans.iter().skip(1).for_each(|tokens_span| {
-            let next_end = self.get_offsets().get(tokens_span.start).unwrap().0;
-            let end = next_end + offset;
-            res.push(span(start, end));
-            start = end;
-        });
-
-        res.push(Span {
-            start,
-            end: data_span.end,
-        });
+        tokens_spans
+            .iter()
+            .enumerate()
+            .for_each(|(i, tokens_span)| {
+                let end = if i < tokens_spans.len() - 1 {
+                    let next_end = self.get_offsets().get(tokens_span.end).unwrap().0;
+                    next_end + offset
+                } else {
+                    data_span.end
+                };
+                res.push(span(start, end));
+                start = end;
+            });
 
         res
     }
