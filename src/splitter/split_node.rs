@@ -3,7 +3,7 @@ use std::sync::Arc;
 
 use aho_corasick::Span;
 
-use crate::common::{chunk_encoding_splits, chunk_spans, span, Split, SplitResults};
+use crate::common::{chunk_encoding_splits, chunk_spans, merge_split_results, span, Split, SplitResults};
 use crate::splitter::split_encoding::SplitEncoding;
 
 #[derive(Clone)]
@@ -127,6 +127,14 @@ impl SplitNode {
             }
         }
         splits
+    }
+
+    pub fn get_results(&self,
+                       max_len: Option<usize>,
+                       data: &str, ) -> Vec<SplitResults> {
+        let merge_level = self.leaf_level().unwrap();
+        let split_res = self.merge_encoding_result(merge_level, max_len, data);
+        merge_split_results(&split_res, max_len.unwrap())
     }
 
     pub fn merge_encoding_result(
