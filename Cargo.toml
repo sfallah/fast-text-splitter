@@ -18,6 +18,12 @@ lazy_static = "1.4.0"
 once_cell = "1.9"
 dashmap = "5.0"
 memchr = "2.7.2"
+unicode-normalization = "0.1.23"
+num_cpus = "1.16.0"
+unicode_categories = "0.1.1"
+serde = { version = "1.0.197", features = ["derive"] }
+itertools = "0.13.0"
+rand = "0.8.5"
 
 [features]
 default = []

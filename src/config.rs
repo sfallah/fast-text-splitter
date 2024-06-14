@@ -1,22 +1,20 @@
 use crate::encodings::Tokenize;
 #[cfg(feature = "tokenizers")]
-use crate::hf_tokenizer::{HFTokenizer, init_tokenizer};
+use crate::hf_tokenizer::{init_tokenizer, HFTokenizer};
 use crate::ws_tokenizer::WSTokenizer;
 
 #[derive(Debug, Clone)]
 pub struct SplitterConfig<T: Tokenize + Sync> {
-    pub pattern: Vec<String>,
+    pub pattern: Vec<Vec<String>>,
     pub tokenizer: T,
     pub max_tokens: usize,
-    pub max_depth: usize,
     pub merge_level: Option<usize>,
     pub parallel: bool,
 }
 
-
 #[derive(Debug, Clone)]
 pub struct ConfigParams {
-    pub pattern: Option<Vec<String>>,
+    pub pattern: Option<Vec<Vec<String>>>,
     #[cfg(feature = "tokenizers")]
     pub model_path: Option<String>,
     #[cfg(feature = "tokenizers")]
@@ -37,26 +35,28 @@ impl ConfigParams {
 impl ConfigParams {
     pub fn ws_default() -> Self {
         Self::builder()
-            .pattern(vec!["\n\n".to_string(), "\n".to_string()])
+            .pattern(vec![vec!["\n\n".to_string()], vec!["\n".to_string()]])
             .max_tokens(384)
             .max_depth(2)
             .merge_level(1)
-            .parallel(true).build()
+            .parallel(true)
+            .build()
     }
     #[cfg(feature = "tokenizers")]
     pub fn hf_default() -> Self {
         Self::builder()
-            .pattern(vec!["\n\n".to_string(), "\n".to_string()])
+            .pattern(vec![vec!["\n\n".to_string()], vec!["\n".to_string()]])
             .model_path("sentence-transformers/all-MiniLM-L6-v2".to_string())
             .max_tokens(512)
             .max_depth(2)
             .merge_level(1)
-            .parallel(true).build()
+            .parallel(true)
+            .build()
     }
 }
 
 pub struct ConfigParamsBuilder {
-    pattern: Option<Vec<String>>,
+    pattern: Option<Vec<Vec<String>>>,
     #[cfg(feature = "tokenizers")]
     model_path: Option<String>,
     #[cfg(feature = "tokenizers")]
@@ -82,7 +82,7 @@ impl ConfigParamsBuilder {
         }
     }
 
-    pub fn pattern(mut self, pattern: Vec<String>) -> Self {
+    pub fn pattern(mut self, pattern: Vec<Vec<String>>) -> Self {
         self.pattern = Some(pattern);
         self
     }
@@ -102,12 +102,10 @@ impl ConfigParamsBuilder {
         self
     }
 
-
     pub fn merge_level(mut self, merge_level: usize) -> ConfigParamsBuilder {
         self.merge_level = Some(merge_level);
         self
     }
-
 
     pub fn parallel(mut self, parallel: bool) -> ConfigParamsBuilder {
         self.parallel = Some(parallel);
@@ -139,10 +137,12 @@ impl ConfigParamsBuilder {
 impl SplitterConfig<WSTokenizer> {
     pub fn from_params(config_params: &ConfigParams) -> Self {
         Self {
-            pattern: config_params.pattern.clone().unwrap_or(vec!["\n\n".to_string(), "\n".to_string()]),
+            pattern: config_params
+                .pattern
+                .clone()
+                .unwrap_or(vec![vec!["\n\n".to_string()], vec!["\n".to_string()]]),
             tokenizer: WSTokenizer {},
             max_tokens: config_params.max_tokens.unwrap_or(384),
-            max_depth: config_params.max_depth.unwrap_or(2),
             merge_level: config_params.merge_level,
             parallel: config_params.parallel.unwrap_or(true),
         }
@@ -153,12 +153,18 @@ impl SplitterConfig<WSTokenizer> {
 impl SplitterConfig<HFTokenizer> {
     pub fn from_params(config_params: ConfigParams) -> Self {
         Self {
-            pattern: config_params.pattern.unwrap_or(vec!["\n\n".to_string(), "\n".to_string()]),
+            pattern: config_params
+                .pattern
+                .unwrap_or(vec![vec!["\n\n".to_string()], vec!["\n".to_string()]]),
             tokenizer: HFTokenizer {
-                tokenizer: init_tokenizer(config_params.model_path, config_params.tokenizer_max_len).unwrap(),
+                tokenizer: init_tokenizer(
+                    config_params.model_path,
+                    config_params.tokenizer_max_len,
+                    false,
+                )
+                .unwrap(),
             },
             max_tokens: config_params.max_tokens.unwrap_or(512),
-            max_depth: config_params.max_depth.unwrap_or(2),
             merge_level: config_params.merge_level,
             parallel: config_params.parallel.unwrap_or(true),
         }
@@ -173,7 +179,10 @@ mod test {
     fn test_config_params_builder() {
         let config_params = ConfigParams::ws_default();
 
-        assert_eq!(config_params.pattern.unwrap(), vec!["\n\n".to_string(), "\n".to_string()]);
+        assert_eq!(
+            config_params.pattern.unwrap(),
+            vec![vec!["\n\n".to_string()], vec!["\n".to_string()]],
+        );
         assert_eq!(config_params.max_tokens.unwrap(), 384);
         assert_eq!(config_params.max_depth.unwrap(), 2);
         assert_eq!(config_params.merge_level.unwrap(), 1);
@@ -184,7 +193,10 @@ mod test {
     fn test_default_config_params() {
         let config_params = ConfigParams::ws_default();
 
-        assert_eq!(config_params.pattern.unwrap(), vec!["\n\n".to_string(), "\n".to_string()]);
+        assert_eq!(
+            config_params.pattern.unwrap(),
+            vec![vec!["\n\n".to_string()], vec!["\n".to_string()]]
+        );
         assert_eq!(config_params.max_tokens.unwrap(), 384);
         assert_eq!(config_params.max_depth.unwrap(), 2);
         assert_eq!(config_params.merge_level.unwrap(), 1);
@@ -197,7 +209,6 @@ mod test {
         let splitter_config = SplitterConfig::<WSTokenizer>::from_params(&config_params);
 
         assert_eq!(splitter_config.max_tokens, 384);
-        assert_eq!(splitter_config.max_depth, 2);
         assert_eq!(splitter_config.merge_level, Some(1));
         assert_eq!(splitter_config.parallel, true);
     }
@@ -209,7 +220,6 @@ mod test {
         let splitter_config = SplitterConfig::<HFTokenizer>::from_params(config_params);
 
         assert_eq!(splitter_config.max_tokens, 512);
-        assert_eq!(splitter_config.max_depth, 2);
         assert_eq!(splitter_config.merge_level, Some(1));
         assert_eq!(splitter_config.parallel, true);
     }

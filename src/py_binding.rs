@@ -1,16 +1,16 @@
-use pyo3::prelude::*;
-use std::sync::Arc;
-use std::hash::{Hash, Hasher};
-use std::collections::hash_map::DefaultHasher;
 use dashmap::DashMap;
 use lazy_static::lazy_static;
+use pyo3::prelude::*;
+use std::collections::hash_map::DefaultHasher;
+use std::hash::{Hash, Hasher};
+use std::sync::Arc;
 
 #[cfg(feature = "tokenizers")]
 use crate::common::TokensResults;
-use crate::{config, text_split_parallel};
 use crate::config::{ConfigParams, SplitterConfig};
 use crate::hf_tokenizer::HFTokenizer;
 use crate::ws_tokenizer::WSTokenizer;
+use crate::{config, text_split_parallel};
 
 #[pyclass]
 #[derive(Default, PartialEq, Debug, Clone)]
@@ -34,7 +34,6 @@ pub struct PySplitResults {
     pub split_strings: String,
 }
 
-
 lazy_static! {
     static ref CACHE: DashMap<u64, Arc<SplitterConfig<WSTokenizer>>> = DashMap::new();
 }
@@ -48,18 +47,26 @@ fn splitter_config_cache(cache_params: &PyConfigParams) -> Arc<SplitterConfig<WS
     };
 
     // Get or insert the SplitterConfig for the given cache_key
-    CACHE.entry(cache_key).or_insert_with(|| {
-        let mut conf_params: ConfigParams = cache_params.clone().into();
-        let max_depth = conf_params.max_depth.unwrap_or(0);
-        let pattern_len = conf_params.pattern.as_ref().map(|p| p.len()).unwrap_or(0);
-        conf_params.max_depth = Some(std::cmp::min(max_depth, pattern_len));    // Min needed otherwise high max_depth slows down a ton
-        Arc::new(config::SplitterConfig::<WSTokenizer>::from_params(&conf_params))
-    }).clone()
+    CACHE
+        .entry(cache_key)
+        .or_insert_with(|| {
+            let mut conf_params: ConfigParams = cache_params.clone().into();
+            let max_depth = conf_params.max_depth.unwrap_or(0);
+            let pattern_len = conf_params.pattern.as_ref().map(|p| p.len()).unwrap_or(0);
+            conf_params.max_depth = Some(std::cmp::min(max_depth, pattern_len)); // Min needed otherwise high max_depth slows down a ton
+            Arc::new(config::SplitterConfig::<WSTokenizer>::from_params(
+                &conf_params,
+            ))
+        })
+        .clone()
 }
 
-
 #[pyfunction]
-pub fn text_split_ws(data: &str, py_conf_params: &PyConfigParams, use_cache: bool) -> Vec<PySplitResults> {
+pub fn text_split_ws(
+    data: &str,
+    py_conf_params: &PyConfigParams,
+    use_cache: bool,
+) -> Vec<PySplitResults> {
     // Basic Caching
     let mut cache_params = py_conf_params.clone();
     cache_params.conf_type = Some("WS".to_string());
@@ -68,15 +75,18 @@ pub fn text_split_ws(data: &str, py_conf_params: &PyConfigParams, use_cache: boo
         splitter_config_cache(&cache_params)
     } else {
         let conf_params: ConfigParams = py_conf_params.clone().into();
-        Arc::new(config::SplitterConfig::<WSTokenizer>::from_params(&conf_params))
+        Arc::new(config::SplitterConfig::<WSTokenizer>::from_params(
+            &conf_params,
+        ))
     };
 
-    text_split_parallel(&conf, data).iter()
+    text_split_parallel(&conf, data)
+        .iter()
         .map(|x| PySplitResults {
             results: None,
             split_strings: x.split_strings.clone(),
-        }
-        ).collect()
+        })
+        .collect()
 }
 
 #[cfg(feature = "tokenizers")]
@@ -87,14 +97,14 @@ pub fn text_split_hf(data: &str, py_conf_params: &PyConfigParams) -> Vec<PySplit
     let conf_params: ConfigParams = py_conf_params.clone().into();
     let conf = config::SplitterConfig::<HFTokenizer>::from_params(conf_params);
 
-    text_split_parallel(&conf, data).iter()
+    text_split_parallel(&conf, data)
+        .iter()
         .map(|x| PySplitResults {
             results: x.results.clone().map(|t| t.into()),
             split_strings: x.split_strings.clone(),
-        }
-        ).collect()
+        })
+        .collect()
 }
-
 
 #[pyfunction]
 #[pyo3(
@@ -102,7 +112,7 @@ pub fn text_split_hf(data: &str, py_conf_params: &PyConfigParams) -> Vec<PySplit
 )]
 pub fn py_ws_config_params(
     merge_level: Option<usize>,
-    patterns: Vec<String>,
+    patterns: Vec<Vec<String>>,
     max_tokens: usize,
     max_depth: usize,
     parallel: bool,
@@ -113,7 +123,8 @@ pub fn py_ws_config_params(
         .max_tokens(max_tokens)
         .max_depth(max_depth)
         .parallel(parallel)
-        .build().into()
+        .build()
+        .into()
 }
 
 #[cfg(feature = "tokenizers")]
@@ -124,7 +135,7 @@ pub fn py_ws_config_params(
 pub fn py_hf_config_params(
     model_path: Option<String>,
     merge_level: Option<usize>,
-    patterns: Vec<String>,
+    patterns: Vec<Vec<String>>,
     max_tokens: usize,
     max_depth: usize,
     parallel: bool,
@@ -136,7 +147,8 @@ pub fn py_hf_config_params(
         .max_tokens(max_tokens)
         .max_depth(max_depth)
         .parallel(parallel)
-        .build().into()
+        .build()
+        .into()
 }
 
 #[pymodule]
@@ -169,7 +181,7 @@ impl From<TokensResults> for PyTokensResults {
 #[pyclass]
 pub struct PyConfigParams {
     #[pyo3(get)]
-    pub pattern: Option<Vec<String>>,
+    pub pattern: Option<Vec<Vec<String>>>,
     #[cfg(feature = "tokenizers")]
     #[pyo3(get)]
     pub model_path: Option<String>,
@@ -236,8 +248,6 @@ impl From<PyConfigParams> for ConfigParams {
     }
 }
 
-
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -248,7 +258,10 @@ mod tests {
     fn test_splitter_config_cache_same_params() {
         // Create dummy PyConfigParams
         let dummy_params = PyConfigParams {
-            pattern: Some(vec!["pattern1".to_string(), "pattern2".to_string()]),
+            pattern: Some(vec![
+                vec!["pattern1".to_string()],
+                vec!["pattern2".to_string()],
+            ]),
             model_path: Some("path/to/model".to_string()),
             tokenizer_max_len: Some(5120),
 
@@ -273,7 +286,10 @@ mod tests {
     fn test_splitter_config_cache_different_params() {
         // Create different dummy PyConfigParams
         let params1 = PyConfigParams {
-            pattern: Some(vec!["pattern1".to_string(), "pattern2".to_string()]),
+            pattern: Some(vec![
+                vec!["pattern1".to_string()],
+                vec!["pattern2".to_string()],
+            ]),
             model_path: Some("path/to/model1".to_string()),
             tokenizer_max_len: Some(5120),
             max_tokens: Some(100),
@@ -284,7 +300,10 @@ mod tests {
         };
 
         let params2 = PyConfigParams {
-            pattern: Some(vec!["pattern3".to_string(), "pattern4".to_string()]),
+            pattern: Some(vec![
+                vec!["pattern1".to_string()],
+                vec!["pattern2".to_string()],
+            ]),
             model_path: Some("path/to/model2".to_string()),
             tokenizer_max_len: Some(5120),
             max_tokens: Some(200),
@@ -306,7 +325,7 @@ mod tests {
     fn test_splitter_config_cache_partial_overlap() {
         // Create partially overlapping PyConfigParams
         let params1 = PyConfigParams {
-            pattern: Some(vec!["pattern1".to_string()]),
+            pattern: Some(vec![vec!["pattern1".to_string()]]),
             model_path: Some("path/to/model".to_string()),
             tokenizer_max_len: Some(5120),
 
@@ -318,12 +337,12 @@ mod tests {
         };
 
         let params2 = PyConfigParams {
-            pattern: Some(vec!["pattern1".to_string()]),  // Same pattern
-            model_path: Some("path/to/model".to_string()),  // Same model path
+            pattern: Some(vec![vec!["pattern1".to_string()]]),
+            model_path: Some("path/to/model".to_string()), // Same model path
             tokenizer_max_len: Some(5120),
 
-            max_tokens: Some(150),  // Different max tokens
-            max_depth: Some(15),  // Different max depth
+            max_tokens: Some(150), // Different max tokens
+            max_depth: Some(15),   // Different max depth
             merge_level: Some(2),
             parallel: Some(true),
             conf_type: Some("type1".to_string()),
@@ -341,10 +360,12 @@ mod tests {
 
     #[test]
     fn test_splitter_config_cache_thread_safety() {
-
         // Create dummy PyConfigParams
         let dummy_params = Arc::new(PyConfigParams {
-            pattern: Some(vec!["pattern1".to_string(), "pattern2".to_string()]),
+            pattern: Some(vec![
+                vec!["pattern1".to_string()],
+                vec!["pattern2".to_string()],
+            ]),
             model_path: Some("path/to/model".to_string()),
             tokenizer_max_len: Some(5120),
             max_tokens: Some(100),
@@ -362,9 +383,7 @@ mod tests {
         // Spawn multiple threads to access the cache
         for _ in 0..10 {
             let params = dummy_params.clone();
-            handles.push(thread::spawn(move || {
-                splitter_config_cache(&params)
-            }));
+            handles.push(thread::spawn(move || splitter_config_cache(&params)));
         }
 
         // Ensure all threads complete and return the same configuration

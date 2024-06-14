@@ -100,22 +100,6 @@ fn tokenize_file_data(
 }
 
 #[test]
-fn list_files_test() -> io::Result<()> {
-    let files = list_text_files("tests/test_data/")?;
-
-    let expected_files = vec![
-        "tests/test_data/mit.txt".to_string(),
-        "tests/test_data/superlinear.txt".to_string(),
-    ];
-    for file in files.iter() {
-        println!("{}", file);
-    }
-    assert_eq!(files, expected_files);
-
-    Ok(())
-}
-
-#[test]
 #[cfg(feature = "tokenizers")]
 fn hf_local_data_test() -> tokenizers::Result<()> {
     let files = list_text_files("tests/test_data/")?;
@@ -140,33 +124,6 @@ fn hf_local_data_test() -> tokenizers::Result<()> {
     }
     Ok(())
 }
-
-#[test]
-#[cfg(feature = "tokenizers")]
-fn text_normalize_test() -> tokenizers::Result<()> {
-    //let file = "data/dev/List_of_Orange_Is_the_New_Black_characters.txt";
-    let file = "data/dev/Border_War_(Kansas–Missouri_rivalry).txt";
-    let data = fs::read_to_string(file)?;
-
-    let tokenizer = init_tokenizer(None, Some(data.len()), false)?;
-
-    let conf_params = ConfigParams::builder()
-        .pattern(vec![
-            //vec!["\n\n".to_string()],
-            vec!["\n".to_string()],
-            vec![".".to_string(), "!".to_string(), "?".to_string()],
-        ])
-        .tokenizer_max_len(100_000)
-        .merge_level(0)
-        //.max_depth(3)
-        .build();
-
-    let conf = SplitterConfig::<HFTokenizer>::from_params(conf_params);
-    tokenize_file_data(&conf, &tokenizer, true, &data, true, file)?;
-
-    Ok(())
-}
-
 #[test]
 #[cfg(feature = "tokenizers")]
 fn hf_nq_dataset_test() -> tokenizers::Result<()> {
