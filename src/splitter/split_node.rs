@@ -3,7 +3,9 @@ use std::sync::Arc;
 
 use aho_corasick::Span;
 
-use crate::common::{chunk_encoding_splits, chunk_spans, merge_split_results, span, Split, SplitResults};
+use crate::common::{
+    chunk_encoding_splits, chunk_spans, merge_split_results, span, Split, SplitResults,
+};
 use crate::splitter::split_encoding::SplitEncoding;
 
 #[derive(Clone)]
@@ -88,18 +90,21 @@ impl SplitNode {
 
     pub fn merge_splits(&self, merge_level: usize, max_len: Option<usize>) -> Vec<Span> {
         let max_len_check = max_len.is_some();
-        let max_len_value = max_len.unwrap_or(0);
 
         let mut splits = Vec::new();
         if self.pattern_id >= merge_level {
             if max_len_check {
-                splits.extend(chunk_spans(&self.all_leaves(), max_len_value));
+                splits.extend(chunk_spans(&self.all_leaves(), max_len.unwrap()));
             } else {
                 splits.extend(self.all_leaves());
             }
         } else {
-            for child in &self.children {
-                splits.extend(child.merge_splits(merge_level, max_len));
+            if self.children.is_empty() {
+                splits.push(self.split_data_span.clone());
+            } else {
+                for child in &self.children {
+                    splits.extend(child.merge_splits(merge_level, max_len));
+                }
             }
         }
         splits
@@ -111,27 +116,31 @@ impl SplitNode {
         max_len: Option<usize>,
     ) -> Vec<(Span, Span)> {
         let max_len_check = max_len.is_some();
-        let max_len_value = max_len.unwrap_or(0);
 
         let mut splits = Vec::new();
         if self.pattern_id >= merge_level {
             if max_len_check {
                 let leaves = self.all_leaves_split();
-                splits.extend(chunk_encoding_splits(&leaves, max_len_value));
+                splits.extend(chunk_encoding_splits(&leaves, max_len.unwrap()));
             } else {
                 splits.extend(self.all_leaves_split());
             }
         } else {
-            for child in &self.children {
-                splits.extend(child.merge_splits_encoding(merge_level, max_len));
+            if self.children.is_empty() {
+                splits.push((
+                    self.split_tokens_span.clone().unwrap_or(span(0, 0)),
+                    self.split_data_span.clone(),
+                ));
+            } else {
+                for child in &self.children {
+                    splits.extend(child.merge_splits_encoding(merge_level, max_len));
+                }
             }
         }
         splits
     }
 
-    pub fn get_results(&self,
-                       max_len: Option<usize>,
-                       data: &str, ) -> Vec<SplitResults> {
+    pub fn get_results(&self, max_len: Option<usize>, data: &str) -> Vec<SplitResults> {
         let merge_level = self.leaf_level().unwrap();
         let split_res = self.merge_encoding_result(merge_level, max_len, data);
         merge_split_results(&split_res, max_len.unwrap())
