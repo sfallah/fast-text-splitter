@@ -278,7 +278,7 @@ mod tests {
         Outperform everyone else.\n"
             .as_bytes();
 
-        //let data = _data;
+        let data = _data;
 
         let patterns = vec![vec!["\n\n"], vec!["\n"], vec![".", "!", "?"]];
         let span = Span {
@@ -311,10 +311,10 @@ mod tests {
         //file.write_all(tree.to_string(data, true).as_bytes()).unwrap();
         //println!("{}", tree.to_string(data, true));
 
-        let leaf_level_opt = tree.leaf_level();
+        let leaf_level = tree.leaf_level().unwrap();
         //assert_eq!(leaf_level_opt, Some(1));
 
-        let splits_encoding = tree.merge_splits_encoding(leaf_level_opt.unwrap(), max_len);
+        let splits_encoding = tree.merge_splits_encoding(leaf_level, max_len);
 
         let splits: Vec<_> = splits_encoding
             .iter()
@@ -326,7 +326,7 @@ mod tests {
         println!("Number of Splits: {:?}", splits.len());
 
         let split_results =
-            tree.merge_encoding_result(leaf_level_opt.unwrap(), max_len, from_utf8(data).unwrap());
+            tree.merge_encoding_result(leaf_level, max_len, from_utf8(data).unwrap());
 
         println!("Number of Split Results: {:?}", split_results.len());
         assert_eq!(split_results.len(), splits.len());
