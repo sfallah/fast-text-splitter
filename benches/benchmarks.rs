@@ -221,7 +221,7 @@ pub fn none_tree_split_benchmark(c: &mut Criterion) {
                 end: data.len(),
             };
             let config =
-                fast_text_splitter::splitter::splitter_config::SplitterConfig::<WSTokenizer> {
+                fast_text_splitter::splitter::splitter_config::SplitterConfig::<NoneTokenizer> {
                     data,
                     patterns: &patterns,
                     searchers: &searchers,

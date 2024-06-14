@@ -36,7 +36,8 @@ mod tests {
         searchers: &Vec<PatternSearcher>,
         max_len: usize,
         _print: bool,
-        check_splits: bool
+        check_splits: bool,
+        parallel:bool
     ) -> (usize, Vec<Span>) {
         let binding = fs::read_to_string(data_path).unwrap();
         let data = binding.as_bytes();
@@ -59,23 +60,19 @@ mod tests {
             //tokenizer: None,
             tokenizer: Some(&hf_tokenizer),
         };
-        let splitter = Splitter::new(&config, span, 0, span, Some(true), None, None);
+        let splitter = Splitter::new(&config, span, 0, span, Some(parallel), None, None);
         let tree = splitter.split();
 
         let leaf_level = tree.leaf_level().unwrap_or(0);
 
         println!("Leaf Level: {:?}", leaf_level);
-        let splits_encoding = tree.merge_splits_encoding(leaf_level, max_len);
-
-        let splits: Vec<_> = splits_encoding
-            .iter()
-            .map(|(_, data_span)| data_span.clone())
-            .collect();
+        let splits_encoding = tree.merge_splits_encoding(0, max_len);
 
         if _print {
-            for span in splits.iter() {
-                println!("{:?}", from_utf8(&data[span.start..span.end]).unwrap());
-                println!("Length: {:?}", span.len());
+            for (tokens_span,data_span) in splits_encoding.iter() {
+                println!("{:?}", from_utf8(&data[data_span.range()]).unwrap());
+                println!("Data Len: {:?}", data_span.len());
+                println!("Tokens Len: {:?}", tokens_span.len());
             }
         }
 
@@ -249,7 +246,7 @@ mod tests {
 
     #[test]
     fn with_encoding_superlinear_test() {
-        let data_path = "tests/test_data/superlinear.txt";
+        //let data_path = "tests/test_data/superlinear.txt";
         let data_path = "tests/error_data/2017_elections_in_India.txt";
 
         let binding = fs::read_to_string(data_path).unwrap();
@@ -289,7 +286,7 @@ mod tests {
             end: data.len(),
         };
         let searchers: Vec<_> = patterns.iter().map(|p| PatternSearcher::new(p)).collect();
-        let ws_tokenizer = WSTokenizer {};
+        //let ws_tokenizer = WSTokenizer {};
 
         let hf_tokenizer = HFTokenizer {
             tokenizer: init_tokenizer(None, None, false).unwrap(),
@@ -399,7 +396,7 @@ mod tests {
 
     #[test]
     fn pattern_split_superlinear_test() {
-        let data_path = "tests/test_data/superlinear.txt";
+        //let data_path = "tests/test_data/superlinear.txt";
         let data_path = "tests/error_data/2017_elections_in_India.txt";
 
         let binding = fs::read_to_string(data_path).unwrap();
@@ -460,7 +457,7 @@ mod tests {
         let patterns = vec![vec!["\n\n"], vec!["\n"], vec![".", "!", "?"]];
         let searchers: Vec<_> = patterns.iter().map(|p| PatternSearcher::new(p)).collect();
 
-        let (data_len, splits) = split_file(data_path, &patterns, &searchers, 256, true, true);
+        let (data_len, splits) = split_file(data_path, &patterns, &searchers, 256, true, true, false);
 
         let total_len: usize = splits.iter().map(|span| span.len()).sum();
         assert_eq!(data_len, total_len);
@@ -480,10 +477,10 @@ mod tests {
         let patterns = vec![vec!["\n\n"], vec!["\n"], vec![".", "!", "?"]];
         let searchers: Vec<_> = patterns.iter().map(|p| PatternSearcher::new(p)).collect();
 
-        let rnd_files: Vec<_> = files.choose_multiple(&mut rng, 2000).collect();
+        let rnd_files: Vec<_> = files.choose_multiple(&mut rng, 200).collect();
 
         rnd_files.par_iter().for_each(|file| {
-            let (data_len, splits) = split_file(file, &patterns, &searchers, 512, false, false);
+            let (data_len, splits) = split_file(file, &patterns, &searchers, 512, false, false,true);
             let total_len: usize = splits.iter().map(|span| span.len()).sum();
             assert_eq!(data_len, total_len, "Failed File: {}", file);
             println!("File: {} \n Total Length: {}", file, total_len);

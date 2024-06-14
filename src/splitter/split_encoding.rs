@@ -1,5 +1,4 @@
 use aho_corasick::Span;
-use tokenizers::parallelism::MaybeParallelRefIterator;
 
 use crate::common::{span, span_ge_offset};
 use crate::encodings::EncodingType;
@@ -74,7 +73,6 @@ mod tests {
     fn test_zero_offset() {
         let offsets = vec![(0, 1), (1, 2), (2, 3), (3, 4), (4, 5)];
         let data_spans = vec![span(0, 2), span(2, 4), span(4, 5)];
-        let data_offset = 0;
 
         let res = data_to_token_offsets(&offsets, &data_spans);
         assert_eq!(res, vec![span(0, 2), span(2, 4), span(4, 5)]);
@@ -84,7 +82,6 @@ mod tests {
     fn no_tokens_data_span() {
         let offsets = vec![(0, 1), (1, 2), (2, 3), (3, 4)];
         let data_spans = vec![span(0, 2), span(2, 4), span(4, 5)];
-        let data_offset = 0;
 
         let res = data_to_token_offsets(&offsets, &data_spans);
         assert_eq!(res, vec![span(0, 2), span(2, 4), span(4,4)]);
@@ -115,7 +112,6 @@ mod tests {
     fn test_with_offset_sliced() {
         let offsets = vec![(0, 1), (1, 2), (2, 3), (3, 4), (4, 5)];
         let data_spans = vec![span(6, 8), span(8, 9)];
-        let data_offset: usize = 4;
 
         let res = splits_tokens_spans(&offsets, &data_spans, 4, 2);
         assert_eq!(res, vec![span(2, 4), span(4, 5)]);

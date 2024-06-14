@@ -141,8 +141,6 @@ mod tests {
         let result1 = searcher.find_pattern(data1, span(0, data1.len()));
         assert_eq!(result1.splits.len(), 2);
 
-        let data2 = "Hello, you all! 0".as_bytes();
-
         let pattern = vec!["\n"];
         let searcher = PatternSearcher::new(&pattern);
 
