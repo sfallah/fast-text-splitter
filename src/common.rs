@@ -205,6 +205,27 @@ impl TokensResults {
     }
 }
 
+pub struct TokensResultLite<'a> {
+    pub data_span: Span,
+    pub ids: &'a [u32],
+    pub offsets: &'a [(usize, usize)],
+}
+
+impl TokensResultLite<'_> {
+    pub fn no_tokens(&self) -> usize {
+        self.ids.len()
+    }
+}
+impl fmt::Debug for TokensResultLite<'_> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(
+            f,
+            "TokensResultLite {{ data_span: {:?}, ids: {:?}, offsets: {:?} }}",
+            self.data_span, self.ids.len(), self.offsets.len()
+        )
+    }
+}
+
 pub fn merge_split_results(
     split_ruslts: &Vec<SplitResults>,
     max_tokens: usize,

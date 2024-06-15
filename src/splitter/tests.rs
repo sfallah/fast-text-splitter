@@ -193,6 +193,64 @@ mod tests {
     }
 
     #[test]
+    fn merge_enc_result_test() {
+        let _data_raw = "\n\n\
+        \n\n\
+        \n\n\
+        In fact, the correlation. Between superlinear.\n\
+        Returns and inequality is so strong that it yields.\n\n\
+        Another heuristic for.\n\n\
+        \n\n\
+        \n\n\
+        \nFinding work of this type.\n\
+        Look for fields where.\n\
+        A few big winners. \n\
+        Outperform everyone else.\n\n"
+            .as_bytes();
+
+        let data = _data_raw;
+
+        let patterns = vec![vec!["\n\n"], vec!["\n"], vec![".", "!", "?"]];
+        let span = Span {
+            start: 0,
+            end: data.len(),
+        };
+        let searchers: Vec<_> = patterns.iter().map(|p| PatternSearcher::new(p)).collect();
+        let hf_tokenizer = HFTokenizer {
+            tokenizer: init_tokenizer(None, None, false).unwrap(),
+        };
+
+        let max_len = Some(6);
+
+        let config = SplitterConfig::<HFTokenizer> {
+            data,
+            patterns: &patterns,
+            searchers: &searchers,
+            max_len: None,
+            tokenizer: Some(&hf_tokenizer),
+        };
+        let splitter = Splitter::new(&config, span, 0, span, None, None, None);
+        let tree = splitter.split();
+
+        tree.merge_splits_encoding(tree.leaf_level().unwrap(), max_len);
+
+        tree.get_results(max_len, from_utf8(data).unwrap());
+
+        let lite_tokens_results = tree.merge_enc_lite_result(tree.leaf_level().unwrap(), max_len);
+        println!("Number of Lite Results: {:?}", lite_tokens_results.len());
+        for res in lite_tokens_results.iter() {
+            println!("{:?}", res);
+        }
+
+        let lite_results = tree.get_results_lite(max_len, data);
+        println!("Number of Lite Results: {:?}", lite_results.len());
+        for res in lite_results.iter() {
+            println!("{:?}", res.split_string);
+            println!("{:?}", res.tokens.len());
+        }
+    }
+
+    #[test]
     fn merge_level_test() {
         let _data_raw = "\n\n\
         \n\n\

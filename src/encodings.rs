@@ -6,9 +6,10 @@ use crate::hf_tokenizer::divide_encoding;
 #[cfg(feature = "tokenizers")]
 use tokenizers::Encoding;
 
-use crate::common::span;
+use crate::common::{span, TokensResultLite};
 use crate::{Split, SplitResults};
 use aho_corasick::Span;
+use crate::hf_tokenizer::divide_encoding_lite;
 
 use crate::ws_tokenizer::WSEncoding;
 
@@ -122,6 +123,15 @@ impl EncodingType {
             });
 
         res
+    }
+
+    pub fn to_lite_results(&self, splits:&Vec<Split>) -> Vec<TokensResultLite> {
+        match self {
+            #[cfg(feature = "tokenizers")]
+            EncodingType::HFEncoding(enc) => divide_encoding_lite(enc, splits),
+            EncodingType::WSEncoding(_) => vec![],
+            EncodingType::NoneEncoding => vec![],
+        }
     }
 
     pub fn to_split_results(&self, splits: &Vec<Split>, data: &str) -> Vec<SplitResults> {

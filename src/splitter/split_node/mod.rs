@@ -1,12 +1,13 @@
+mod utils;
+
 use std::str::from_utf8;
 use std::sync::Arc;
 
 use aho_corasick::Span;
 
-use crate::common::{
-    chunk_encoding_splits, chunk_spans, merge_split_results, span, Split, SplitResults,
-};
+use crate::common::{chunk_encoding_splits, chunk_spans, merge_split_results, span, Split, SplitResults, TokensResultLite};
 use crate::splitter::split_encoding::SplitEncoding;
+use crate::splitter::split_node::utils::{merge_split_result_lite, SplitResultLite};
 
 #[derive(Clone)]
 pub struct SplitNode {
@@ -140,10 +141,17 @@ impl SplitNode {
         splits
     }
 
+
     pub fn get_results(&self, max_len: Option<usize>, data: &str) -> Vec<SplitResults> {
         let merge_level = self.leaf_level().unwrap();
         let split_res = self.merge_encoding_result(merge_level, max_len, data);
         merge_split_results(&split_res, max_len.unwrap())
+    }
+
+    pub fn get_results_lite(&self, max_len: Option<usize>, data: &[u8]) -> Vec<SplitResultLite> {
+        let merge_level = self.leaf_level().unwrap();
+        let split_res = self.merge_enc_lite_result(merge_level, max_len);
+        merge_split_result_lite(&split_res, max_len.unwrap(),data)
     }
 
     pub fn merge_encoding_result(
@@ -182,6 +190,46 @@ impl SplitNode {
         } else {
             for child in &self.children {
                 split_results.extend(child.merge_encoding_result(merge_level, max_len, data));
+            }
+        }
+        split_results
+    }
+
+    pub fn merge_enc_lite_result(
+        &self,
+        merge_level: usize,
+        max_len: Option<usize>,
+    ) -> Vec<TokensResultLite> {
+        let max_len_check = max_len.is_some();
+        let max_len_value = max_len.unwrap_or(0);
+
+        let mut split_results = Vec::new();
+        if self.pattern_id >= merge_level {
+            let raw_splits = if max_len_check {
+                let leaves = self.all_leaves_split();
+                chunk_encoding_splits(&leaves, max_len_value)
+            } else {
+                self.all_leaves_split()
+            };
+
+            let splits: Vec<_> = raw_splits
+                .iter()
+                .map(|(tokens_span, data_span)| Split {
+                    tokens_span: tokens_span.clone(),
+                    data_span: Some(data_span.clone()),
+                })
+                .collect();
+            let split_res = self
+                .split_encoding
+                .as_ref()
+                .unwrap()
+                .encoding
+                .to_lite_results(&splits);
+
+            split_results.extend(split_res);
+        } else {
+            for child in &self.children {
+                split_results.extend(child.merge_enc_lite_result(merge_level, max_len));
             }
         }
         split_results

@@ -3,7 +3,7 @@ use tokenizers::normalizers::BertNormalizer;
 use tokenizers::{Encoding, PaddingStrategy, Tokenizer, TruncationStrategy};
 use tokenizers::{PaddingParams, TruncationParams};
 
-use crate::common::TokensResults;
+use crate::common::{TokensResultLite, TokensResults};
 use crate::encodings::EncodingType;
 use crate::{Split, Tokenize};
 
@@ -85,6 +85,25 @@ pub fn divide_encoding(encoded: &Encoding, splits: &[Split]) -> Vec<TokensResult
                 attention_mask,
                 offsets,
                 tokens,
+            }
+        };
+        results.push(result);
+    }
+    results
+}
+
+#[cfg(feature = "tokenizers")]
+pub fn divide_encoding_lite<'a>(encoded: &'a Encoding, splits: &[Split]) -> Vec<TokensResultLite<'a>> {
+    let mut results = Vec::new();
+    for split in splits {
+        let result = {
+            let ids = &encoded.get_ids()[split.tokens_span.range()];
+            let offsets = &encoded.get_offsets()[split.tokens_span.range()];
+
+            TokensResultLite {
+                data_span: split.data_span.unwrap().clone(),
+                ids,
+                offsets,
             }
         };
         results.push(result);
