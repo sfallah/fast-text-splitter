@@ -52,7 +52,7 @@ fn splitter_config_cache(cache_params: &PyConfigParams) -> Arc<SplitterConfig<WS
         .or_insert_with(|| {
             let mut conf_params: ConfigParams = cache_params.clone().into();
             let max_depth = conf_params.max_depth.unwrap_or(0);
-            let pattern_len = conf_params.pattern.as_ref().map(|p| p.len()).unwrap_or(0);
+            let pattern_len = conf_params.patterns.as_ref().map(|p| p.len()).unwrap_or(0);
             conf_params.max_depth = Some(std::cmp::min(max_depth, pattern_len)); // Min needed otherwise high max_depth slows down a ton
             Arc::new(config::SplitterConfig::<WSTokenizer>::from_params(
                 &conf_params,
@@ -217,7 +217,7 @@ impl Hash for PyConfigParams {
 impl From<ConfigParams> for PyConfigParams {
     fn from(conf_params: ConfigParams) -> Self {
         PyConfigParams {
-            pattern: conf_params.pattern,
+            pattern: conf_params.patterns,
             #[cfg(feature = "tokenizers")]
             model_path: conf_params.model_path,
             #[cfg(feature = "tokenizers")]
@@ -234,7 +234,7 @@ impl From<ConfigParams> for PyConfigParams {
 impl From<PyConfigParams> for ConfigParams {
     fn from(py_conf_params: PyConfigParams) -> Self {
         ConfigParams {
-            pattern: py_conf_params.pattern,
+            patterns: py_conf_params.pattern,
             #[cfg(feature = "tokenizers")]
             model_path: py_conf_params.model_path,
             #[cfg(feature = "tokenizers")]

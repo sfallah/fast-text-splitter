@@ -13,7 +13,7 @@ use tokenizers::{
 };
 
 use fast_text_splitter::ac_matches::init_aho_corasick;
-use fast_text_splitter::config::{ConfigParams, SplitterConfig};
+use fast_text_splitter::config::{ConfigParams, SplitterConfig, SplitterLiteConfig};
 use fast_text_splitter::encodings::NoneTokenizer;
 use fast_text_splitter::hf_tokenizer::init_tokenizer;
 #[cfg(feature = "tokenizers")]
@@ -251,6 +251,7 @@ pub fn hf_merged_tree_lite_res_benchmark(c: &mut Criterion) {
 
     let binding = fs::read(data_path).unwrap();
     let data = binding.as_slice();
+
     let patterns = vec![vec!["\n\n"], vec!["\n"], vec![".", "!", "?"]];
 
     let searchers: Vec<_> = patterns.iter().map(|p| PatternSearcher::new(p)).collect();
@@ -260,30 +261,18 @@ pub fn hf_merged_tree_lite_res_benchmark(c: &mut Criterion) {
 
     let max_len = Some(512);
 
+    let splitter_config = SplitterLiteConfig::new_hf(&patterns, 512, 0, true, None);
+
     c.bench_function("hf_merged_tree_lite_splits_benchmark", |b| {
         b.iter(|| {
-            let span = Span {
-                start: 0,
-                end: data.len(),
-            };
-            let config =
-                fast_text_splitter::splitter::splitter_config::SplitterConfig::<HFTokenizer> {
-                    data,
-                    patterns: &patterns,
-                    searchers: &searchers,
-                    max_len,
-                    tokenizer: Some(&hf_tokenizer),
-                };
-            let splitter = Splitter::new(&config, span, 0, span, Some(true), None, None);
-            let tree = splitter.split();
-            let splits = tree.get_results_lite(max_len, data);
+            let splits = splitter_config.hf_splits(data);
             black_box(splits);
         })
     });
 }
 
 #[cfg(feature = "default")]
-pub fn ws_tree_split_benchmark(c: &mut Criterion) {
+pub fn ws_tree_split_lite_benchmark(c: &mut Criterion) {
     let data_path = "tests/test_data/superlinear.txt";
 
     let binding = fs::read(data_path).unwrap();
@@ -461,16 +450,16 @@ pub fn benches() {
     //text_normalize_benchmark(&mut criterion);
     //#[cfg(feature = "default")]
     //words_single_split_benchmark(&mut criterion);
-    hf_pre_tokenize_benchmark(&mut criterion);
-    ws_tokenize_benchmark(&mut criterion);
-    ws_tokenize_whole_benchmark(&mut criterion);
-    hf_parallel_tokenize_benchmark(&mut criterion);
+    //hf_pre_tokenize_benchmark(&mut criterion);
+    //ws_tokenize_benchmark(&mut criterion);
+    //ws_tokenize_whole_benchmark(&mut criterion);
+    //hf_parallel_tokenize_benchmark(&mut criterion);
 
     //tokenizer_multi_batch_benchmark(&mut criterion);
     //hf_tree_split_benchmark(&mut criterion);
     //hf_merged_tree_split_benchmark(&mut criterion);
     hf_merged_tree_lite_res_benchmark(&mut criterion);
-    ws_tree_split_benchmark(&mut criterion);
+    ws_tree_split_lite_benchmark(&mut criterion);
     //none_tree_split_benchmark(&mut criterion);
 
     //#[cfg(feature = "tokenizers")]

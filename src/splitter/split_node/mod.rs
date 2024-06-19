@@ -1,4 +1,4 @@
-mod utils;
+pub mod utils;
 
 use std::str::from_utf8;
 use std::sync::Arc;

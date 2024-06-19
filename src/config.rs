@@ -1,7 +1,86 @@
+use aho_corasick::Span;
 use crate::encodings::Tokenize;
 #[cfg(feature = "tokenizers")]
 use crate::hf_tokenizer::{init_tokenizer, HFTokenizer};
+use crate::pattern_search::pattern_searcher::PatternSearcher;
 use crate::ws_tokenizer::WSTokenizer;
+use crate::splitter::split_node::utils::SplitResultLite;
+use crate::splitter::Splitter;
+
+pub struct SplitterLiteConfig<'a, T: Tokenize + Sync> {
+    pub patterns: Vec<Vec<&'a str>>,
+    pub searchers: Vec<PatternSearcher<'a>>,
+    pub tokenizer: T,
+    pub max_tokens: Option<usize>,
+    pub merge_level: Option<usize>,
+    pub parallel: Option<bool>,
+}
+
+
+impl<'a> SplitterLiteConfig<'a, WSTokenizer> {
+    pub fn new_ws(patterns: &'a Vec<Vec<&str>>, max_tokens: usize, merge_level: usize, parallel: bool) -> Self {
+        let searchers: Vec<_> = patterns.iter().map(|p| PatternSearcher::new(p)).collect();
+        Self {
+            patterns: patterns.clone(),
+            searchers,
+            tokenizer: WSTokenizer {},
+            max_tokens: Some(max_tokens),
+            merge_level: Some(merge_level),
+            parallel: Some(parallel),
+        }
+    }
+    pub fn ws_splits(&self, data: &[u8]) -> Vec<SplitResultLite> {
+        let span = Span {
+            start: 0,
+            end: data.len(),
+        };
+        let config =
+            crate::splitter::splitter_config::SplitterConfig::<WSTokenizer> {
+                data,
+                patterns: &self.patterns,
+                searchers: &self.searchers,
+                max_len: self.max_tokens,
+                tokenizer: Some(&self.tokenizer),
+            };
+        let splitter = Splitter::new(&config, span, 0, span, Some(true), None, None);
+        let tree = splitter.split();
+        tree.get_results_lite(self.max_tokens, data)
+    }
+}
+
+impl<'a> SplitterLiteConfig<'a, HFTokenizer> {
+    pub fn new_hf(patterns: &'a Vec<Vec<&str>>, max_tokens: usize, merge_level: usize, parallel: bool, model: Option<String>) -> Self {
+        let searchers: Vec<_> = patterns.iter().map(|p| PatternSearcher::new(p)).collect();
+        let hf_tokenizer = HFTokenizer {
+            tokenizer: init_tokenizer(model, Some(usize::MAX), false).unwrap(),
+        };
+        Self {
+            patterns: patterns.clone(),
+            searchers,
+            tokenizer: hf_tokenizer,
+            max_tokens: Some(max_tokens),
+            merge_level: Some(merge_level),
+            parallel: Some(parallel),
+        }
+    }
+    pub fn hf_splits(&self, data: &[u8]) -> Vec<SplitResultLite> {
+        let span = Span {
+            start: 0,
+            end: data.len(),
+        };
+        let config =
+            crate::splitter::splitter_config::SplitterConfig::<HFTokenizer> {
+                data,
+                patterns: &self.patterns,
+                searchers: &self.searchers,
+                max_len: self.max_tokens,
+                tokenizer: Some(&self.tokenizer),
+            };
+        let splitter = Splitter::new(&config, span, 0, span, Some(true), None, None);
+        let tree = splitter.split();
+        tree.get_results_lite(self.max_tokens, data)
+    }
+}
 
 #[derive(Debug, Clone)]
 pub struct SplitterConfig<T: Tokenize + Sync> {
@@ -14,7 +93,7 @@ pub struct SplitterConfig<T: Tokenize + Sync> {
 
 #[derive(Debug, Clone)]
 pub struct ConfigParams {
-    pub pattern: Option<Vec<Vec<String>>>,
+    pub patterns: Option<Vec<Vec<String>>>,
     #[cfg(feature = "tokenizers")]
     pub model_path: Option<String>,
     #[cfg(feature = "tokenizers")]
@@ -56,7 +135,7 @@ impl ConfigParams {
 }
 
 pub struct ConfigParamsBuilder {
-    pattern: Option<Vec<Vec<String>>>,
+    patterns: Option<Vec<Vec<String>>>,
     #[cfg(feature = "tokenizers")]
     model_path: Option<String>,
     #[cfg(feature = "tokenizers")]
@@ -70,7 +149,7 @@ pub struct ConfigParamsBuilder {
 impl ConfigParamsBuilder {
     pub fn new() -> Self {
         ConfigParamsBuilder {
-            pattern: None,
+            patterns: None,
             #[cfg(feature = "tokenizers")]
             model_path: None,
             #[cfg(feature = "tokenizers")]
@@ -83,7 +162,7 @@ impl ConfigParamsBuilder {
     }
 
     pub fn pattern(mut self, pattern: Vec<Vec<String>>) -> Self {
-        self.pattern = Some(pattern);
+        self.patterns = Some(pattern);
         self
     }
 
@@ -120,7 +199,7 @@ impl ConfigParamsBuilder {
 
     pub fn build(self) -> ConfigParams {
         ConfigParams {
-            pattern: self.pattern,
+            patterns: self.patterns,
             #[cfg(feature = "tokenizers")]
             model_path: self.model_path,
             #[cfg(feature = "tokenizers")]
@@ -138,7 +217,7 @@ impl SplitterConfig<WSTokenizer> {
     pub fn from_params(config_params: &ConfigParams) -> Self {
         Self {
             pattern: config_params
-                .pattern
+                .patterns
                 .clone()
                 .unwrap_or(vec![vec!["\n\n".to_string()], vec!["\n".to_string()]]),
             tokenizer: WSTokenizer {},
@@ -154,7 +233,7 @@ impl SplitterConfig<HFTokenizer> {
     pub fn from_params(config_params: ConfigParams) -> Self {
         Self {
             pattern: config_params
-                .pattern
+                .patterns
                 .unwrap_or(vec![vec!["\n\n".to_string()], vec!["\n".to_string()]]),
             tokenizer: HFTokenizer {
                 tokenizer: init_tokenizer(
@@ -180,7 +259,7 @@ mod test {
         let config_params = ConfigParams::ws_default();
 
         assert_eq!(
-            config_params.pattern.unwrap(),
+            config_params.patterns.unwrap(),
             vec![vec!["\n\n".to_string()], vec!["\n".to_string()]],
         );
         assert_eq!(config_params.max_tokens.unwrap(), 384);
@@ -194,7 +273,7 @@ mod test {
         let config_params = ConfigParams::ws_default();
 
         assert_eq!(
-            config_params.pattern.unwrap(),
+            config_params.patterns.unwrap(),
             vec![vec!["\n\n".to_string()], vec!["\n".to_string()]]
         );
         assert_eq!(config_params.max_tokens.unwrap(), 384);
