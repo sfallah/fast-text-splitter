@@ -28,7 +28,6 @@ pub fn merge_split_result_lite(
     let mut cur_data_span = first_sp_res.data_span.clone();
     let mut cur_tokens = first_sp_res.ids.to_vec();
 
-
     for (i, split_res) in split_ruslts.iter().enumerate().skip(1) {
         if cur_tokens.len() + split_res.no_tokens() <= max_tokens {
             cur_tokens.extend(split_res.ids.to_vec());

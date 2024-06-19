@@ -5,7 +5,10 @@ use std::sync::Arc;
 
 use aho_corasick::Span;
 
-use crate::common::{chunk_encoding_splits, chunk_spans, merge_split_results, span, Split, SplitResults, TokensResultLite};
+use crate::common::{
+    chunk_encoding_splits, chunk_spans, merge_split_results, span, Split, SplitResults,
+    TokensResultLite,
+};
 use crate::splitter::split_encoding::SplitEncoding;
 use crate::splitter::split_node::utils::{merge_split_result_lite, SplitResultLite};
 
@@ -141,7 +144,6 @@ impl SplitNode {
         splits
     }
 
-
     pub fn get_results(&self, max_len: Option<usize>, data: &str) -> Vec<SplitResults> {
         let merge_level = self.leaf_level().unwrap();
         let split_res = self.merge_encoding_result(merge_level, max_len, data);
@@ -151,7 +153,7 @@ impl SplitNode {
     pub fn get_results_lite(&self, max_len: Option<usize>, data: &[u8]) -> Vec<SplitResultLite> {
         let merge_level = self.leaf_level().unwrap();
         let split_res = self.merge_enc_lite_result(merge_level, max_len);
-        merge_split_result_lite(&split_res, max_len.unwrap(),data)
+        merge_split_result_lite(&split_res, max_len.unwrap(), data)
     }
 
     pub fn merge_encoding_result(

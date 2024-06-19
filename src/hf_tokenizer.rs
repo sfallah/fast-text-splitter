@@ -93,7 +93,10 @@ pub fn divide_encoding(encoded: &Encoding, splits: &[Split]) -> Vec<TokensResult
 }
 
 #[cfg(feature = "tokenizers")]
-pub fn divide_encoding_lite<'a>(encoded: &'a Encoding, splits: &[Split]) -> Vec<TokensResultLite<'a>> {
+pub fn divide_encoding_lite<'a>(
+    encoded: &'a Encoding,
+    splits: &[Split],
+) -> Vec<TokensResultLite<'a>> {
     let mut results = Vec::new();
     for split in splits {
         let result = {
@@ -116,6 +119,12 @@ pub fn divide_encoding_lite<'a>(encoded: &'a Encoding, splits: &[Split]) -> Vec<
 mod tests {
     use super::*;
     use aho_corasick::Span;
+    use tokenizers::pre_tokenizers::punctuation::Punctuation;
+    use tokenizers::pre_tokenizers::sequence::Sequence;
+    use tokenizers::pre_tokenizers::whitespace::WhitespaceSplit;
+    use tokenizers::{
+        OffsetReferential, OffsetType, PreTokenizedString, PreTokenizer, PreTokenizerWrapper,
+    };
 
     #[test]
     fn tokens_len_test() -> tokenizers::Result<()> {
@@ -174,6 +183,26 @@ mod tests {
             .get_offsets()
             .iter()
             .for_each(|offset| println!("{:?}", offset));
+        Ok(())
+    }
+
+    #[test]
+    fn hf_pre_tokenizer_test() -> tokenizers::Result<()> {
+        let pretokenizers = vec![
+            PreTokenizerWrapper::WhitespaceSplit(WhitespaceSplit),
+            PreTokenizerWrapper::Punctuation(Punctuation::default()),
+        ];
+        let pretok = Sequence::new(pretokenizers);
+        let mut pretokenized: PreTokenizedString = "Hey friend!     How are you?!?".into();
+        pretok.pre_tokenize(&mut pretokenized).unwrap();
+        let offsets: Vec<_> = pretokenized
+            .get_splits(OffsetReferential::Original, OffsetType::Byte)
+            .into_iter()
+            .map(|(s, o, _)| (s, o))
+            .collect();
+        for (s, o) in offsets {
+            println!("{:?} {:?}", s, o);
+        }
         Ok(())
     }
 

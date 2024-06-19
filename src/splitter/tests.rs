@@ -124,15 +124,11 @@ mod tests {
             .sum();
         println!("Total Tokens: {:?}", total_tokens);
         let encodings = hf_tokenizer.encode(from_utf8(data).unwrap()).unwrap();
-        assert_eq!(
-            total_tokens,
-            encodings.len()
-        );
+        assert_eq!(total_tokens, encodings.len());
 
         let lite_results = tree.get_results_lite(max_len, data);
         let total_lite_tokens: usize = lite_results.iter().map(|res| res.tokens.len()).sum();
         println!("Total Lite Tokens: {:?}", total_lite_tokens);
-
 
         assert_eq!(encodings.len(), total_lite_tokens);
 

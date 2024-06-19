@@ -221,7 +221,9 @@ impl fmt::Debug for TokensResultLite<'_> {
         write!(
             f,
             "TokensResultLite {{ data_span: {:?}, ids: {:?}, offsets: {:?} }}",
-            self.data_span, self.ids.len(), self.offsets.len()
+            self.data_span,
+            self.ids.len(),
+            self.offsets.len()
         )
     }
 }

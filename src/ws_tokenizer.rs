@@ -1,5 +1,6 @@
 use super::Tokenize;
 use crate::encodings::EncodingType;
+use unicode_categories::UnicodeCategories;
 
 pub struct WSTokenizer;
 
@@ -35,7 +36,7 @@ pub fn whitespace_punctuation_tokenize(text: &str) -> Vec<(usize, usize)> {
                 in_token = false;
             }
             current_index += char_len;
-        } else if c.is_ascii_punctuation() {
+        } else if char::is_ascii_punctuation(&c) || c.is_punctuation() {
             if in_token {
                 offsets.push((start_index, current_index));
                 in_token = false;
