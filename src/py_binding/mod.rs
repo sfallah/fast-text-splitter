@@ -18,21 +18,30 @@ struct PyWSSplitterConfig {
     inner: SplitterLiteConfig<WSTokenizer>,
 }
 
-
 #[pymethods]
 impl PyWSSplitterConfig {
     #[new]
-    fn new(patterns: Vec<Vec<String>>, max_tokens: usize, merge_level: usize, parallel: bool) -> Self {
+    fn new(
+        patterns: Vec<Vec<String>>,
+        max_tokens: usize,
+        merge_level: usize,
+        parallel: bool,
+    ) -> Self {
         PyWSSplitterConfig {
             inner: SplitterLiteConfig::new_ws(patterns, max_tokens, merge_level, parallel),
         }
     }
 
     fn splits(&self, data: String) -> PyResult<Vec<PySplitLiteResult>> {
-        Ok(self.inner.ws_splits(data.as_bytes()).iter().map(|x| PySplitLiteResult {
-            tokens: x.tokens.clone(),
-            text: x.split_string.clone(),
-        }).collect())
+        Ok(self
+            .inner
+            .ws_splits(data.as_bytes())
+            .iter()
+            .map(|x| PySplitLiteResult {
+                tokens: x.tokens.clone(),
+                text: x.split_string.clone(),
+            })
+            .collect())
     }
 }
 
@@ -44,31 +53,49 @@ struct PyHFSplitterConfig {
 #[pymethods]
 impl PyHFSplitterConfig {
     #[new]
-    fn new(patterns: Vec<Vec<String>>, max_tokens: usize, merge_level: usize, parallel: bool) -> Self {
+    fn new(
+        patterns: Vec<Vec<String>>,
+        max_tokens: usize,
+        merge_level: usize,
+        parallel: bool,
+    ) -> Self {
         PyHFSplitterConfig {
-            inner: SplitterLiteConfig::new_hf(patterns, max_tokens, merge_level, parallel,None),
+            inner: SplitterLiteConfig::new_hf(patterns, max_tokens, merge_level, parallel, None),
         }
     }
 
     fn splits(&self, data: String) -> PyResult<Vec<PySplitLiteResult>> {
         println!("ws_splits");
         println!("data:{:?}", &data);
-        Ok(self.inner.hf_splits(data.as_bytes()).iter().map(|x| PySplitLiteResult {
-            tokens: x.tokens.clone(),
-            text: x.split_string.clone(),
-        }).collect())
+        Ok(self
+            .inner
+            .hf_splits(data.as_bytes())
+            .iter()
+            .map(|x| PySplitLiteResult {
+                tokens: x.tokens.clone(),
+                text: x.split_string.clone(),
+            })
+            .collect())
     }
-
-
 }
 
 #[pyfunction]
-fn create_ws_splitter(patterns: Vec<Vec<String>>, max_tokens: usize, merge_level: usize, parallel: bool) -> PyWSSplitterConfig {
+fn create_ws_splitter(
+    patterns: Vec<Vec<String>>,
+    max_tokens: usize,
+    merge_level: usize,
+    parallel: bool,
+) -> PyWSSplitterConfig {
     PyWSSplitterConfig::new(patterns, max_tokens, merge_level, parallel)
 }
 
 #[pyfunction]
-fn create_hf_splitter(patterns: Vec<Vec<String>>, max_tokens: usize, merge_level: usize, parallel: bool) -> PyHFSplitterConfig {
+fn create_hf_splitter(
+    patterns: Vec<Vec<String>>,
+    max_tokens: usize,
+    merge_level: usize,
+    parallel: bool,
+) -> PyHFSplitterConfig {
     PyHFSplitterConfig::new(patterns, max_tokens, merge_level, parallel)
 }
 

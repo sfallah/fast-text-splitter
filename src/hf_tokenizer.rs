@@ -6,7 +6,6 @@ use tokenizers::{PaddingParams, TruncationParams};
 use crate::common::{Split, TokensResultLite, TokensResults};
 use crate::encodings::{EncodingType, Tokenize};
 
-
 pub fn init_tokenizer(
     model_path: Option<String>,
     max_len: Option<usize>,
@@ -50,11 +49,9 @@ pub fn init_tokenizer(
     Ok(tokenizer)
 }
 
-
 pub struct HFTokenizer {
     pub tokenizer: Tokenizer,
 }
-
 
 impl Tokenize for HFTokenizer {
     fn encode(&self, data: &str) -> anyhow::Result<EncodingType> {
@@ -62,7 +59,6 @@ impl Tokenize for HFTokenizer {
         Ok(EncodingType::HFEncoding(encoded))
     }
 }
-
 
 pub fn divide_encoding(encoded: &Encoding, splits: &[Split]) -> Vec<TokensResults> {
     let mut results = Vec::new();
@@ -91,7 +87,6 @@ pub fn divide_encoding(encoded: &Encoding, splits: &[Split]) -> Vec<TokensResult
     results
 }
 
-
 pub fn divide_encoding_lite<'a>(
     encoded: &'a Encoding,
     splits: &[Split],
@@ -112,7 +107,6 @@ pub fn divide_encoding_lite<'a>(
     }
     results
 }
-
 
 #[cfg(test)]
 mod tests {

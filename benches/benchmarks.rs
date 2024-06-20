@@ -85,7 +85,6 @@ pub fn tokenizer_multi_batch_benchmark(c: &mut Criterion) {
     });
 }
 
-
 pub fn hf_tree_split_benchmark(c: &mut Criterion) {
     let data_path = "tests/test_data/superlinear.txt";
     //let data_path = "data/dev/List_of_Game_of_Thrones_characters.txt";
@@ -93,9 +92,16 @@ pub fn hf_tree_split_benchmark(c: &mut Criterion) {
 
     let binding = fs::read(data_path).unwrap();
     let data = binding.as_slice();
-    let patterns = vec![vec!["\n\n".to_string()], vec!["\n".to_string()], vec![".".to_string(), "!".to_string(), "?".to_string()]];
+    let patterns = vec![
+        vec!["\n\n".to_string()],
+        vec!["\n".to_string()],
+        vec![".".to_string(), "!".to_string(), "?".to_string()],
+    ];
 
-    let searchers: Vec<_> = patterns.iter().map(|p| PatternSearcher::new(p.clone())).collect();
+    let searchers: Vec<_> = patterns
+        .iter()
+        .map(|p| PatternSearcher::new(p.clone()))
+        .collect();
 
     let hf_tokenizer = HFTokenizer {
         tokenizer: init_tokenizer(None, None, false).unwrap(),
@@ -127,7 +133,6 @@ pub fn hf_tree_split_benchmark(c: &mut Criterion) {
     });
 }
 
-
 pub fn hf_merged_tree_split_benchmark(c: &mut Criterion) {
     let data_path = "tests/test_data/superlinear.txt";
     //let data_path = "data/dev/List_of_Game_of_Thrones_characters.txt";
@@ -135,9 +140,16 @@ pub fn hf_merged_tree_split_benchmark(c: &mut Criterion) {
 
     let binding = fs::read(data_path).unwrap();
     let data = binding.as_slice();
-    let patterns = vec![vec!["\n\n".to_string()], vec!["\n".to_string()], vec![".".to_string(), "!".to_string(), "?".to_string()]];
+    let patterns = vec![
+        vec!["\n\n".to_string()],
+        vec!["\n".to_string()],
+        vec![".".to_string(), "!".to_string(), "?".to_string()],
+    ];
 
-    let searchers: Vec<_> = patterns.iter().map(|p| PatternSearcher::new(p.clone())).collect();
+    let searchers: Vec<_> = patterns
+        .iter()
+        .map(|p| PatternSearcher::new(p.clone()))
+        .collect();
 
     let hf_tokenizer = HFTokenizer {
         tokenizer: init_tokenizer(None, None, false).unwrap(),
@@ -168,7 +180,6 @@ pub fn hf_merged_tree_split_benchmark(c: &mut Criterion) {
     });
 }
 
-
 pub fn hf_merged_tree_lite_res_benchmark(c: &mut Criterion) {
     let data_path = "tests/test_data/superlinear.txt";
     //let data_path = "data/dev/List_of_Game_of_Thrones_characters.txt";
@@ -177,8 +188,11 @@ pub fn hf_merged_tree_lite_res_benchmark(c: &mut Criterion) {
     let binding = fs::read(data_path).unwrap();
     let data = binding.as_slice();
 
-    let patterns = vec![vec!["\n\n".to_string()], vec!["\n".to_string()], vec![".".to_string(), "!".to_string(), "?".to_string()]];
-
+    let patterns = vec![
+        vec!["\n\n".to_string()],
+        vec!["\n".to_string()],
+        vec![".".to_string(), "!".to_string(), "?".to_string()],
+    ];
 
     let splitter_config = SplitterLiteConfig::new_hf(patterns, 512, 0, true, None);
 
@@ -196,9 +210,16 @@ pub fn ws_tree_split_lite_benchmark(c: &mut Criterion) {
 
     let binding = fs::read(data_path).unwrap();
     let data = binding.as_slice();
-    let patterns = vec![vec!["\n\n".to_string()], vec!["\n".to_string()], vec![".".to_string(), "!".to_string(), "?".to_string()]];
+    let patterns = vec![
+        vec!["\n\n".to_string()],
+        vec!["\n".to_string()],
+        vec![".".to_string(), "!".to_string(), "?".to_string()],
+    ];
 
-    let searchers: Vec<_> = patterns.iter().map(|p| PatternSearcher::new(p.clone())).collect();
+    let searchers: Vec<_> = patterns
+        .iter()
+        .map(|p| PatternSearcher::new(p.clone()))
+        .collect();
 
     let ws_tokenizer = WSTokenizer {};
 
@@ -220,8 +241,7 @@ pub fn ws_tree_split_lite_benchmark(c: &mut Criterion) {
                 };
             let splitter = Splitter::new(&config, span, 0, span, Some(true), None, None);
             let tree = splitter.split();
-            let merge_level = tree.leaf_level().unwrap_or(0);
-            let splits = tree.merge_splits_encoding(merge_level, max_len);
+            let splits = tree.get_results_lite(max_len, data);
             black_box(splits);
         })
     });
@@ -233,9 +253,16 @@ pub fn none_tree_split_benchmark(c: &mut Criterion) {
 
     let binding = fs::read(data_path).unwrap();
     let data = binding.as_slice();
-    let patterns = vec![vec!["\n\n".to_string()], vec!["\n".to_string()], vec![".".to_string(), "!".to_string(), "?".to_string()]];
+    let patterns = vec![
+        vec!["\n\n".to_string()],
+        vec!["\n".to_string()],
+        vec![".".to_string(), "!".to_string(), "?".to_string()],
+    ];
 
-    let searchers: Vec<_> = patterns.iter().map(|p| PatternSearcher::new(p.clone())).collect();
+    let searchers: Vec<_> = patterns
+        .iter()
+        .map(|p| PatternSearcher::new(p.clone()))
+        .collect();
 
     let max_len = Some(1024);
 

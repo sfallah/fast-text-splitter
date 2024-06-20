@@ -24,7 +24,11 @@ impl SplitterLiteConfig<WSTokenizer> {
         merge_level: usize,
         parallel: bool,
     ) -> Self {
-        let searchers: Vec<_> = patterns.clone().iter().map(|p| PatternSearcher::new(p.clone())).collect();
+        let searchers: Vec<_> = patterns
+            .clone()
+            .iter()
+            .map(|p| PatternSearcher::new(p.clone()))
+            .collect();
         Self {
             patterns: patterns.clone(),
             searchers,
@@ -61,7 +65,11 @@ impl SplitterLiteConfig<HFTokenizer> {
         parallel: bool,
         model: Option<String>,
     ) -> Self {
-        let searchers: Vec<_> = patterns.clone().iter().map(|p| PatternSearcher::new(p.clone())).collect();
+        let searchers: Vec<_> = patterns
+            .clone()
+            .iter()
+            .map(|p| PatternSearcher::new(p.clone()))
+            .collect();
         let hf_tokenizer = HFTokenizer {
             tokenizer: init_tokenizer(model, Some(usize::MAX), false).unwrap(),
         };
