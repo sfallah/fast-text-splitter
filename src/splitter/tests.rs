@@ -1,19 +1,18 @@
 #[cfg(test)]
 mod tests {
-    use std::str::from_utf8;
     use std::{fs, io};
+    use std::str::from_utf8;
 
     use aho_corasick::Span;
     use rand::seq::SliceRandom;
     use rand::thread_rng;
     use rayon::prelude::*;
 
-    use crate::common::span;
     use crate::encodings::{NoneTokenizer, Tokenize};
-    use crate::hf_tokenizer::{init_tokenizer, HFTokenizer};
+    use crate::hf_tokenizer::{HFTokenizer, init_tokenizer};
     use crate::pattern_search::pattern_searcher::PatternSearcher;
-    use crate::splitter::split_node::utils::SplitResultLite;
     use crate::splitter::{Splitter, SplitterConfig};
+    use crate::splitter::split_node::utils::SplitResultLite;
     use crate::ws_tokenizer::WSTokenizer;
 
     fn list_text_files(dir: &str) -> io::Result<Vec<String>> {
