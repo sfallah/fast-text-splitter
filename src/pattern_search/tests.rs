@@ -8,15 +8,15 @@ mod tests {
 
     #[test]
     fn strange_case_test() -> anyhow::Result<()> {
-        let pattern = vec!["\n"];
+        let pattern = vec!["\n".to_string()];
         let data = "In fact, the correlation. Between superlinear.\nReturns and inequality is so strong that it yields.";
-        let searcher = PatternSearcher::new(&pattern);
+        let searcher = PatternSearcher::new(pattern);
         let result = searcher.find_pattern(data.as_bytes(), span(0, data.len()));
         assert_eq!(result.splits.len(), 2);
 
         let data1 = "Returns and inequality is so strong that it yields.".as_bytes();
-        let pattern = vec!["\n"];
-        let searcher = PatternSearcher::new(&pattern);
+        let pattern = vec!["\n".to_string()];
+        let searcher = PatternSearcher::new(pattern);
         let result1 = searcher.find_pattern(data1, span(0, data1.len()));
         assert_eq!(result1.splits.len(), 1);
 
@@ -25,8 +25,8 @@ mod tests {
 
     #[test]
     fn search_empty_test() -> anyhow::Result<()> {
-        let pattern = vec!["\n"];
-        let searcher = PatternSearcher::new(&pattern);
+        let pattern = vec!["\n".to_string()];
+        let searcher = PatternSearcher::new(pattern);
 
         let data = "";
         let result = searcher.find_pattern(data.as_bytes(), span(0, data.len()));
@@ -69,8 +69,8 @@ mod tests {
 
     #[test]
     fn no_matches_test() -> anyhow::Result<()> {
-        let pattern = vec!["\n\n"];
-        let searcher = PatternSearcher::new(&pattern);
+        let pattern = vec!["\n\n".to_string()];
+        let searcher = PatternSearcher::new(pattern);
         let data1 = "Hello, you all! How are you?";
 
         let no_match_res = searcher.find_pattern(data1.as_bytes(), span(0, data1.len()));
@@ -82,8 +82,8 @@ mod tests {
 
     #[test]
     fn empty_data_test() -> anyhow::Result<()> {
-        let pattern = vec!["\n\n"];
-        let searcher = PatternSearcher::new(&pattern);
+        let pattern = vec!["\n\n".to_string()];
+        let searcher = PatternSearcher::new(pattern);
         let data1 = "";
 
         let result = searcher.find_pattern(data1.as_bytes(), span(0, data1.len()));
@@ -94,8 +94,8 @@ mod tests {
 
     #[test]
     fn single_ends_test() -> anyhow::Result<()> {
-        let pattern = vec!["\n\n"];
-        let searcher = PatternSearcher::new(&pattern);
+        let pattern = vec!["\n\n".to_string()];
+        let searcher = PatternSearcher::new(pattern);
         let data1 = "\n\nHello, you all! How are you?".as_bytes();
         let result1 = searcher.find_pattern(data1, span(0, data1.len()));
 
@@ -135,14 +135,14 @@ mod tests {
 
     #[test]
     fn space_single_ends_test() -> anyhow::Result<()> {
-        let pattern = vec!["!"];
-        let searcher = PatternSearcher::new(&pattern);
+        let pattern = vec!["!".to_string()];
+        let searcher = PatternSearcher::new(pattern);
         let data1 = "Hello, you all!0".as_bytes();
         let result1 = searcher.find_pattern(data1, span(0, data1.len()));
         assert_eq!(result1.splits.len(), 2);
 
-        let pattern = vec!["\n"];
-        let searcher = PatternSearcher::new(&pattern);
+        let pattern = vec!["\n".to_string()];
+        let searcher = PatternSearcher::new(pattern);
 
         let file_path = "tests/error_data/nbsp_lines.txt";
         let binding = std::fs::read(file_path).unwrap();
@@ -161,8 +161,8 @@ mod tests {
 
     #[test]
     fn offseted_single_ends_test() -> anyhow::Result<()> {
-        let pattern = vec!["\n\n"];
-        let searcher = PatternSearcher::new(&pattern);
+        let pattern = vec!["\n\n".to_string()];
+        let searcher = PatternSearcher::new(pattern);
         let before = "<from before NOT IN SEARCH>\n\n";
         let before_len = before.len();
         let data_1 = "\n\nHello, you all! How are you?";
@@ -214,8 +214,8 @@ mod tests {
 
     #[test]
     fn single_middle_test() -> anyhow::Result<()> {
-        let pattern = vec!["\n\n"];
-        let searcher = PatternSearcher::new(&pattern);
+        let pattern = vec!["\n\n".to_string()];
+        let searcher = PatternSearcher::new(pattern);
         let data4 = "Hello, you all!\n\nHow are you ?".as_bytes();
         let result4 = searcher.find_pattern(data4, span(0, data4.len()));
         assert_eq!(result4.splits.len(), 2);
@@ -229,8 +229,8 @@ mod tests {
 
     #[test]
     fn test_data_nlnl() -> anyhow::Result<()> {
-        let pattern = vec!["\n\n"];
-        let searcher = PatternSearcher::new(&pattern);
+        let pattern = vec!["\n\n".to_string()];
+        let searcher = PatternSearcher::new(pattern);
         let file_path = "tests/splitter_test_data/data_nlnl_01.txt";
         let binding = std::fs::read(file_path).unwrap();
         let data = binding.as_slice();
@@ -247,8 +247,8 @@ mod tests {
 
     #[test]
     fn find_multiple_patterns_ends_test() -> anyhow::Result<()> {
-        let pattern = vec!["\n\n"];
-        let searcher = PatternSearcher::new(&pattern);
+        let pattern = vec!["\n\n".to_string()];
+        let searcher = PatternSearcher::new(pattern);
         let data1 = "\n\nHello, you all! How are you? \n\n".as_bytes();
         let result1 = searcher.find_pattern(data1, span(0, data1.len()));
 
@@ -280,8 +280,8 @@ mod tests {
 
     #[test]
     fn search_pattern_test() -> anyhow::Result<()> {
-        let patterns = &vec!["\n\n"];
-        let searcher = PatternSearcher::new(&patterns);
+        let patterns = vec!["\n\n".to_string()];
+        let searcher = PatternSearcher::new(patterns);
         let data = "Hello, you all!\n\n How are you? \n\n".as_bytes();
         let data_span = span(0, data.len());
         let matches = searcher.search_patterns(data, data_span);
@@ -296,8 +296,8 @@ mod tests {
 
     #[test]
     fn search_patterns_test() -> anyhow::Result<()> {
-        let patterns = vec![".", "!", "?"];
-        let searcher = PatternSearcher::new(&patterns);
+        let patterns = vec![".".to_string(), "!".to_string(), "?".to_string()];
+        let searcher = PatternSearcher::new(patterns);
         let data = "Hello, you all! How are you? Nice to be here.".as_bytes();
         let data_span = span(0, data.len());
         let matches = searcher.search_patterns(data, data_span);
@@ -310,8 +310,8 @@ mod tests {
         assert_eq!(matches[2].span, span(44, 45));
 
         let data = "Hello, you all!\n\n How are you? \n\n".as_bytes();
-        let patterns = vec!["\n\n", "\n"];
-        let searcher = PatternSearcher::new(&patterns);
+        let patterns = vec!["\n\n".to_string(), "\n".to_string()];
+        let searcher = PatternSearcher::new(patterns);
         let matches = searcher.search_patterns(data, span(0, data.len()));
         assert_eq!(matches.len(), 2);
         assert_eq!(matches[0].pattern, "\n\n");
@@ -320,8 +320,8 @@ mod tests {
         assert_eq!(matches[1].span, span(31, 33));
 
         let data = "Hello, you all!\n\n How are you? \n\n".as_bytes();
-        let patterns = vec!["\n", "\n\n"];
-        let searcher = PatternSearcher::new(&patterns);
+        let patterns = vec!["\n".to_string(), "\n\n".to_string()];
+        let searcher = PatternSearcher::new(patterns);
         let matches = searcher.search_patterns(data, span(0, data.len()));
         assert_eq!(matches.len(), 4);
         assert_eq!(matches[0].pattern, "\n");
@@ -338,8 +338,8 @@ mod tests {
 
     #[test]
     fn find_multiple_patterns_test() -> anyhow::Result<()> {
-        let pattern = vec!["\n\n"];
-        let searcher = PatternSearcher::new(&pattern);
+        let pattern = vec!["\n\n".to_string()];
+        let searcher = PatternSearcher::new(pattern);
         let data1 = "Hello, you all!\n\n How are you? \n\n".as_bytes();
 
         let result1 = searcher.find_pattern(data1, span(0, data1.len()));

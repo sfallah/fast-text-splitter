@@ -11,8 +11,8 @@ use crate::splitter::split_encoding::SplitEncoding;
 //FIXME: need to be moved to Splitter
 pub struct SplitterConfig<'a, T: Tokenize + Sync> {
     pub data: &'a [u8],
-    pub patterns: &'a Vec<Vec<&'a str>>,
-    pub searchers: &'a Vec<PatternSearcher<'a>>,
+    pub patterns: Vec<Vec<String>>,
+    pub searchers: &'a Vec<PatternSearcher>,
     pub tokenizer: Option<&'a T>,
     pub max_len: Option<usize>,
 }

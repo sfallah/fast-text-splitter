@@ -7,22 +7,22 @@ use crate::pattern_search::search_match::SearchMatch;
 use crate::pattern_search::search_result::SearchResult;
 use crate::pattern_search::search_split::SearchSplit;
 
-pub struct PatternSearcher<'a> {
-    pub patterns: &'a Vec<&'a str>,
+pub struct PatternSearcher {
+    pub patterns: Vec<String>,
     pub engine: Option<AhoCorasick>,
 }
 
-impl<'a> PatternSearcher<'a> {
-    pub fn new(patterns: &'a Vec<&str>) -> Self {
+impl PatternSearcher {
+    pub fn new(patterns: Vec<String>) -> Self {
         let engine = if patterns.len() > 1 {
-            Some(get_aho_corasick(patterns))
+            Some(get_aho_corasick(patterns.clone()))
         } else {
             None
         };
         Self { patterns, engine }
     }
 
-    pub fn search_patterns(&self, data: &'a [u8], data_span: Span) -> Vec<SearchMatch<'a>> {
+    pub fn search_patterns(&self, data: &[u8], data_span: Span) -> Vec<SearchMatch> {
         if self.patterns.is_empty() || data_span.is_empty() || data.is_empty() {
             return Vec::new();
         }
@@ -32,7 +32,7 @@ impl<'a> PatternSearcher<'a> {
             let pattern_len = pattern.len();
             find_iter(&data[data_span.start..data_span.end], pattern.as_bytes())
                 .map(|start| SearchMatch {
-                    pattern,
+                    pattern: &pattern,
                     span: span(start, start + pattern_len),
                 })
                 .collect()
@@ -47,14 +47,14 @@ impl<'a> PatternSearcher<'a> {
         }
     }
 
-    pub fn find_pattern(&self, data: &'a [u8], data_span: Span) -> SearchResult<'a> {
+    pub fn find_pattern<'a>(&'a self, data: &'a [u8], data_span: Span) -> SearchResult {
         let matches: Vec<_> = self.search_patterns(data, data_span);
 
         if matches.is_empty() {
             return SearchResult {
                 data,
                 offset: data_span.start,
-                splits: vec![SearchSplit::new(Span::from(data_span), data, "", 0)],
+                splits: vec![SearchSplit::new(Span::from(data_span), data, None, 0)],
                 matched: false,
             };
         }
@@ -68,7 +68,7 @@ impl<'a> PatternSearcher<'a> {
             let split = SearchSplit::new(
                 span(data_span.start, data_span.start + cur_match.start()),
                 data,
-                cur_match.pattern,
+                Some(cur_match.pattern),
                 1,
             );
             pattern_splits.push(split);
@@ -77,7 +77,7 @@ impl<'a> PatternSearcher<'a> {
             let split = SearchSplit::new(
                 span(data_span.start, data_span.start),
                 data,
-                cur_match.pattern,
+                Some(cur_match.pattern),
                 1,
             );
 
@@ -91,7 +91,7 @@ impl<'a> PatternSearcher<'a> {
                 let split = SearchSplit::new(
                     span(data_span.start + cur_match.end(), data_span.end),
                     data,
-                    cur_match.pattern,
+                    Some(cur_match.pattern),
                     0,
                 );
 
@@ -112,7 +112,7 @@ impl<'a> PatternSearcher<'a> {
                     data_span.start + end.start(),
                 ),
                 data,
-                cur_match.pattern,
+                Some(cur_match.pattern),
                 1,
             );
             pattern_splits.push(split);
@@ -123,7 +123,7 @@ impl<'a> PatternSearcher<'a> {
             let split = SearchSplit::new(
                 span(data_span.start + cur_match.end(), data_span.end),
                 data,
-                cur_match.pattern,
+                Some(cur_match.pattern),
                 0,
             );
             pattern_splits.push(split);

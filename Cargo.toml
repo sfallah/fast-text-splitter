@@ -9,11 +9,12 @@ name = "fast_text_splitter"
 #crate-type = ["cdylib"]
 
 [dependencies]
-tokenizers = { version = "0.19.1", features = ["http"], optional = true }
+tokenizers = { version = "0.19.1", features = ["http"] }
 aho-corasick = "=1.1.3"
 anyhow = "1.0.83"
 rayon = "1.10.0"
-pyo3 = "0.21.2"
+pyo3 = { version = "0.21.2", features = ["extension-module"] }
+pyo3-macros-backend = "0.21.2"
 lazy_static = "1.4.0"
 once_cell = "1.9"
 dashmap = "5.0"
@@ -27,8 +28,6 @@ rand = "0.8.5"
 
 [features]
 default = []
-tokenizers = ["dep:tokenizers"]
-
 
 [dev-dependencies]
 criterion = "0.5.1"

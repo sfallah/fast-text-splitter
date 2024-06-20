@@ -269,7 +269,7 @@ impl<'a, T: Tokenize + Sync> Splitter<'a, T> {
             if search_split.stride > 0 {
                 let pattern_data_span = span(
                     search_split.span.end,
-                    search_split.span.end + search_split.pattern.len(),
+                    search_split.span.end + search_split.pattern_len(),
                 );
 
                 let pattern_tokens_span = if self.split_encoding.is_some() {

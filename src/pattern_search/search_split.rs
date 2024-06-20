@@ -4,7 +4,7 @@ use std::str::from_utf8;
 #[derive(Clone, PartialEq, Eq)]
 pub struct SearchSplit<'a> {
     pub data: &'a [u8],
-    pub pattern: &'a str,
+    pub pattern: Option<&'a String>,
     pub stride: usize,
     pub span: Span,
 }
@@ -21,7 +21,7 @@ impl std::fmt::Debug for SearchSplit<'_> {
 }
 
 impl<'a> SearchSplit<'a> {
-    pub fn new(span: Span, data: &'a [u8], pattern: &'a str, stride: usize) -> Self {
+    pub fn new(span: Span, data: &'a [u8], pattern: Option<&'a String>, stride: usize) -> Self {
         Self {
             data,
             pattern,
@@ -42,11 +42,15 @@ impl<'a> SearchSplit<'a> {
             .to_string()
     }
 
+    pub fn pattern_len(&self) -> usize {
+        self.pattern.map(|p| p.len()).unwrap_or(0)
+    }
+
     pub fn full_span(&self) -> Span {
         if self.stride == 1 {
             Span {
                 start: self.span.start,
-                end: self.span.end + self.pattern.len(),
+                end: self.span.end + self.pattern_len(),
             }
         } else {
             self.span

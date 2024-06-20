@@ -2,6 +2,7 @@ use std::str::from_utf8;
 
 use crate::common::{span, TokensResultLite};
 
+#[derive(Debug)]
 pub struct SplitResultLite {
     pub tokens: Vec<u32>,
     pub split_string: String,

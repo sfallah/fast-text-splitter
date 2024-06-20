@@ -1,13 +1,12 @@
 use tokenizers::normalizers::BertNormalizer;
-#[cfg(feature = "tokenizers")]
+
 use tokenizers::{Encoding, PaddingStrategy, Tokenizer, TruncationStrategy};
 use tokenizers::{PaddingParams, TruncationParams};
 
-use crate::common::{TokensResultLite, TokensResults};
-use crate::encodings::EncodingType;
-use crate::{Split, Tokenize};
+use crate::common::{Split, TokensResultLite, TokensResults};
+use crate::encodings::{EncodingType, Tokenize};
 
-#[cfg(feature = "tokenizers")]
+
 pub fn init_tokenizer(
     model_path: Option<String>,
     max_len: Option<usize>,
@@ -51,12 +50,12 @@ pub fn init_tokenizer(
     Ok(tokenizer)
 }
 
-#[cfg(feature = "tokenizers")]
+
 pub struct HFTokenizer {
     pub tokenizer: Tokenizer,
 }
 
-#[cfg(feature = "tokenizers")]
+
 impl Tokenize for HFTokenizer {
     fn encode(&self, data: &str) -> anyhow::Result<EncodingType> {
         let encoded = self.tokenizer.encode(data, false).unwrap();
@@ -64,7 +63,7 @@ impl Tokenize for HFTokenizer {
     }
 }
 
-#[cfg(feature = "tokenizers")]
+
 pub fn divide_encoding(encoded: &Encoding, splits: &[Split]) -> Vec<TokensResults> {
     let mut results = Vec::new();
     for split in splits {
@@ -92,7 +91,7 @@ pub fn divide_encoding(encoded: &Encoding, splits: &[Split]) -> Vec<TokensResult
     results
 }
 
-#[cfg(feature = "tokenizers")]
+
 pub fn divide_encoding_lite<'a>(
     encoded: &'a Encoding,
     splits: &[Split],
@@ -114,7 +113,7 @@ pub fn divide_encoding_lite<'a>(
     results
 }
 
-#[cfg(feature = "tokenizers")]
+
 #[cfg(test)]
 mod tests {
     use super::*;

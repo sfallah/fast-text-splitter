@@ -1,6 +1,5 @@
-use super::Tokenize;
-use crate::encodings::EncodingType;
 use unicode_categories::UnicodeCategories;
+use crate::encodings::{EncodingType, Tokenize};
 
 pub struct WSTokenizer;
 

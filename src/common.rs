@@ -171,7 +171,7 @@ pub fn chunk_encoding_splits(spans: &Vec<(Span, Span)>, max_len: usize) -> Vec<(
 #[derive(PartialEq, Clone)]
 pub struct SplitResults {
     pub split: Split,
-    #[cfg(feature = "tokenizers")]
+
     pub results: Option<TokensResults>,
     pub split_strings: String,
 }

@@ -1,14 +1,13 @@
-#[cfg(feature = "tokenizers")]
-use crate::common::TokensResults;
 
-#[cfg(feature = "tokenizers")]
+use crate::common::{Split, SplitResults, TokensResults};
+
+
 use crate::hf_tokenizer::divide_encoding;
-#[cfg(feature = "tokenizers")]
+
 use tokenizers::Encoding;
 
 use crate::common::{span, TokensResultLite};
 use crate::hf_tokenizer::divide_encoding_lite;
-use crate::{Split, SplitResults};
 use aho_corasick::Span;
 
 use crate::ws_tokenizer::WSEncoding;
@@ -26,7 +25,7 @@ impl Tokenize for NoneTokenizer {
 }
 
 pub enum EncodingType {
-    #[cfg(feature = "tokenizers")]
+
     HFEncoding(Encoding),
     WSEncoding(WSEncoding),
     NoneEncoding,
@@ -35,7 +34,7 @@ pub enum EncodingType {
 impl EncodingType {
     pub fn get_offsets(&self) -> &[(usize, usize)] {
         match self {
-            #[cfg(feature = "tokenizers")]
+
             EncodingType::HFEncoding(enc) => enc.get_offsets(),
             EncodingType::WSEncoding(enc) => &*enc.offsets,
             EncodingType::NoneEncoding => &[],
@@ -44,7 +43,7 @@ impl EncodingType {
 
     pub fn get_word_ids(&self) -> &[Option<u32>] {
         match self {
-            #[cfg(feature = "tokenizers")]
+
             EncodingType::HFEncoding(enc) => enc.get_word_ids(),
             EncodingType::WSEncoding(enc) => &*enc.word_ids,
             EncodingType::NoneEncoding => &[],
@@ -53,7 +52,7 @@ impl EncodingType {
 
     pub fn len(&self) -> usize {
         match self {
-            #[cfg(feature = "tokenizers")]
+
             EncodingType::HFEncoding(enc) => enc.len(),
             EncodingType::WSEncoding(enc) => enc.offsets.len(),
             EncodingType::NoneEncoding => 0,
@@ -62,7 +61,7 @@ impl EncodingType {
 
     pub fn is_empty(&self) -> bool {
         match self {
-            #[cfg(feature = "tokenizers")]
+
             EncodingType::HFEncoding(enc) => enc.is_empty(),
             EncodingType::WSEncoding(enc) => enc.offsets.is_empty(),
             EncodingType::NoneEncoding => true,
@@ -127,7 +126,7 @@ impl EncodingType {
 
     pub fn to_lite_results(&self, splits: &Vec<Split>) -> Vec<TokensResultLite> {
         match self {
-            #[cfg(feature = "tokenizers")]
+
             EncodingType::HFEncoding(enc) => divide_encoding_lite(enc, splits),
             EncodingType::WSEncoding(_) => vec![],
             EncodingType::NoneEncoding => vec![],
@@ -135,9 +134,9 @@ impl EncodingType {
     }
 
     pub fn to_split_results(&self, splits: &Vec<Split>, data: &str) -> Vec<SplitResults> {
-        #[cfg(feature = "tokenizers")]
+
         let encodings: Vec<TokensResults> = match self {
-            #[cfg(feature = "tokenizers")]
+
             EncodingType::HFEncoding(enc) => divide_encoding(enc, splits),
             EncodingType::WSEncoding(_) => vec![],
             EncodingType::NoneEncoding => vec![],
@@ -158,7 +157,7 @@ impl EncodingType {
             .enumerate()
             .map(|(i, split)| SplitResults {
                 split: split.clone(),
-                #[cfg(feature = "tokenizers")]
+
                 results: if encodings.is_empty() {
                     None
                 } else {

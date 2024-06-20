@@ -2,7 +2,7 @@ use aho_corasick::Span;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct SearchMatch<'a> {
-    pub pattern: &'a str,
+    pub pattern: &'a String,
     pub span: Span,
 }
 

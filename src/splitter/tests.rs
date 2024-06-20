@@ -31,7 +31,7 @@ mod tests {
 
     fn split_file<'a>(
         data_path: &str,
-        patterns: &Vec<Vec<&str>>,
+        patterns: Vec<Vec<String>>,
         searchers: &Vec<PatternSearcher>,
         max_len: usize,
         _print: bool,
@@ -138,15 +138,15 @@ mod tests {
     #[test]
     fn single_level_split() {
         let data = "Hello, you all.\n How are you.\n".as_bytes();
-        let patterns = vec![vec!["\n\n"], vec!["\n"], vec![".", "!", "?"]];
-        let searchers: Vec<_> = patterns.iter().map(|p| PatternSearcher::new(p)).collect();
+        let patterns = vec![vec!["\n\n".to_string()], vec!["\n".to_string()], vec![".".to_string(), "!".to_string(), "?".to_string()]];
+        let searchers: Vec<_> = patterns.iter().map(|p| PatternSearcher::new(p.clone())).collect();
         let span = Span {
             start: 0,
             end: data.len(),
         };
         let config = SplitterConfig::<NoneTokenizer> {
             data,
-            patterns: &patterns,
+            patterns,
             searchers: &searchers,
             max_len: None,
             tokenizer: None,
@@ -177,15 +177,15 @@ mod tests {
 
         let data = _data_raw;
 
-        let patterns = vec![vec!["\n\n"], vec!["\n"], vec![".", "!", "?"]];
+        let patterns = vec![vec!["\n\n".to_string()], vec!["\n".to_string()], vec![".".to_string(), "!".to_string(), "?".to_string()]];
         let span = Span {
             start: 0,
             end: data.len(),
         };
-        let searchers: Vec<_> = patterns.iter().map(|p| PatternSearcher::new(p)).collect();
+        let searchers: Vec<_> = patterns.iter().map(|p| PatternSearcher::new(p.clone())).collect();
         let config = SplitterConfig::<NoneTokenizer> {
             data,
-            patterns: &patterns,
+            patterns,
             searchers: &searchers,
             max_len: None,
             tokenizer: None,
@@ -214,12 +214,12 @@ mod tests {
 
         let data = _data_raw;
 
-        let patterns = vec![vec!["\n\n"], vec!["\n"], vec![".", "!", "?"]];
+        let patterns = vec![vec!["\n\n".to_string()], vec!["\n".to_string()], vec![".".to_string(), "!".to_string(), "?".to_string()]];
         let span = Span {
             start: 0,
             end: data.len(),
         };
-        let searchers: Vec<_> = patterns.iter().map(|p| PatternSearcher::new(p)).collect();
+        let searchers: Vec<_> = patterns.iter().map(|p| PatternSearcher::new(p.clone())).collect();
         let hf_tokenizer = HFTokenizer {
             tokenizer: init_tokenizer(None, None, false).unwrap(),
         };
@@ -228,7 +228,7 @@ mod tests {
 
         let config = SplitterConfig::<HFTokenizer> {
             data,
-            patterns: &patterns,
+            patterns,
             searchers: &searchers,
             max_len: None,
             tokenizer: Some(&hf_tokenizer),
@@ -272,15 +272,15 @@ mod tests {
 
         let data = _data_raw;
 
-        let patterns = vec![vec!["\n\n"], vec!["\n"], vec![".", "!", "?"]];
+        let patterns = vec![vec!["\n\n".to_string()], vec!["\n".to_string()], vec![".".to_string(), "!".to_string(), "?".to_string()]];
         let span = Span {
             start: 0,
             end: data.len(),
         };
-        let searchers: Vec<_> = patterns.iter().map(|p| PatternSearcher::new(p)).collect();
+        let searchers: Vec<_> = patterns.iter().map(|p| PatternSearcher::new(p.clone())).collect();
         let config = SplitterConfig::<NoneTokenizer> {
             data,
-            patterns: &patterns,
+            patterns,
             searchers: &searchers,
             max_len: None,
             tokenizer: None,
@@ -371,15 +371,15 @@ mod tests {
 
         let data = _data_raw;
 
-        let patterns = vec![vec!["\n\n"], vec!["\n"], vec![".", "!", "?"]];
+        let patterns = vec![vec!["\n\n".to_string()], vec!["\n".to_string()], vec![".".to_string(), "!".to_string(), "?".to_string()]];
         let span = Span {
             start: 0,
             end: data.len(),
         };
-        let searchers: Vec<_> = patterns.iter().map(|p| PatternSearcher::new(p)).collect();
+        let searchers: Vec<_> = patterns.iter().map(|p| PatternSearcher::new(p.clone())).collect();
         let config = SplitterConfig::<NoneTokenizer> {
             data,
-            patterns: &patterns,
+            patterns,
             searchers: &searchers,
             max_len: Some(16),
             tokenizer: None,
@@ -445,12 +445,12 @@ mod tests {
 
         //let data = _data;
 
-        let patterns = vec![vec!["\n\n"], vec!["\n"], vec![".", "!", "?"]];
+        let patterns = vec![vec!["\n\n".to_string()], vec!["\n".to_string()], vec![".".to_string(), "!".to_string(), "?".to_string()]];
         let span = Span {
             start: 0,
             end: data.len(),
         };
-        let searchers: Vec<_> = patterns.iter().map(|p| PatternSearcher::new(p)).collect();
+        let searchers: Vec<_> = patterns.iter().map(|p| PatternSearcher::new(p.clone())).collect();
         //let ws_tokenizer = WSTokenizer {};
 
         let hf_tokenizer = HFTokenizer {
@@ -460,7 +460,7 @@ mod tests {
         let max_len = Some(512);
         let config = SplitterConfig::<HFTokenizer> {
             data,
-            patterns: &patterns,
+            patterns,
             searchers: &searchers,
             max_len,
             //tokenizer: Some(&ws_tokenizer),
@@ -564,17 +564,17 @@ mod tests {
         Outperform everyone else.\n"
             .as_bytes();
 
-        let patterns = vec![vec!["\n\n"], vec!["\n"], vec![".", "!", "?"]];
+        let patterns = vec![vec!["\n\n".to_string()], vec!["\n".to_string()], vec![".".to_string(), "!".to_string(), "?".to_string()]];
         //let patterns = vec!["\n\n".to_string()];
         //let patterns = vec!["\n\n".to_string(), "\n".to_string()];
         let span = Span {
             start: 0,
             end: data.len(),
         };
-        let searchers: Vec<_> = patterns.iter().map(|p| PatternSearcher::new(p)).collect();
+        let searchers: Vec<_> = patterns.iter().map(|p| PatternSearcher::new(p.clone())).collect();
         let config = SplitterConfig::<NoneTokenizer> {
             data,
-            patterns: &patterns,
+            patterns,
             searchers: &searchers,
             max_len: None,
             tokenizer: None,
@@ -593,14 +593,14 @@ mod tests {
         let binding = fs::read_to_string(data_path).unwrap();
         let data = binding.as_bytes();
 
-        let patterns = vec![vec!["\n\n"], vec!["\n"], vec!["."]];
+        let patterns = vec![vec!["\n\n".to_string()], vec!["\n".to_string()], vec![".".to_string(), "!".to_string(), "?".to_string()]];
 
         let span = Span {
             start: 0,
             end: data.len(),
         };
 
-        let searchers: Vec<_> = patterns.iter().map(|p| PatternSearcher::new(p)).collect();
+        let searchers: Vec<_> = patterns.iter().map(|p| PatternSearcher::new(p.clone())).collect();
         let max_len = Some(40);
         let hf_tokenizer = HFTokenizer {
             tokenizer: init_tokenizer(None, None, false).unwrap(),
@@ -608,7 +608,7 @@ mod tests {
         //let config = SplitterConfig::<WSTokenizer> {
         let config = SplitterConfig::<HFTokenizer> {
             data,
-            patterns: &patterns,
+            patterns,
             searchers: &searchers,
             max_len,
             //tokenizer: None,
@@ -645,11 +645,11 @@ mod tests {
         let data_path = "tests/test_data/superlinear.txt";
         //let data_path = "data/train/List_of_Game_of_Thrones_characters.txt";
 
-        let patterns = vec![vec!["\n\n"], vec!["\n"], vec![".", "!", "?"]];
-        let searchers: Vec<_> = patterns.iter().map(|p| PatternSearcher::new(p)).collect();
+        let patterns = vec![vec!["\n\n".to_string()], vec!["\n".to_string()], vec![".".to_string(), "!".to_string(), "?".to_string()]];
+        let searchers: Vec<_> = patterns.iter().map(|p| PatternSearcher::new(p.clone())).collect();
 
         let (data_len, splits) =
-            split_file(data_path, &patterns, &searchers, 40, true, false, false);
+            split_file(data_path, patterns, &searchers, 40, true, false, false);
 
         let total_len: usize = splits.iter().map(|span| span.len()).sum();
         assert_eq!(data_len, total_len);
@@ -658,7 +658,7 @@ mod tests {
     }
 
     #[test]
-    #[cfg(feature = "tokenizers")]
+
     fn hf_nq_dataset_test() -> tokenizers::Result<()> {
         let mut rng = thread_rng();
 
@@ -666,14 +666,14 @@ mod tests {
         //let files = list_text_files("data/dev/")?;
         let files = list_text_files("data/train/")?;
 
-        let patterns = vec![vec!["\n\n"], vec!["\n"], vec![".", "!", "?"]];
-        let searchers: Vec<_> = patterns.iter().map(|p| PatternSearcher::new(p)).collect();
+        let patterns = vec![vec!["\n\n".to_string()], vec!["\n".to_string()], vec![".".to_string(), "!".to_string(), "?".to_string()]];
+        let searchers: Vec<_> = patterns.iter().map(|p| PatternSearcher::new(p.clone())).collect();
 
         let rnd_files: Vec<_> = files.choose_multiple(&mut rng, 600).collect();
 
         rnd_files.par_iter().for_each(|file| {
             let (data_len, splits) =
-                split_file(file, &patterns, &searchers, 512, false, false, true);
+                split_file(file, patterns.clone(), &searchers, 512, false, false, true);
             let total_len: usize = splits.iter().map(|span| span.len()).sum();
             assert_eq!(data_len, total_len, "Failed File: {}", file);
             println!("File: {} \n Total Length: {}", file, total_len);
