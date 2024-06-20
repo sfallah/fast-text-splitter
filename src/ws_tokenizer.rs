@@ -1,6 +1,6 @@
+use crate::common::{Split, TokensResultLite, TokensResults};
 use crate::encodings::{EncodingType, Tokenize};
 use unicode_categories::UnicodeCategories;
-use crate::common::{Split, TokensResultLite, TokensResults};
 
 pub struct WSTokenizer {
     pub ascii: bool,
@@ -89,7 +89,7 @@ impl WSEncoding {
                 TokensResultLite {
                     data_span: split.data_span.unwrap().clone(),
                     ids: None,
-                    offsets,
+                    offsets: Some(offsets),
                 }
             };
             results.push(result);
@@ -120,7 +120,6 @@ impl WSEncoding {
         results
     }
 }
-
 
 pub fn ws_punc_tokens(text: &str) -> Vec<String> {
     let mut tokens = Vec::new();

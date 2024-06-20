@@ -1,7 +1,7 @@
 use aho_corasick::Span;
 
-use crate::common::{Split, SplitResults, TokensResults};
 use crate::common::{span, TokensResultLite};
+use crate::common::{Split, SplitResults, TokensResults};
 use crate::hf_tokenizer::HFEncoding;
 use crate::ws_tokenizer::WSEncoding;
 
@@ -115,7 +115,7 @@ impl EncodingType {
 
     pub fn to_lite_results(&self, splits: &Vec<Split>) -> Vec<TokensResultLite> {
         match self {
-            EncodingType::HFEncoding(hf_encoding) => hf_encoding.divide_encoding_lite( splits),
+            EncodingType::HFEncoding(hf_encoding) => hf_encoding.divide_encoding_lite(splits),
             EncodingType::WSEncoding(ws_encoding) => ws_encoding.divide_encoding_lite(splits),
             EncodingType::NoneEncoding => vec![],
         }

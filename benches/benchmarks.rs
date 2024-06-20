@@ -23,7 +23,7 @@ use fast_text_splitter::hf_tokenizer::HFTokenizer;
 use fast_text_splitter::normalizer::TextNormalizer;
 use fast_text_splitter::pattern_search::pattern_searcher::PatternSearcher;
 use fast_text_splitter::splitter::Splitter;
-use fast_text_splitter::ws_tokenizer::{WSTokenizer};
+use fast_text_splitter::ws_tokenizer::WSTokenizer;
 
 pub fn text_normalize_benchmark(c: &mut Criterion) {
     //let data_path = "tests/error_data/Selena Gomez - Wikipedia.txt";
@@ -224,7 +224,7 @@ pub fn ws_tree_split_lite_benchmark(c: &mut Criterion) {
         .map(|p| PatternSearcher::new(p.clone()))
         .collect();
 
-    let ws_tokenizer = WSTokenizer {ascii: true};
+    let ws_tokenizer = WSTokenizer { ascii: true };
 
     let max_len = Some(384);
 
@@ -339,7 +339,7 @@ pub fn ws_tokenize_benchmark(c: &mut Criterion) {
         .map(|p| p.to_string())
         .collect::<Vec<_>>();
 
-    let ws_tokenizer = WSTokenizer {ascii: true};
+    let ws_tokenizer = WSTokenizer { ascii: true };
 
     c.bench_function("ws_tokenize_benchmark", |b| {
         b.iter(|| {
@@ -355,7 +355,7 @@ pub fn ws_tokenize_whole_benchmark(c: &mut Criterion) {
     let data_path = "tests/test_data/superlinear.txt";
     let data = fs::read_to_string(data_path).unwrap();
     let data = data.as_str();
-    let ws_tokenizer = WSTokenizer {ascii: true};
+    let ws_tokenizer = WSTokenizer { ascii: true };
 
     c.bench_function("ws_tokenize_whole_benchmark", |b| {
         b.iter(|| {

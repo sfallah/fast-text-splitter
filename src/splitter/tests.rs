@@ -42,7 +42,6 @@ mod tests {
         let data = binding.as_bytes();
         let patterns_len = patterns.len();
 
-
         let origin_dta_span = Span {
             start: 0,
             end: data.len(),
@@ -158,7 +157,6 @@ mod tests {
             max_len: None,
             tokenizer: None,
             patterns_len,
-
         };
         let splitter = Splitter::new(&config, span, 0, span, None, None, None);
         let tree = splitter.split();
@@ -203,7 +201,7 @@ mod tests {
         let config = SplitterConfig::<NoneTokenizer> {
             data,
             searchers: &searchers,
-            max_len: None,
+            max_len: Some(32),
             tokenizer: None,
             patterns_len,
         };
@@ -212,14 +210,12 @@ mod tests {
         println!("{}", tree.to_string(data, true));
         assert_eq!(from_utf8(data).unwrap(), tree.reconstruct(data));
 
-        /*
-        let lite_results = tree.get_results_lite(None, data);
+        let lite_results = tree.get_results_lite(Some(32), data);
         println!("Number of Lite Results: {:?}", lite_results.len());
         for res in lite_results.iter() {
             println!("{:?}", res.split_string);
             println!("{:?}", res.tokens.len());
         }
-         */
     }
 
     #[test]
@@ -251,7 +247,7 @@ mod tests {
             start: 0,
             end: data.len(),
         };
-        let ws_tokenizer = WSTokenizer {ascii: false};
+        let ws_tokenizer = WSTokenizer { ascii: false };
         let searchers: Vec<_> = patterns
             .iter()
             .map(|p| PatternSearcher::new(p.clone()))
@@ -623,7 +619,7 @@ mod tests {
 
          */
 
-        let ws_tokenizer = WSTokenizer {ascii: false};
+        let ws_tokenizer = WSTokenizer { ascii: false };
         for res in split_results.iter() {
             let split_str = res.split_strings.as_str();
             println!("{:?}", split_str);

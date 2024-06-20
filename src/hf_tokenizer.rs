@@ -89,7 +89,8 @@ impl HFEncoding {
                 let split_range = split.tokens_span.range();
                 let ids = self.hf_encoding.get_ids()[split_range.clone()].to_vec();
                 let type_ids = self.hf_encoding.get_type_ids()[split_range.clone()].to_vec();
-                let attention_mask = self.hf_encoding.get_attention_mask()[split_range.clone()].to_vec();
+                let attention_mask =
+                    self.hf_encoding.get_attention_mask()[split_range.clone()].to_vec();
                 let offsets = self.hf_encoding.get_offsets()[split_range.clone()].to_vec();
                 let tokens = self.hf_encoding.get_tokens()[split_range.clone()].to_vec();
 
@@ -106,9 +107,7 @@ impl HFEncoding {
         results
     }
 
-    pub fn divide_encoding_lite<'a>(&'a self,
-                                    splits: &[Split],
-    ) -> Vec<TokensResultLite<'a>> {
+    pub fn divide_encoding_lite<'a>(&'a self, splits: &[Split]) -> Vec<TokensResultLite<'a>> {
         let mut results = Vec::new();
         for split in splits {
             let result = {
@@ -118,7 +117,7 @@ impl HFEncoding {
                 TokensResultLite {
                     data_span: split.data_span.unwrap().clone(),
                     ids: Some(ids),
-                    offsets,
+                    offsets: Some(offsets),
                 }
             };
             results.push(result);

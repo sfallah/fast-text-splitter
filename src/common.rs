@@ -208,7 +208,7 @@ impl TokensResults {
 pub struct TokensResultLite<'a> {
     pub data_span: Span,
     pub ids: Option<&'a [u32]>,
-    pub offsets: &'a [(usize, usize)],
+    pub offsets: Option<&'a [(usize, usize)]>,
 }
 
 impl TokensResultLite<'_> {
@@ -216,7 +216,11 @@ impl TokensResultLite<'_> {
         if let Some(ids) = self.ids {
             ids.len()
         } else {
-            self.offsets.len()
+            if let Some(offsets) = self.offsets {
+                offsets.len()
+            } else {
+                0
+            }
         }
     }
 }
@@ -228,7 +232,7 @@ impl fmt::Debug for TokensResultLite<'_> {
             "TokensResultLite {{ data_span: {:?}, ids: {:?}, offsets: {:?} }}",
             self.data_span,
             self.no_tokens(),
-            self.offsets.len()
+            self.offsets.map_or_else(|| 0, |offsets| offsets.len())
         )
     }
 }

@@ -126,7 +126,8 @@ impl SplitNode {
         if let Some(max_len) = max_len {
             merge_split_result_lite(&split_res, max_len, data)
         } else {
-            split_res.iter()
+            split_res
+                .iter()
                 .map(|res| SplitResultLite {
                     tokens: res.ids.map_or_else(Vec::new, |ids| ids.to_vec()),
                     split_string: from_utf8(&data[res.data_span.range()]).unwrap().to_string(),
@@ -201,6 +202,20 @@ impl SplitNode {
                 })
                 .collect();
 
+            if let Some(encoding) = &self.split_encoding {
+                let split_res = encoding.encoding.to_lite_results(&splits);
+                split_results.extend(split_res);
+            } else {
+                //FIXME: This is a temporary fix, we need to adapt it to work with like for the HFEncoding nad WSEncoding
+                let split_res = splits.iter().map(|split| TokensResultLite {
+                    data_span: split.data_span.clone().unwrap(),
+                    ids: None,
+                    offsets: None,
+                });
+                split_results.extend(split_res);
+            }
+
+            /*
             let split_res = self
                 .split_encoding
                 .as_ref()
@@ -209,6 +224,8 @@ impl SplitNode {
                 .to_lite_results(&splits);
 
             split_results.extend(split_res);
+
+             */
         } else {
             for child in &self.children {
                 split_results.extend(child.merge_enc_lite_result(merge_level, max_len));

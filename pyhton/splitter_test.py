@@ -5,6 +5,14 @@ import fast_text_splitter as fts
 # addd main function
 def main():
     # Test the splitter
+
+    patterns = [[".", "!", "?"]]
+    len_splitter = fts.create_none_splitter(patterns=patterns, max_tokens=10, merge_level=0, parallel=False)
+    text = "Hello, world! How are you doing today? I am doing fine."
+    for res in len_splitter.splits(text):
+        print(res.text)
+        print(res.tokens)
+
     patterns = [[".", "!", "?"]]
     ws_splitter = fts.create_ws_splitter(patterns=patterns, max_tokens=10, merge_level=0, parallel=False,ascii=True)
     text = "Hello, world! How are you doing today? I am doing fine."
