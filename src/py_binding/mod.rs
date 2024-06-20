@@ -26,9 +26,10 @@ impl PyWSSplitterConfig {
         max_tokens: usize,
         merge_level: usize,
         parallel: bool,
+        ascii: bool,
     ) -> Self {
         PyWSSplitterConfig {
-            inner: SplitterLiteConfig::new_ws(patterns, max_tokens, merge_level, parallel),
+            inner: SplitterLiteConfig::new_ws(patterns, max_tokens, merge_level, parallel, ascii),
         }
     }
 
@@ -85,8 +86,9 @@ fn create_ws_splitter(
     max_tokens: usize,
     merge_level: usize,
     parallel: bool,
+    ascii: bool,
 ) -> PyWSSplitterConfig {
-    PyWSSplitterConfig::new(patterns, max_tokens, merge_level, parallel)
+    PyWSSplitterConfig::new(patterns, max_tokens, merge_level, parallel, ascii)
 }
 
 #[pyfunction]

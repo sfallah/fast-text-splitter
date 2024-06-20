@@ -23,6 +23,7 @@ impl SplitterLiteConfig<WSTokenizer> {
         max_tokens: usize,
         merge_level: usize,
         parallel: bool,
+        ascii: bool,
     ) -> Self {
         let searchers: Vec<_> = patterns
             .clone()
@@ -32,7 +33,7 @@ impl SplitterLiteConfig<WSTokenizer> {
         Self {
             patterns: patterns.clone(),
             searchers,
-            tokenizer: WSTokenizer {ascii: false},
+            tokenizer: WSTokenizer {ascii},
             max_tokens: Some(max_tokens),
             merge_level: Some(merge_level),
             parallel: Some(parallel),
