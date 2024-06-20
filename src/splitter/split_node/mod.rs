@@ -123,7 +123,16 @@ impl SplitNode {
     pub fn get_results_lite(&self, max_len: Option<usize>, data: &[u8]) -> Vec<SplitResultLite> {
         let merge_level = self.leaf_level().unwrap();
         let split_res = self.merge_enc_lite_result(merge_level, max_len);
-        merge_split_result_lite(&split_res, max_len.unwrap(), data)
+        if let Some(max_len) = max_len {
+            merge_split_result_lite(&split_res, max_len, data)
+        } else {
+            split_res.iter()
+                .map(|res| SplitResultLite {
+                    tokens: res.ids.map_or_else(Vec::new, |ids| ids.to_vec()),
+                    split_string: from_utf8(&data[res.data_span.range()]).unwrap().to_string(),
+                })
+                .collect()
+        }
     }
 
     pub fn merge_encoding_result(
@@ -191,6 +200,7 @@ impl SplitNode {
                     data_span: Some(data_span.clone()),
                 })
                 .collect();
+
             let split_res = self
                 .split_encoding
                 .as_ref()

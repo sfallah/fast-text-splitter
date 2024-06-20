@@ -1,7 +1,7 @@
 #[cfg(test)]
 mod tests {
-    use std::{fs, io};
     use std::str::from_utf8;
+    use std::{fs, io};
 
     use aho_corasick::Span;
     use rand::seq::SliceRandom;
@@ -9,10 +9,10 @@ mod tests {
     use rayon::prelude::*;
 
     use crate::encodings::{NoneTokenizer, Tokenize};
-    use crate::hf_tokenizer::{HFTokenizer, init_tokenizer};
+    use crate::hf_tokenizer::{init_tokenizer, HFTokenizer};
     use crate::pattern_search::pattern_searcher::PatternSearcher;
-    use crate::splitter::{Splitter, SplitterConfig};
     use crate::splitter::split_node::utils::SplitResultLite;
+    use crate::splitter::{Splitter, SplitterConfig};
     use crate::ws_tokenizer::WSTokenizer;
 
     fn list_text_files(dir: &str) -> io::Result<Vec<String>> {
@@ -164,7 +164,7 @@ mod tests {
     }
 
     #[test]
-    fn multi_level_split() {
+    fn multi_level_none_tokenizer_split() {
         let _data_raw = "\n\n\
         \n\n\
         \n\n\
@@ -205,6 +205,68 @@ mod tests {
         let tree = splitter.split();
         println!("{}", tree.to_string(data, true));
         assert_eq!(from_utf8(data).unwrap(), tree.reconstruct(data));
+
+        /*
+        let lite_results = tree.get_results_lite(None, data);
+        println!("Number of Lite Results: {:?}", lite_results.len());
+        for res in lite_results.iter() {
+            println!("{:?}", res.split_string);
+            println!("{:?}", res.tokens.len());
+        }
+         */
+    }
+
+    #[test]
+    fn multi_level_ws_tokenizer_split() {
+        let _data_raw = "\n\n\
+        \n\n\
+        \n\n\
+        In fact, the correlation. Between superlinear.\n\
+        Returns and inequality is so strong that it yields.\n\n\
+        Another heuristic for.\n\n\
+        \n\n\
+        \n\n\
+        \nFinding work of this type.\n\
+        Look for fields where.\n\
+        A few big winners. \n\
+        Outperform everyone else.\n\n"
+            .as_bytes();
+
+        let data = _data_raw;
+
+        let patterns = vec![
+            vec!["\n\n".to_string()],
+            vec!["\n".to_string()],
+            vec![".".to_string(), "!".to_string(), "?".to_string()],
+        ];
+        let span = Span {
+            start: 0,
+            end: data.len(),
+        };
+        let ws_tokenizer = WSTokenizer {ascii: false};
+        let searchers: Vec<_> = patterns
+            .iter()
+            .map(|p| PatternSearcher::new(p.clone()))
+            .collect();
+        let max_len = Some(16);
+        let config = SplitterConfig::<WSTokenizer> {
+            data,
+            patterns,
+            searchers: &searchers,
+            max_len,
+            tokenizer: Some(&ws_tokenizer),
+        };
+        let splitter = Splitter::new(&config, span, 0, span, None, None, None);
+        let tree = splitter.split();
+        println!("{}", tree.to_string(data, true));
+        assert_eq!(from_utf8(data).unwrap(), tree.reconstruct(data));
+
+        let lite_results = tree.get_results_lite(max_len, data);
+        println!("Number of Lite Results: {:?}", lite_results.len());
+        for res in lite_results.iter() {
+            println!("{:?}", res.split_string);
+            println!("{:?}", res.tokens.len());
+        }
     }
 
     #[test]
@@ -545,7 +607,7 @@ mod tests {
 
          */
 
-        let ws_tokenizer = WSTokenizer {};
+        let ws_tokenizer = WSTokenizer {ascii: false};
         for res in split_results.iter() {
             let split_str = res.split_strings.as_str();
             println!("{:?}", split_str);

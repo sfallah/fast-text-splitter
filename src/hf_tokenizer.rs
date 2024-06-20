@@ -99,7 +99,7 @@ pub fn divide_encoding_lite<'a>(
 
             TokensResultLite {
                 data_span: split.data_span.unwrap().clone(),
-                ids,
+                ids: Some(ids),
                 offsets,
             }
         };

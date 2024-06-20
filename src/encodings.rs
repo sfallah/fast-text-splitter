@@ -12,6 +12,7 @@ use crate::ws_tokenizer::WSEncoding;
 
 pub trait Tokenize {
     fn encode(&self, data: &str) -> anyhow::Result<EncodingType>;
+    //fn divide_encoding(&self, splits: &[Split]) -> Vec<TokensResults>;
 }
 
 pub struct NoneTokenizer;
@@ -120,15 +121,15 @@ impl EncodingType {
     pub fn to_lite_results(&self, splits: &Vec<Split>) -> Vec<TokensResultLite> {
         match self {
             EncodingType::HFEncoding(enc) => divide_encoding_lite(enc, splits),
-            EncodingType::WSEncoding(_) => vec![],
+            EncodingType::WSEncoding(ws_encoding) => ws_encoding.divide_encoding_lite(splits),
             EncodingType::NoneEncoding => vec![],
         }
     }
 
     pub fn to_split_results(&self, splits: &Vec<Split>, data: &str) -> Vec<SplitResults> {
         let encodings: Vec<TokensResults> = match self {
-            EncodingType::HFEncoding(enc) => divide_encoding(enc, splits),
-            EncodingType::WSEncoding(_) => vec![],
+            EncodingType::HFEncoding(hf_encoding) => divide_encoding(hf_encoding, splits),
+            EncodingType::WSEncoding(ws_encoding) => ws_encoding.divide_encoding(splits),
             EncodingType::NoneEncoding => vec![],
         };
 

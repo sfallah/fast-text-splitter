@@ -5,8 +5,12 @@ use aho_corasick::Span;
 use criterion::{black_box, criterion_main, Criterion};
 use rayon::current_num_threads;
 use rayon::iter::IntoParallelRefIterator;
+use rayon::prelude::*;
 use tokenizers::normalizers::bert::BertNormalizer;
 use tokenizers::parallelism::{get_parallelism, set_parallelism};
+use tokenizers::pre_tokenizers::punctuation::Punctuation;
+use tokenizers::pre_tokenizers::sequence::Sequence;
+use tokenizers::pre_tokenizers::whitespace::WhitespaceSplit;
 use tokenizers::{
     NormalizedString, Normalizer, OffsetReferential, OffsetType, PreTokenizedString, PreTokenizer,
     PreTokenizerWrapper,
@@ -19,11 +23,7 @@ use fast_text_splitter::hf_tokenizer::HFTokenizer;
 use fast_text_splitter::normalizer::TextNormalizer;
 use fast_text_splitter::pattern_search::pattern_searcher::PatternSearcher;
 use fast_text_splitter::splitter::Splitter;
-use fast_text_splitter::ws_tokenizer::{whitespace_punctuation_tokenize, WSTokenizer};
-use rayon::prelude::*;
-use tokenizers::pre_tokenizers::punctuation::Punctuation;
-use tokenizers::pre_tokenizers::sequence::Sequence;
-use tokenizers::pre_tokenizers::whitespace::WhitespaceSplit;
+use fast_text_splitter::ws_tokenizer::{WSTokenizer};
 
 pub fn text_normalize_benchmark(c: &mut Criterion) {
     //let data_path = "tests/error_data/Selena Gomez - Wikipedia.txt";
@@ -221,7 +221,7 @@ pub fn ws_tree_split_lite_benchmark(c: &mut Criterion) {
         .map(|p| PatternSearcher::new(p.clone()))
         .collect();
 
-    let ws_tokenizer = WSTokenizer {};
+    let ws_tokenizer = WSTokenizer {ascii: true};
 
     let max_len = Some(384);
 
@@ -335,10 +335,12 @@ pub fn ws_tokenize_benchmark(c: &mut Criterion) {
         .map(|p| p.to_string())
         .collect::<Vec<_>>();
 
+    let ws_tokenizer = WSTokenizer {ascii: true};
+
     c.bench_function("ws_tokenize_benchmark", |b| {
         b.iter(|| {
             splits.iter().for_each(|split_str| {
-                let ws_tokens = whitespace_punctuation_tokenize(split_str);
+                let ws_tokens = ws_tokenizer.whitespace_punctuation_tokenize(split_str);
                 black_box(ws_tokens);
             });
         })
@@ -349,10 +351,11 @@ pub fn ws_tokenize_whole_benchmark(c: &mut Criterion) {
     let data_path = "tests/test_data/superlinear.txt";
     let data = fs::read_to_string(data_path).unwrap();
     let data = data.as_str();
+    let ws_tokenizer = WSTokenizer {ascii: true};
 
     c.bench_function("ws_tokenize_whole_benchmark", |b| {
         b.iter(|| {
-            let ws_tokens = whitespace_punctuation_tokenize(data);
+            let ws_tokens = ws_tokenizer.whitespace_punctuation_tokenize(data);
             black_box(ws_tokens);
         })
     });

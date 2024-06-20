@@ -32,7 +32,7 @@ impl SplitterLiteConfig<WSTokenizer> {
         Self {
             patterns: patterns.clone(),
             searchers,
-            tokenizer: WSTokenizer {},
+            tokenizer: WSTokenizer {ascii: false},
             max_tokens: Some(max_tokens),
             merge_level: Some(merge_level),
             parallel: Some(parallel),
