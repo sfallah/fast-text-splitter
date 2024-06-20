@@ -11,10 +11,10 @@ use crate::splitter::split_encoding::SplitEncoding;
 //FIXME: need to be moved to Splitter
 pub struct SplitterConfig<'a, T: Tokenize + Sync> {
     pub data: &'a [u8],
-    pub patterns: Vec<Vec<String>>,
     pub searchers: &'a Vec<PatternSearcher>,
     pub tokenizer: Option<&'a T>,
     pub max_len: Option<usize>,
+    pub patterns_len: usize,
 }
 
 impl<'a, T: Tokenize + Sync> SplitterConfig<'a, T> {
@@ -49,5 +49,8 @@ impl<'a, T: Tokenize + Sync> SplitterConfig<'a, T> {
         });
 
         (new_split_encoding, new_split_tokens_span)
+    }
+    pub fn patterns_len(&self) -> usize {
+        self.patterns_len
     }
 }

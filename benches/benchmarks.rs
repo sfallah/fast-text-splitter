@@ -97,6 +97,7 @@ pub fn hf_tree_split_benchmark(c: &mut Criterion) {
         vec!["\n".to_string()],
         vec![".".to_string(), "!".to_string(), "?".to_string()],
     ];
+    let patterns_len = patterns.len();
 
     let searchers: Vec<_> = patterns
         .iter()
@@ -119,10 +120,10 @@ pub fn hf_tree_split_benchmark(c: &mut Criterion) {
             let config =
                 fast_text_splitter::splitter::splitter_config::SplitterConfig::<HFTokenizer> {
                     data,
-                    patterns: patterns.clone(),
                     searchers: &searchers,
                     max_len,
                     tokenizer: Some(&hf_tokenizer),
+                    patterns_len,
                 };
             let splitter = Splitter::new(&config, span, 0, span, Some(true), None, None);
             let tree = splitter.split();
@@ -146,6 +147,8 @@ pub fn hf_merged_tree_split_benchmark(c: &mut Criterion) {
         vec![".".to_string(), "!".to_string(), "?".to_string()],
     ];
 
+    let patterns_len = patterns.len();
+
     let searchers: Vec<_> = patterns
         .iter()
         .map(|p| PatternSearcher::new(p.clone()))
@@ -167,10 +170,10 @@ pub fn hf_merged_tree_split_benchmark(c: &mut Criterion) {
             let config =
                 fast_text_splitter::splitter::splitter_config::SplitterConfig::<HFTokenizer> {
                     data,
-                    patterns: patterns.clone(),
                     searchers: &searchers,
                     max_len,
                     tokenizer: Some(&hf_tokenizer),
+                    patterns_len,
                 };
             let splitter = Splitter::new(&config, span, 0, span, Some(true), None, None);
             let tree = splitter.split();
@@ -215,7 +218,7 @@ pub fn ws_tree_split_lite_benchmark(c: &mut Criterion) {
         vec!["\n".to_string()],
         vec![".".to_string(), "!".to_string(), "?".to_string()],
     ];
-
+    let patterns_len = patterns.len();
     let searchers: Vec<_> = patterns
         .iter()
         .map(|p| PatternSearcher::new(p.clone()))
@@ -234,10 +237,10 @@ pub fn ws_tree_split_lite_benchmark(c: &mut Criterion) {
             let config =
                 fast_text_splitter::splitter::splitter_config::SplitterConfig::<WSTokenizer> {
                     data,
-                    patterns: patterns.clone(),
                     searchers: &searchers,
                     max_len,
                     tokenizer: Some(&ws_tokenizer),
+                    patterns_len,
                 };
             let splitter = Splitter::new(&config, span, 0, span, Some(true), None, None);
             let tree = splitter.split();
@@ -258,6 +261,7 @@ pub fn none_tree_split_benchmark(c: &mut Criterion) {
         vec!["\n".to_string()],
         vec![".".to_string(), "!".to_string(), "?".to_string()],
     ];
+    let patterns_len = patterns.len();
 
     let searchers: Vec<_> = patterns
         .iter()
@@ -275,10 +279,10 @@ pub fn none_tree_split_benchmark(c: &mut Criterion) {
             let config =
                 fast_text_splitter::splitter::splitter_config::SplitterConfig::<NoneTokenizer> {
                     data,
-                    patterns: patterns.clone(),
                     searchers: &searchers,
                     max_len,
                     tokenizer: None,
+                    patterns_len,
                 };
             let splitter = Splitter::new(&config, span, 0, span, Some(false), None, None);
             let tree = splitter.split();

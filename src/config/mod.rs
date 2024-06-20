@@ -9,12 +9,12 @@ use crate::splitter::Splitter;
 use crate::ws_tokenizer::WSTokenizer;
 
 pub struct SplitterLiteConfig<T: Tokenize + Sync> {
-    pub patterns: Vec<Vec<String>>,
     pub searchers: Vec<PatternSearcher>,
     pub tokenizer: T,
     pub max_tokens: Option<usize>,
     pub merge_level: Option<usize>,
     pub parallel: Option<bool>,
+    pub patterns_len: usize,
 }
 
 impl SplitterLiteConfig<WSTokenizer> {
@@ -25,18 +25,19 @@ impl SplitterLiteConfig<WSTokenizer> {
         parallel: bool,
         ascii: bool,
     ) -> Self {
+        let patterns_len = patterns.len();
         let searchers: Vec<_> = patterns
             .clone()
             .iter()
             .map(|p| PatternSearcher::new(p.clone()))
             .collect();
         Self {
-            patterns: patterns.clone(),
             searchers,
             tokenizer: WSTokenizer {ascii},
             max_tokens: Some(max_tokens),
             merge_level: Some(merge_level),
             parallel: Some(parallel),
+            patterns_len,
         }
     }
 
@@ -47,10 +48,10 @@ impl SplitterLiteConfig<WSTokenizer> {
         };
         let config = crate::splitter::splitter_config::SplitterConfig::<WSTokenizer> {
             data,
-            patterns: self.patterns.clone(),
             searchers: &self.searchers,
             max_len: self.max_tokens,
             tokenizer: Some(&self.tokenizer),
+            patterns_len: self.patterns_len,
         };
         let splitter = Splitter::new(&config, span, 0, span, Some(true), None, None);
         let tree = splitter.split();
@@ -66,6 +67,7 @@ impl SplitterLiteConfig<HFTokenizer> {
         parallel: bool,
         model: Option<String>,
     ) -> Self {
+        let patterns_len = patterns.len();
         let searchers: Vec<_> = patterns
             .clone()
             .iter()
@@ -75,12 +77,12 @@ impl SplitterLiteConfig<HFTokenizer> {
             tokenizer: init_tokenizer(model, Some(usize::MAX), false).unwrap(),
         };
         Self {
-            patterns: patterns.clone(),
             searchers,
             tokenizer: hf_tokenizer,
             max_tokens: Some(max_tokens),
             merge_level: Some(merge_level),
             parallel: Some(parallel),
+            patterns_len,
         }
     }
 
@@ -91,10 +93,10 @@ impl SplitterLiteConfig<HFTokenizer> {
         };
         let config = crate::splitter::splitter_config::SplitterConfig::<HFTokenizer> {
             data,
-            patterns: self.patterns.clone(),
             searchers: &self.searchers,
             max_len: self.max_tokens,
             tokenizer: Some(&self.tokenizer),
+            patterns_len: self.patterns_len,
         };
         let splitter = Splitter::new(&config, span, 0, span, Some(true), None, None);
         let tree = splitter.split();

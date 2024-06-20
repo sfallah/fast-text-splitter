@@ -213,7 +213,7 @@ impl<'a, T: Tokenize + Sync> Splitter<'a, T> {
                 self.split_tokens_span,
             )
         } else {
-            if self.pattern_id + 1 < self.config.patterns.len() && !self.search_data_span.is_empty()
+            if self.pattern_id + 1 < self.config.patterns_len() && !self.search_data_span.is_empty()
             {
                 let new_splitter = self.to_next_splitter();
                 new_splitter.split()
@@ -248,7 +248,7 @@ impl<'a, T: Tokenize + Sync> Splitter<'a, T> {
     }
 
     fn sub_split(&self, search_split: &SearchSplit) -> Vec<SplitNode> {
-        if self.pattern_id + 1 < self.config.patterns.len() && !search_split.span.is_empty() {
+        if self.pattern_id + 1 < self.config.patterns_len() && !search_split.span.is_empty() {
             let mut child_nodes = Vec::new();
 
             let splitter = self.to_sub_splitter(

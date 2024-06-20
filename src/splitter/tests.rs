@@ -40,6 +40,8 @@ mod tests {
     ) -> (usize, Vec<SplitResultLite>) {
         let binding = fs::read_to_string(data_path).unwrap();
         let data = binding.as_bytes();
+        let patterns_len = patterns.len();
+
 
         let origin_dta_span = Span {
             start: 0,
@@ -53,10 +55,10 @@ mod tests {
         let max_len = Some(max_len);
         let config = SplitterConfig::<HFTokenizer> {
             data,
-            patterns,
             searchers,
             max_len,
             tokenizer: Some(&hf_tokenizer),
+            patterns_len,
         };
 
         let splitter = Splitter::new(
@@ -140,20 +142,23 @@ mod tests {
             vec!["\n".to_string()],
             vec![".".to_string(), "!".to_string(), "?".to_string()],
         ];
+        let patterns_len = patterns.len();
         let searchers: Vec<_> = patterns
             .iter()
             .map(|p| PatternSearcher::new(p.clone()))
             .collect();
+
         let span = Span {
             start: 0,
             end: data.len(),
         };
         let config = SplitterConfig::<NoneTokenizer> {
             data,
-            patterns,
             searchers: &searchers,
             max_len: None,
             tokenizer: None,
+            patterns_len,
+
         };
         let splitter = Splitter::new(&config, span, 0, span, None, None, None);
         let tree = splitter.split();
@@ -186,6 +191,7 @@ mod tests {
             vec!["\n".to_string()],
             vec![".".to_string(), "!".to_string(), "?".to_string()],
         ];
+        let patterns_len = patterns.len();
         let span = Span {
             start: 0,
             end: data.len(),
@@ -196,10 +202,10 @@ mod tests {
             .collect();
         let config = SplitterConfig::<NoneTokenizer> {
             data,
-            patterns,
             searchers: &searchers,
             max_len: None,
             tokenizer: None,
+            patterns_len,
         };
         let splitter = Splitter::new(&config, span, 0, span, None, None, None);
         let tree = splitter.split();
@@ -239,6 +245,8 @@ mod tests {
             vec!["\n".to_string()],
             vec![".".to_string(), "!".to_string(), "?".to_string()],
         ];
+        let patterns_len = patterns.len();
+
         let span = Span {
             start: 0,
             end: data.len(),
@@ -251,10 +259,10 @@ mod tests {
         let max_len = Some(16);
         let config = SplitterConfig::<WSTokenizer> {
             data,
-            patterns,
             searchers: &searchers,
             max_len,
             tokenizer: Some(&ws_tokenizer),
+            patterns_len,
         };
         let splitter = Splitter::new(&config, span, 0, span, None, None, None);
         let tree = splitter.split();
@@ -292,6 +300,8 @@ mod tests {
             vec!["\n".to_string()],
             vec![".".to_string(), "!".to_string(), "?".to_string()],
         ];
+        let patterns_len = patterns.len();
+
         let span = Span {
             start: 0,
             end: data.len(),
@@ -308,10 +318,10 @@ mod tests {
 
         let config = SplitterConfig::<HFTokenizer> {
             data,
-            patterns,
             searchers: &searchers,
             max_len: None,
             tokenizer: Some(&hf_tokenizer),
+            patterns_len,
         };
         let splitter = Splitter::new(&config, span, 0, span, None, None, None);
         let tree = splitter.split();
@@ -355,6 +365,8 @@ mod tests {
             vec!["\n".to_string()],
             vec![".".to_string(), "!".to_string(), "?".to_string()],
         ];
+        let patterns_len = patterns.len();
+
         let span = Span {
             start: 0,
             end: data.len(),
@@ -365,10 +377,10 @@ mod tests {
             .collect();
         let config = SplitterConfig::<NoneTokenizer> {
             data,
-            patterns,
             searchers: &searchers,
             max_len: None,
             tokenizer: None,
+            patterns_len,
         };
         let splitter = Splitter::new(&config, span, 0, span, None, None, None);
         let tree = splitter.split();
@@ -461,6 +473,8 @@ mod tests {
             vec!["\n".to_string()],
             vec![".".to_string(), "!".to_string(), "?".to_string()],
         ];
+        let patterns_len = patterns.len();
+
         let span = Span {
             start: 0,
             end: data.len(),
@@ -471,10 +485,10 @@ mod tests {
             .collect();
         let config = SplitterConfig::<NoneTokenizer> {
             data,
-            patterns,
             searchers: &searchers,
             max_len: Some(16),
             tokenizer: None,
+            patterns_len,
         };
         let splitter = Splitter::new(&config, span, 0, span, None, None, None);
         let tree = splitter.split();
@@ -542,6 +556,8 @@ mod tests {
             vec!["\n".to_string()],
             vec![".".to_string(), "!".to_string(), "?".to_string()],
         ];
+        let patterns_len = patterns.len();
+
         let span = Span {
             start: 0,
             end: data.len(),
@@ -559,11 +575,11 @@ mod tests {
         let max_len = Some(512);
         let config = SplitterConfig::<HFTokenizer> {
             data,
-            patterns,
             searchers: &searchers,
             max_len,
             //tokenizer: Some(&ws_tokenizer),
             tokenizer: Some(&hf_tokenizer),
+            patterns_len,
         };
         let splitter = Splitter::new(&config, span, 0, span, Some(true), None, None);
         let tree = splitter.split();
@@ -656,6 +672,8 @@ mod tests {
             vec!["\n".to_string()],
             vec![".".to_string(), "!".to_string(), "?".to_string()],
         ];
+        let patterns_len = patterns.len();
+
         //let patterns = vec!["\n\n".to_string()];
         //let patterns = vec!["\n\n".to_string(), "\n".to_string()];
         let span = Span {
@@ -668,10 +686,10 @@ mod tests {
             .collect();
         let config = SplitterConfig::<NoneTokenizer> {
             data,
-            patterns,
             searchers: &searchers,
             max_len: None,
             tokenizer: None,
+            patterns_len,
         };
         let splitter = Splitter::new(&config, span, 0, span, None, None, None);
         let tree = splitter.split();
@@ -694,7 +712,7 @@ mod tests {
             .map(|p| PatternSearcher::new(p.clone()))
             .collect();
 
-        let (data_len, splits) = split_file(data_path, patterns, &searchers, 128, true, true, false);
+        let (data_len, splits) = split_file(data_path, patterns, &searchers, 40, true, true, false);
 
         let total_len: usize = splits.iter().map(|res| res.split_string.len()).sum();
         assert_eq!(data_len, total_len);

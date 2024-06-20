@@ -4,15 +4,14 @@ use std::str::from_utf8;
 #[derive(Clone, PartialEq, Eq)]
 pub struct SearchSplit<'a> {
     pub data: &'a [u8],
-    pub pattern: Option<&'a String>,
     pub stride: usize,
     pub span: Span,
+    pub pattern_len: usize,
 }
 
 impl std::fmt::Debug for SearchSplit<'_> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("Split")
-            .field("pattern", &self.pattern)
             .field("data", &self.data())
             .field("stride", &self.stride)
             .field("span", &self.span)
@@ -21,12 +20,12 @@ impl std::fmt::Debug for SearchSplit<'_> {
 }
 
 impl<'a> SearchSplit<'a> {
-    pub fn new(span: Span, data: &'a [u8], pattern: Option<&'a String>, stride: usize) -> Self {
+    pub fn new(span: Span, data: &'a [u8], pattern_len: usize, stride: usize) -> Self {
         Self {
             data,
-            pattern,
             stride,
             span,
+            pattern_len,
         }
     }
     pub fn data(&self) -> String {
@@ -43,7 +42,7 @@ impl<'a> SearchSplit<'a> {
     }
 
     pub fn pattern_len(&self) -> usize {
-        self.pattern.map(|p| p.len()).unwrap_or(0)
+        self.pattern_len
     }
 
     pub fn full_span(&self) -> Span {

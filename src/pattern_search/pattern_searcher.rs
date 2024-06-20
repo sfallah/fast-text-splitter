@@ -32,7 +32,7 @@ impl PatternSearcher {
             let pattern_len = pattern.len();
             find_iter(&data[data_span.start..data_span.end], pattern.as_bytes())
                 .map(|start| SearchMatch {
-                    pattern: &pattern,
+                    pattern_len,
                     span: span(start, start + pattern_len),
                 })
                 .collect()
@@ -40,7 +40,7 @@ impl PatternSearcher {
             let ac = self.engine.as_ref().unwrap();
             ac.find_iter(&data[data_span.start..data_span.end])
                 .map(|mt| SearchMatch {
-                    pattern: &self.patterns[mt.pattern().as_usize()],
+                    pattern_len: self.patterns[mt.pattern().as_usize()].len(),
                     span: mt.span().into(),
                 })
                 .collect()
@@ -54,7 +54,7 @@ impl PatternSearcher {
             return SearchResult {
                 data,
                 offset: data_span.start,
-                splits: vec![SearchSplit::new(Span::from(data_span), data, None, 0)],
+                splits: vec![SearchSplit::new(Span::from(data_span), data, 0, 0)],
                 matched: false,
             };
         }
@@ -68,7 +68,7 @@ impl PatternSearcher {
             let split = SearchSplit::new(
                 span(data_span.start, data_span.start + cur_match.start()),
                 data,
-                Some(cur_match.pattern),
+                cur_match.pattern_len,
                 1,
             );
             pattern_splits.push(split);
@@ -77,7 +77,7 @@ impl PatternSearcher {
             let split = SearchSplit::new(
                 span(data_span.start, data_span.start),
                 data,
-                Some(cur_match.pattern),
+                cur_match.pattern_len,
                 1,
             );
 
@@ -91,7 +91,7 @@ impl PatternSearcher {
                 let split = SearchSplit::new(
                     span(data_span.start + cur_match.end(), data_span.end),
                     data,
-                    Some(cur_match.pattern),
+                    cur_match.pattern_len,
                     0,
                 );
 
@@ -112,7 +112,7 @@ impl PatternSearcher {
                     data_span.start + end.start(),
                 ),
                 data,
-                Some(cur_match.pattern),
+                cur_match.pattern_len,
                 1,
             );
             pattern_splits.push(split);
@@ -123,7 +123,7 @@ impl PatternSearcher {
             let split = SearchSplit::new(
                 span(data_span.start + cur_match.end(), data_span.end),
                 data,
-                Some(cur_match.pattern),
+                cur_match.pattern_len,
                 0,
             );
             pattern_splits.push(split);
