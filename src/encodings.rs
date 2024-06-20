@@ -1,13 +1,8 @@
-use crate::common::{Split, SplitResults, TokensResults};
-
-use crate::hf_tokenizer::divide_encoding;
-
-use tokenizers::Encoding;
-
-use crate::common::{span, TokensResultLite};
-use crate::hf_tokenizer::divide_encoding_lite;
 use aho_corasick::Span;
 
+use crate::common::{Split, SplitResults, TokensResults};
+use crate::common::{span, TokensResultLite};
+use crate::hf_tokenizer::HFEncoding;
 use crate::ws_tokenizer::WSEncoding;
 
 pub trait Tokenize {
@@ -24,7 +19,7 @@ impl Tokenize for NoneTokenizer {
 }
 
 pub enum EncodingType {
-    HFEncoding(Encoding),
+    HFEncoding(HFEncoding),
     WSEncoding(WSEncoding),
     NoneEncoding,
 }
@@ -120,7 +115,7 @@ impl EncodingType {
 
     pub fn to_lite_results(&self, splits: &Vec<Split>) -> Vec<TokensResultLite> {
         match self {
-            EncodingType::HFEncoding(enc) => divide_encoding_lite(enc, splits),
+            EncodingType::HFEncoding(hf_encoding) => hf_encoding.divide_encoding_lite( splits),
             EncodingType::WSEncoding(ws_encoding) => ws_encoding.divide_encoding_lite(splits),
             EncodingType::NoneEncoding => vec![],
         }
@@ -128,7 +123,7 @@ impl EncodingType {
 
     pub fn to_split_results(&self, splits: &Vec<Split>, data: &str) -> Vec<SplitResults> {
         let encodings: Vec<TokensResults> = match self {
-            EncodingType::HFEncoding(hf_encoding) => divide_encoding(hf_encoding, splits),
+            EncodingType::HFEncoding(hf_encoding) => hf_encoding.divide_encoding(splits),
             EncodingType::WSEncoding(ws_encoding) => ws_encoding.divide_encoding(splits),
             EncodingType::NoneEncoding => vec![],
         };

@@ -694,7 +694,7 @@ mod tests {
             .map(|p| PatternSearcher::new(p.clone()))
             .collect();
 
-        let (data_len, splits) = split_file(data_path, patterns, &searchers, 40, true, true, false);
+        let (data_len, splits) = split_file(data_path, patterns, &searchers, 128, true, true, false);
 
         let total_len: usize = splits.iter().map(|res| res.split_string.len()).sum();
         assert_eq!(data_len, total_len);

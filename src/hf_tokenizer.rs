@@ -56,56 +56,75 @@ pub struct HFTokenizer {
 impl Tokenize for HFTokenizer {
     fn encode(&self, data: &str) -> anyhow::Result<EncodingType> {
         let encoded = self.tokenizer.encode(data, false).unwrap();
-        Ok(EncodingType::HFEncoding(encoded))
+        Ok(EncodingType::HFEncoding(HFEncoding {
+            hf_encoding: encoded,
+        }))
     }
 }
 
-pub fn divide_encoding(encoded: &Encoding, splits: &[Split]) -> Vec<TokensResults> {
-    let mut results = Vec::new();
-    for split in splits {
-        let result = {
-            //if split.tokens_span.is_empty() {
-            //TokensResults::default()
-            //} else {
-            let split_range = split.tokens_span.range();
-            let ids = encoded.get_ids()[split_range.clone()].to_vec();
-            let type_ids = encoded.get_type_ids()[split_range.clone()].to_vec();
-            let attention_mask = encoded.get_attention_mask()[split_range.clone()].to_vec();
-            let offsets = encoded.get_offsets()[split_range.clone()].to_vec();
-            let tokens = encoded.get_tokens()[split_range.clone()].to_vec();
-
-            TokensResults {
-                ids,
-                type_ids,
-                attention_mask,
-                offsets,
-                tokens,
-            }
-        };
-        results.push(result);
-    }
-    results
+pub struct HFEncoding {
+    pub hf_encoding: Encoding,
 }
 
-pub fn divide_encoding_lite<'a>(
-    encoded: &'a Encoding,
-    splits: &[Split],
-) -> Vec<TokensResultLite<'a>> {
-    let mut results = Vec::new();
-    for split in splits {
-        let result = {
-            let ids = &encoded.get_ids()[split.tokens_span.range()];
-            let offsets = &encoded.get_offsets()[split.tokens_span.range()];
-
-            TokensResultLite {
-                data_span: split.data_span.unwrap().clone(),
-                ids: Some(ids),
-                offsets,
-            }
-        };
-        results.push(result);
+impl HFEncoding {
+    pub fn get_offsets(&self) -> &[(usize, usize)] {
+        self.hf_encoding.get_offsets()
     }
-    results
+    pub fn get_word_ids(&self) -> &[Option<u32>] {
+        self.hf_encoding.get_word_ids()
+    }
+    pub fn len(&self) -> usize {
+        self.hf_encoding.len()
+    }
+    pub fn is_empty(&self) -> bool {
+        self.hf_encoding.is_empty()
+    }
+    pub fn divide_encoding(&self, splits: &[Split]) -> Vec<TokensResults> {
+        let mut results = Vec::new();
+        for split in splits {
+            let result = {
+                //if split.tokens_span.is_empty() {
+                //TokensResults::default()
+                //} else {
+                let split_range = split.tokens_span.range();
+                let ids = self.hf_encoding.get_ids()[split_range.clone()].to_vec();
+                let type_ids = self.hf_encoding.get_type_ids()[split_range.clone()].to_vec();
+                let attention_mask = self.hf_encoding.get_attention_mask()[split_range.clone()].to_vec();
+                let offsets = self.hf_encoding.get_offsets()[split_range.clone()].to_vec();
+                let tokens = self.hf_encoding.get_tokens()[split_range.clone()].to_vec();
+
+                TokensResults {
+                    ids,
+                    type_ids,
+                    attention_mask,
+                    offsets,
+                    tokens,
+                }
+            };
+            results.push(result);
+        }
+        results
+    }
+
+    pub fn divide_encoding_lite<'a>(&'a self,
+                                    splits: &[Split],
+    ) -> Vec<TokensResultLite<'a>> {
+        let mut results = Vec::new();
+        for split in splits {
+            let result = {
+                let ids = &self.hf_encoding.get_ids()[split.tokens_span.range()];
+                let offsets = &self.hf_encoding.get_offsets()[split.tokens_span.range()];
+
+                TokensResultLite {
+                    data_span: split.data_span.unwrap().clone(),
+                    ids: Some(ids),
+                    offsets,
+                }
+            };
+            results.push(result);
+        }
+        results
+    }
 }
 
 #[cfg(test)]
