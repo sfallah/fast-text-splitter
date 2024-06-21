@@ -6,9 +6,11 @@ use std::sync::Arc;
 use aho_corasick::Span;
 
 use crate::common::{
-    chunk_encoding_splits, merge_split_results, Split, SplitResults,
-    TokensResultLite,
+    chunk_encoding_splits, merge_split_results
 };
+use crate::common::split::Split;
+use crate::common::split_result::SplitResults;
+use crate::common::tokens_result_lite::TokensResultLite;
 use crate::splitter::split_encoding::SplitEncoding;
 use crate::splitter::split_node::utils::{merge_split_result_lite, SplitResultLite};
 

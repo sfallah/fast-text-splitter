@@ -1,6 +1,8 @@
-use crate::common::{Split, TokensResultLite, TokensResults};
 use crate::encodings::{EncodingType, Tokenize};
 use unicode_categories::UnicodeCategories;
+use crate::common::split::Split;
+use crate::common::tokens_result::TokensResults;
+use crate::common::tokens_result_lite::TokensResultLite;
 
 pub struct WSTokenizer {
     pub ascii: bool,

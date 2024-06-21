@@ -1,7 +1,10 @@
 use aho_corasick::Span;
 
-use crate::common::{span, TokensResultLite};
-use crate::common::{Split, SplitResults, TokensResults};
+use crate::common::{span};
+use crate::common::split::Split;
+use crate::common::split_result::SplitResults;
+use crate::common::tokens_result::TokensResults;
+use crate::common::tokens_result_lite::TokensResultLite;
 use crate::hf_tokenizer::HFEncoding;
 use crate::ws_tokenizer::WSEncoding;
 

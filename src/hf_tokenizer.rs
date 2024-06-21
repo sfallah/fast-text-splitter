@@ -1,9 +1,10 @@
-use tokenizers::normalizers::BertNormalizer;
-
 use tokenizers::{Encoding, PaddingStrategy, Tokenizer, TruncationStrategy};
 use tokenizers::{PaddingParams, TruncationParams};
+use tokenizers::normalizers::BertNormalizer;
+use crate::common::split::Split;
+use crate::common::tokens_result::TokensResults;
+use crate::common::tokens_result_lite::TokensResultLite;
 
-use crate::common::{Split, TokensResultLite, TokensResults};
 use crate::encodings::{EncodingType, Tokenize};
 
 pub fn init_tokenizer(
@@ -128,14 +129,15 @@ impl HFEncoding {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use aho_corasick::Span;
-    use tokenizers::pre_tokenizers::punctuation::Punctuation;
-    use tokenizers::pre_tokenizers::sequence::Sequence;
-    use tokenizers::pre_tokenizers::whitespace::WhitespaceSplit;
     use tokenizers::{
         OffsetReferential, OffsetType, PreTokenizedString, PreTokenizer, PreTokenizerWrapper,
     };
+    use tokenizers::pre_tokenizers::punctuation::Punctuation;
+    use tokenizers::pre_tokenizers::sequence::Sequence;
+    use tokenizers::pre_tokenizers::whitespace::WhitespaceSplit;
+
+    use super::*;
 
     #[test]
     fn tokens_len_test() -> tokenizers::Result<()> {
