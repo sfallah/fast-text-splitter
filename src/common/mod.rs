@@ -1,13 +1,13 @@
-use aho_corasick::Span;
 use crate::common::split::Split;
 use crate::common::split_result::SplitResults;
 use crate::common::tokens_result::TokensResults;
+use aho_corasick::Span;
 
 pub mod split;
 pub mod split_result;
+mod tests;
 pub mod tokens_result;
 pub mod tokens_result_lite;
-mod tests;
 
 pub fn chunk_encoding_splits(spans: &Vec<Split>, max_len: usize) -> Vec<Split> {
     if spans.is_empty() {
@@ -60,7 +60,7 @@ pub fn chunk_encoding_splits(spans: &Vec<Split>, max_len: usize) -> Vec<Split> {
             } else {
                 None
             };
-            cur_split =  Split{
+            cur_split = Split {
                 tokens_span,
                 data_span,
             };
@@ -73,9 +73,6 @@ pub fn chunk_encoding_splits(spans: &Vec<Split>, max_len: usize) -> Vec<Split> {
 
     chunked_splits
 }
-
-
-
 
 pub fn merge_split_results(
     split_ruslts: &Vec<SplitResults>,

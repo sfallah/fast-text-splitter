@@ -1,6 +1,6 @@
 use aho_corasick::Span;
 
-use crate::common::{span};
+use crate::common::span;
 use crate::common::split::Split;
 use crate::common::split_result::SplitResults;
 use crate::common::tokens_result::TokensResults;

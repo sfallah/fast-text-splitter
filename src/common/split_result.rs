@@ -1,6 +1,6 @@
-use std::fmt;
 use crate::common::split::Split;
 use crate::common::tokens_result::TokensResults;
+use std::fmt;
 
 #[derive(PartialEq, Clone)]
 pub struct SplitResults {

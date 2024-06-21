@@ -1,5 +1,5 @@
-use std::fmt;
 use aho_corasick::Span;
+use std::fmt;
 
 pub struct TokensResultLite<'a> {
     pub data_span: Span,

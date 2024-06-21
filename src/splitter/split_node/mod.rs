@@ -5,12 +5,10 @@ use std::sync::Arc;
 
 use aho_corasick::Span;
 
-use crate::common::{
-    chunk_encoding_splits, merge_split_results,
-};
 use crate::common::split::Split;
 use crate::common::split_result::SplitResults;
 use crate::common::tokens_result_lite::TokensResultLite;
+use crate::common::{chunk_encoding_splits, merge_split_results};
 use crate::splitter::split_encoding::SplitEncoding;
 use crate::splitter::split_node::utils::{merge_split_result_lite, SplitResultLite};
 
@@ -167,7 +165,6 @@ impl SplitNode {
                 self.all_leaves_split(max_len)
             };
 
-
             if let Some(encoding) = &self.split_encoding {
                 let split_res = encoding.encoding.to_lite_results(&splits);
                 split_results.extend(split_res);
@@ -235,10 +232,13 @@ impl SplitNode {
                 data_span: Some(self.split_data_span.clone()),
             }]
         } else {
-            let child_splits = self.children
+            let child_splits = self
+                .children
                 .iter()
                 .flat_map(|child| child.all_leaves_split(max_len))
                 .collect();
+            // handling of special case where split max_len is smaller than
+            // get_result max_len (when we merge the results back again)
             if let Some(max_len) = max_len {
                 chunk_encoding_splits(&child_splits, max_len)
             } else {

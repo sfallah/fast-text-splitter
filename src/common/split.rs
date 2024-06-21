@@ -1,6 +1,5 @@
-use std::fmt;
 use aho_corasick::Span;
-
+use std::fmt;
 
 #[derive(Clone, Copy, Eq, PartialEq)]
 pub struct Split {

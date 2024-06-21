@@ -1,5 +1,3 @@
-
-
 #[derive(Default, PartialEq, Debug, Clone)]
 pub struct TokensResults {
     pub ids: Vec<u32>,

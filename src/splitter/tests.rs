@@ -318,9 +318,7 @@ mod tests {
             .collect();
         let tokenizer = init_tokenizer(None, None, false).unwrap();
 
-        let hf_tokenizer = HFTokenizer {
-            tokenizer,
-        };
+        let hf_tokenizer = HFTokenizer { tokenizer };
 
         let max_len = Some(4);
 
@@ -341,11 +339,17 @@ mod tests {
             println!("{:?}", res.tokens.len());
         }
 
-        let encoding = hf_tokenizer.tokenizer.encode(from_utf8(data).unwrap(),false).unwrap();
+        let encoding = hf_tokenizer
+            .tokenizer
+            .encode(from_utf8(data).unwrap(), false)
+            .unwrap();
         let total_no_tokens: usize = lite_results.iter().map(|res| res.tokens.len()).sum();
         assert_eq!(encoding.len(), total_no_tokens);
 
-        let all_tokens: Vec<u32> = lite_results.iter().flat_map(|res| res.tokens.clone()).collect();
+        let all_tokens: Vec<u32> = lite_results
+            .iter()
+            .flat_map(|res| res.tokens.clone())
+            .collect();
         assert_eq!(encoding.get_ids(), all_tokens);
     }
 
