@@ -84,16 +84,15 @@ impl HFEncoding {
         let mut results = Vec::new();
         for split in splits {
             let result = {
-                //if split.tokens_span.is_empty() {
-                //TokensResults::default()
-                //} else {
-                let split_range = split.tokens_span.range();
-                let ids = self.hf_encoding.get_ids()[split_range.clone()].to_vec();
-                let type_ids = self.hf_encoding.get_type_ids()[split_range.clone()].to_vec();
+                let tk_start = split.tokens_span.map_or(0, |span| span.start);
+                let tk_end = split.tokens_span.map_or(0, |span| span.end);
+
+                let ids = self.hf_encoding.get_ids()[tk_start..tk_end].to_vec();
+                let type_ids = self.hf_encoding.get_type_ids()[tk_start..tk_end].to_vec();
                 let attention_mask =
-                    self.hf_encoding.get_attention_mask()[split_range.clone()].to_vec();
-                let offsets = self.hf_encoding.get_offsets()[split_range.clone()].to_vec();
-                let tokens = self.hf_encoding.get_tokens()[split_range.clone()].to_vec();
+                    self.hf_encoding.get_attention_mask()[tk_start..tk_end].to_vec();
+                let offsets = self.hf_encoding.get_offsets()[tk_start..tk_end].to_vec();
+                let tokens = self.hf_encoding.get_tokens()[tk_start..tk_end].to_vec();
 
                 TokensResults {
                     ids,
@@ -112,8 +111,11 @@ impl HFEncoding {
         let mut results = Vec::new();
         for split in splits {
             let result = {
-                let ids = &self.hf_encoding.get_ids()[split.tokens_span.range()];
-                let offsets = &self.hf_encoding.get_offsets()[split.tokens_span.range()];
+                let tk_start = split.tokens_span.map_or(0, |span| span.start);
+                let tk_end = split.tokens_span.map_or(0, |span| span.end);
+
+                let ids = &self.hf_encoding.get_ids()[tk_start..tk_end];
+                let offsets = &self.hf_encoding.get_offsets()[tk_start..tk_end];
 
                 TokensResultLite {
                     data_span: split.data_span.unwrap().clone(),

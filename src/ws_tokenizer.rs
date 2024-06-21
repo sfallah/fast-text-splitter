@@ -86,7 +86,9 @@ impl WSEncoding {
         let mut results = Vec::new();
         for split in splits {
             let result = {
-                let offsets = &self.offsets[split.tokens_span.range()];
+                let tk_start = split.tokens_span.map_or(0, |span| span.start);
+                let tk_end = split.tokens_span.map_or(0, |span| span.end);
+                let offsets = &self.offsets[tk_start..tk_end];
 
                 TokensResultLite {
                     data_span: split.data_span.unwrap().clone(),
@@ -102,11 +104,12 @@ impl WSEncoding {
         let mut results = Vec::new();
         for split in splits {
             let result = {
-                let split_range = split.tokens_span.range();
+                let tk_start = split.tokens_span.map_or(0, |span| span.start);
+                let tk_end = split.tokens_span.map_or(0, |span| span.end);
                 let ids = Vec::new();
                 let type_ids = Vec::new();
                 let attention_mask = Vec::new();
-                let offsets = self.offsets[split_range.clone()].to_vec();
+                let offsets = self.offsets[tk_start..tk_end].to_vec();
                 let tokens = Vec::new();
 
                 TokensResults {

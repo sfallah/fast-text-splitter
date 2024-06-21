@@ -4,14 +4,14 @@ use aho_corasick::Span;
 
 #[derive(Clone, Copy, Eq, PartialEq)]
 pub struct Split {
-    pub tokens_span: Span,
+    pub tokens_span: Option<Span>,
     pub data_span: Option<Span>,
 }
 
 impl Split {
     pub fn new(tokens_span: Span) -> Self {
         Self {
-            tokens_span,
+            tokens_span: Some(tokens_span),
             data_span: None,
         }
     }
@@ -30,6 +30,16 @@ impl fmt::Debug for Split {
 
 impl Split {
     pub fn no_tokens(&self) -> usize {
-        self.tokens_span.len()
+        if let Some(tokens_span) = self.tokens_span {
+            tokens_span.len()
+        } else {
+            // fall back to data span
+            // this should only be the case for none-tokenizer (data len split)
+            if let Some(data_span) = self.data_span {
+                data_span.len()
+            } else {
+                0
+            }
+        }
     }
 }

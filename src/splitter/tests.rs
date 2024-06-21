@@ -154,7 +154,7 @@ mod tests {
         let config = SplitterConfig::<NoneTokenizer> {
             data,
             searchers: &searchers,
-            max_len: None,
+            max_len: Some(10),
             tokenizer: None,
             patterns_len,
         };
@@ -164,6 +164,16 @@ mod tests {
         println!("{}", tree.to_string(data, true));
         let reconsted = tree.reconstruct(data);
         assert_eq!(from_utf8(data).unwrap(), reconsted);
+
+        let lite_results = tree.get_results_lite(Some(20), data);
+        println!("Number of Lite Results: {:?}", lite_results.len());
+        for res in lite_results.iter() {
+            println!("text: {:?}", res.split_string);
+            println!("len: {:?}", res.split_string.len());
+        }
+        assert_eq!(lite_results.len(), 2);
+        let total_len: usize = lite_results.iter().map(|res| res.split_string.len()).sum();
+        assert_eq!(data.len(), total_len);
     }
 
     #[test]
@@ -306,36 +316,37 @@ mod tests {
             .iter()
             .map(|p| PatternSearcher::new(p.clone()))
             .collect();
+        let tokenizer = init_tokenizer(None, None, false).unwrap();
+
         let hf_tokenizer = HFTokenizer {
-            tokenizer: init_tokenizer(None, None, false).unwrap(),
+            tokenizer,
         };
 
-        let max_len = Some(6);
+        let max_len = Some(16);
 
         let config = SplitterConfig::<HFTokenizer> {
             data,
             searchers: &searchers,
-            max_len: None,
+            max_len,
             tokenizer: Some(&hf_tokenizer),
             patterns_len,
         };
         let splitter = Splitter::new(&config, span, 0, span, None, None, None);
         let tree = splitter.split();
 
-        tree.get_results(max_len, from_utf8(data).unwrap());
-
-        let lite_tokens_results = tree.merge_enc_lite_result(tree.leaf_level().unwrap(), max_len);
-        println!("Number of Lite Results: {:?}", lite_tokens_results.len());
-        for res in lite_tokens_results.iter() {
-            println!("{:?}", res);
-        }
-
-        let lite_results = tree.get_results_lite(max_len, data);
+        let lite_results = tree.get_results_lite(Some(16), data);
         println!("Number of Lite Results: {:?}", lite_results.len());
         for res in lite_results.iter() {
             println!("{:?}", res.split_string);
             println!("{:?}", res.tokens.len());
         }
+
+        let encoding = hf_tokenizer.tokenizer.encode(from_utf8(data).unwrap(),false).unwrap();
+        let total_no_tokens: usize = lite_results.iter().map(|res| res.tokens.len()).sum();
+        assert_eq!(encoding.len(), total_no_tokens);
+
+        let all_tokens: Vec<u32> = lite_results.iter().flat_map(|res| res.tokens.clone()).collect();
+        assert_eq!(encoding.get_ids(), all_tokens);
     }
 
     #[test]

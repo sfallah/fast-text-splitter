@@ -9,18 +9,18 @@ pub mod tokens_result;
 pub mod tokens_result_lite;
 mod tests;
 
-pub fn chunk_encoding_splits(spans: &Vec<(Option<Span>, Span)>, max_len: usize) -> Vec<(Option<Span>, Span)> {
+pub fn chunk_encoding_splits(spans: &Vec<Split>, max_len: usize) -> Vec<Split> {
     if spans.is_empty() {
         return Vec::new();
     }
 
     let mut cur_split = spans[0];
-    let mut cur_tokens_len: usize = cur_split.0.unwrap().len();
+    let mut cur_tokens_len: usize = cur_split.no_tokens();
     assert!(
         cur_tokens_len <= max_len,
         "First Span: {:?} with len: {} is larger than max_len: {}",
-        cur_split.0,
-        cur_split.0.unwrap().len(),
+        cur_split,
+        cur_split.no_tokens(),
         max_len
     );
     if spans.len() == 1 {
@@ -30,26 +30,41 @@ pub fn chunk_encoding_splits(spans: &Vec<(Option<Span>, Span)>, max_len: usize) 
     let mut chunked_splits = Vec::new();
 
     for (idx, leaf) in spans.iter().enumerate().skip(1) {
+        //FIXME: not good for performance, need to remove assert in production
         assert!(
-            cur_split.0.unwrap().len() <= max_len,
+            cur_split.no_tokens() <= max_len,
             "Current Span: {:?} with len: {} is larger than max_len: {}",
             cur_split,
-            cur_split.0.unwrap().len(),
+            cur_split.no_tokens(),
             max_len
         );
 
+        /*
         if leaf.0.unwrap().is_empty() {
             cur_split = (cur_split.0, span(cur_split.1.start, leaf.1.end));
-        } else if cur_tokens_len + leaf.0.unwrap().len() > max_len {
+        } else
+         */
+        if cur_tokens_len + leaf.no_tokens() > max_len {
             chunked_splits.push(cur_split);
             cur_split = leaf.clone();
-            cur_tokens_len = leaf.0.unwrap().len();
+            cur_tokens_len = leaf.no_tokens();
         } else {
-            cur_split = (
-                Some(span(cur_split.0.unwrap().start, leaf.0.unwrap().end)),
-                span(cur_split.1.start, leaf.1.end),
-            );
-            cur_tokens_len += leaf.0.unwrap().len();
+            let tokens_span = if let Some(tokens_span) = cur_split.tokens_span {
+                Some(span(tokens_span.start, leaf.tokens_span.unwrap().end))
+            } else {
+                None
+            };
+
+            let data_span = if let Some(data_span) = cur_split.data_span {
+                Some(span(data_span.start, leaf.data_span.unwrap().end))
+            } else {
+                None
+            };
+            cur_split =  Split{
+                tokens_span,
+                data_span,
+            };
+            cur_tokens_len += leaf.no_tokens();
         }
         if idx == spans.len() - 1 {
             chunked_splits.push(cur_split);

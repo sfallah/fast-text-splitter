@@ -6,7 +6,7 @@ use std::sync::Arc;
 use aho_corasick::Span;
 
 use crate::common::{
-    chunk_encoding_splits, merge_split_results
+    chunk_encoding_splits, merge_split_results,
 };
 use crate::common::split::Split;
 use crate::common::split_result::SplitResults;
@@ -127,20 +127,13 @@ impl SplitNode {
 
         let mut split_results = Vec::new();
         if self.pattern_id >= merge_level {
-            let raw_splits = if max_len_check {
+            let splits = if max_len_check {
                 let leaves = self.all_leaves_split();
                 chunk_encoding_splits(&leaves, max_len_value)
             } else {
                 self.all_leaves_split()
             };
 
-            let splits: Vec<_> = raw_splits
-                .iter()
-                .map(|(tokens_span, data_span)| Split {
-                    tokens_span: tokens_span.clone().unwrap(),
-                    data_span: Some(data_span.clone()),
-                })
-                .collect();
             let split_res = self
                 .split_encoding
                 .clone()
@@ -167,20 +160,13 @@ impl SplitNode {
 
         let mut split_results = Vec::new();
         if self.pattern_id >= merge_level {
-            let raw_splits = if max_len_check {
+            let splits = if max_len_check {
                 let leaves = self.all_leaves_split();
                 chunk_encoding_splits(&leaves, max_len_value)
             } else {
                 self.all_leaves_split()
             };
 
-            let splits: Vec<_> = raw_splits
-                .iter()
-                .map(|(tokens_span, data_span)| Split {
-                    tokens_span: tokens_span.clone().unwrap(),
-                    data_span: Some(data_span.clone()),
-                })
-                .collect();
 
             if let Some(encoding) = &self.split_encoding {
                 let split_res = encoding.encoding.to_lite_results(&splits);
@@ -242,12 +228,12 @@ impl SplitNode {
         }
     }
 
-    pub fn all_leaves_split(&self) -> Vec<(Option<Span>, Span)> {
+    pub fn all_leaves_split(&self) -> Vec<Split> {
         if self.children.is_empty() {
-            vec![(
-                self.split_tokens_span.clone(),
-                self.split_data_span.clone(),
-            )]
+            vec![Split {
+                tokens_span: self.split_tokens_span.clone(),
+                data_span: Some(self.split_data_span.clone()),
+            }]
         } else {
             self.children
                 .iter()
