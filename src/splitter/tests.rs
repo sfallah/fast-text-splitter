@@ -213,8 +213,8 @@ mod tests {
         let lite_results = tree.get_results_lite(Some(32), data);
         println!("Number of Lite Results: {:?}", lite_results.len());
         for res in lite_results.iter() {
-            println!("{:?}", res.split_string);
-            println!("{:?}", res.tokens.len());
+            println!("text: {:?}", res.split_string);
+            println!("len: {:?}", res.split_string.len());
         }
     }
 
@@ -339,113 +339,6 @@ mod tests {
     }
 
     #[test]
-    fn merge_level_test() {
-        let _data_raw = "\n\n\
-        \n\n\
-        \n\n\
-        In fact, the correlation. Between superlinear.\n\
-        Returns and inequality is so strong that it yields.\n\n\
-        Another heuristic for.\n\n\
-        \n\n\
-        \n\n\
-        \nFinding work of this type.\n\
-        Look for fields where.\n\
-        A few big winners. \n\
-        Outperform everyone else.\n\n"
-            .as_bytes();
-
-        let data = _data_raw;
-
-        let patterns = vec![
-            vec!["\n\n".to_string()],
-            vec!["\n".to_string()],
-            vec![".".to_string(), "!".to_string(), "?".to_string()],
-        ];
-        let patterns_len = patterns.len();
-
-        let span = Span {
-            start: 0,
-            end: data.len(),
-        };
-        let searchers: Vec<_> = patterns
-            .iter()
-            .map(|p| PatternSearcher::new(p.clone()))
-            .collect();
-        let config = SplitterConfig::<NoneTokenizer> {
-            data,
-            searchers: &searchers,
-            max_len: None,
-            tokenizer: None,
-            patterns_len,
-        };
-        let splitter = Splitter::new(&config, span, 0, span, None, None, None);
-        let tree = splitter.split();
-        println!("{}", tree.to_string(data, true));
-        assert_eq!(from_utf8(data).unwrap(), tree.reconstruct(data));
-
-        let merge_level = tree.leaf_level().unwrap();
-        let splits = tree.merge_splits(merge_level, None);
-        println!(
-            "Level: {}, Number of Splits: {:?}",
-            merge_level,
-            splits.len()
-        );
-        for span in splits.iter() {
-            println!("{:?}", from_utf8(&data[*span]).unwrap());
-        }
-
-        let merge_level = 2;
-        let splits = tree.merge_splits(merge_level, None);
-        println!(
-            "Level: {}, Number of Splits: {:?}",
-            merge_level,
-            splits.len()
-        );
-        for span in splits.iter() {
-            println!("{:?}", from_utf8(&data[*span]).unwrap());
-        }
-
-        let merge_level = 1;
-        let splits = tree.merge_splits(merge_level, Some(usize::MAX));
-        println!(
-            "Level: {}, Number of Splits: {:?}",
-            merge_level,
-            splits.len()
-        );
-        for span in splits.iter() {
-            println!("{:?}", from_utf8(&data[*span]).unwrap());
-        }
-
-        let merge_level = 2;
-        let splits = tree.merge_splits(merge_level, Some(usize::MAX));
-        println!(
-            "Level: {}, Number of Splits: {:?}",
-            merge_level,
-            splits.len()
-        );
-        for span in splits.iter() {
-            println!("{:?}", from_utf8(&data[*span]).unwrap());
-        }
-
-        let total_len: usize = splits.iter().map(|span| span.len()).sum();
-        assert_eq!(data.len(), total_len);
-
-        let merge_level = 3;
-        let splits = tree.merge_splits(merge_level, Some(usize::MAX));
-        println!(
-            "Level: {}, Number of Splits: {:?}",
-            merge_level,
-            splits.len()
-        );
-        for span in splits.iter() {
-            println!("{:?}", from_utf8(&data[*span]).unwrap());
-        }
-
-        let total_len: usize = splits.iter().map(|span| span.len()).sum();
-        assert_eq!(data.len(), total_len);
-    }
-
-    #[test]
     fn max_len_splits() {
         let _data_raw = "\n\n\
         \n\n\
@@ -503,12 +396,17 @@ mod tests {
         println!("{:?}", leaves_concatenated);
         assert_eq!(data.len(), total_len);
 
+        //FIXME: add the new relevant test for max_len none tokenizer
+
+        /*
         let splits = tree.merge_splits(tree.leaf_level().unwrap(), Some(16));
         for span in splits.iter() {
             println!("{:?}", from_utf8(&data[*span]).unwrap());
         }
         let total_len: usize = splits.iter().map(|span| span.len()).sum();
         assert_eq!(data.len(), total_len);
+
+         */
     }
 
     #[test]

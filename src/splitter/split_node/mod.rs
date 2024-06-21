@@ -6,7 +6,7 @@ use std::sync::Arc;
 use aho_corasick::Span;
 
 use crate::common::{
-    chunk_encoding_splits, chunk_spans, merge_split_results, span, Split, SplitResults,
+    chunk_encoding_splits, merge_split_results, Split, SplitResults,
     TokensResultLite,
 };
 use crate::splitter::split_encoding::SplitEncoding;
@@ -92,28 +92,6 @@ impl SplitNode {
             .to_string()
     }
 
-    pub fn merge_splits(&self, merge_level: usize, max_len: Option<usize>) -> Vec<Span> {
-        let max_len_check = max_len.is_some();
-
-        let mut splits = Vec::new();
-        if self.pattern_id >= merge_level {
-            if max_len_check {
-                splits.extend(chunk_spans(&self.all_leaves(), max_len.unwrap()));
-            } else {
-                splits.extend(self.all_leaves());
-            }
-        } else {
-            if self.children.is_empty() {
-                splits.push(self.split_data_span.clone());
-            } else {
-                for child in &self.children {
-                    splits.extend(child.merge_splits(merge_level, max_len));
-                }
-            }
-        }
-        splits
-    }
-
     pub fn get_results(&self, max_len: Option<usize>, data: &str) -> Vec<SplitResults> {
         let merge_level = self.leaf_level().unwrap();
         let split_res = self.merge_encoding_result(merge_level, max_len, data);
@@ -157,7 +135,7 @@ impl SplitNode {
             let splits: Vec<_> = raw_splits
                 .iter()
                 .map(|(tokens_span, data_span)| Split {
-                    tokens_span: tokens_span.clone(),
+                    tokens_span: tokens_span.clone().unwrap(),
                     data_span: Some(data_span.clone()),
                 })
                 .collect();
@@ -197,7 +175,7 @@ impl SplitNode {
             let splits: Vec<_> = raw_splits
                 .iter()
                 .map(|(tokens_span, data_span)| Split {
-                    tokens_span: tokens_span.clone(),
+                    tokens_span: tokens_span.clone().unwrap(),
                     data_span: Some(data_span.clone()),
                 })
                 .collect();
@@ -262,10 +240,10 @@ impl SplitNode {
         }
     }
 
-    pub fn all_leaves_split(&self) -> Vec<(Span, Span)> {
+    pub fn all_leaves_split(&self) -> Vec<(Option<Span>, Span)> {
         if self.children.is_empty() {
             vec![(
-                self.split_tokens_span.clone().unwrap_or(span(0, 0)),
+                self.split_tokens_span.clone(),
                 self.split_data_span.clone(),
             )]
         } else {

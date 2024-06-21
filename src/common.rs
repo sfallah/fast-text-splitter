@@ -33,103 +33,19 @@ impl Split {
     }
 }
 
-pub fn merge_splits(splits: &[Split], max_tokens: usize) -> Vec<Split> {
-    if splits.len() <= 1 {
-        return splits.to_vec();
-    }
-    let mut merged_splits = Vec::new();
 
-    let mut start_split = splits.first().unwrap();
-    let mut last_split = start_split;
-
-    let mut cur_no_tokens: usize = start_split.no_tokens();
-
-    for (i, split) in splits.iter().enumerate().skip(1) {
-        if cur_no_tokens + split.no_tokens() <= max_tokens {
-            cur_no_tokens += split.no_tokens();
-            last_split = split;
-        } else {
-            merged_splits.push(Split::new(span(
-                start_split.tokens_span.start,
-                last_split.tokens_span.end,
-            )));
-
-            start_split = split;
-            last_split = start_split;
-            cur_no_tokens = split.no_tokens();
-        }
-        if i == splits.len() - 1 {
-            merged_splits.push(Split::new(span(
-                start_split.tokens_span.start,
-                split.tokens_span.end,
-            )));
-        }
-    }
-    merged_splits
-}
-
-pub fn chunk_spans(spans: &Vec<Span>, max_len: usize) -> Vec<Span> {
+pub fn chunk_encoding_splits(spans: &Vec<(Option<Span>, Span)>, max_len: usize) -> Vec<(Option<Span>, Span)> {
     if spans.is_empty() {
         return Vec::new();
     }
 
     let mut cur_split = spans[0];
-    let mut cur_len: usize = cur_split.len();
-    assert!(
-        cur_len <= max_len,
-        "First Span: {:?} with len: {} is larger than max_len: {}",
-        cur_split,
-        cur_split.len(),
-        max_len
-    );
-    if spans.len() == 1 {
-        return vec![cur_split];
-    }
-
-    let mut chunked_splits = Vec::new();
-
-    for (idx, leaf) in spans.iter().enumerate().skip(1) {
-        assert!(
-            cur_split.len() <= max_len,
-            "Current Span: {:?} with len: {} is larger than max_len: {}",
-            cur_split,
-            cur_split.len(),
-            max_len
-        );
-
-        assert_eq!(
-            cur_split.end, leaf.start,
-            "Next Span: {:?} doesn't continue the Current Span: {:?}",
-            leaf, cur_split
-        );
-        if cur_len + leaf.len() > max_len {
-            chunked_splits.push(cur_split);
-            cur_split = leaf.clone();
-            cur_len = leaf.len();
-        } else {
-            cur_split = span(cur_split.start, leaf.end);
-            cur_len += leaf.len();
-        }
-        if idx == spans.len() - 1 {
-            chunked_splits.push(cur_split);
-        }
-    }
-
-    chunked_splits
-}
-
-pub fn chunk_encoding_splits(spans: &Vec<(Span, Span)>, max_len: usize) -> Vec<(Span, Span)> {
-    if spans.is_empty() {
-        return Vec::new();
-    }
-
-    let mut cur_split = spans[0];
-    let mut cur_tokens_len: usize = cur_split.0.len();
+    let mut cur_tokens_len: usize = cur_split.0.unwrap().len();
     assert!(
         cur_tokens_len <= max_len,
         "First Span: {:?} with len: {} is larger than max_len: {}",
         cur_split.0,
-        cur_split.0.len(),
+        cur_split.0.unwrap().len(),
         max_len
     );
     if spans.len() == 1 {
@@ -140,25 +56,25 @@ pub fn chunk_encoding_splits(spans: &Vec<(Span, Span)>, max_len: usize) -> Vec<(
 
     for (idx, leaf) in spans.iter().enumerate().skip(1) {
         assert!(
-            cur_split.0.len() <= max_len,
+            cur_split.0.unwrap().len() <= max_len,
             "Current Span: {:?} with len: {} is larger than max_len: {}",
             cur_split,
-            cur_split.0.len(),
+            cur_split.0.unwrap().len(),
             max_len
         );
 
-        if leaf.0.is_empty() {
+        if leaf.0.unwrap().is_empty() {
             cur_split = (cur_split.0, span(cur_split.1.start, leaf.1.end));
-        } else if cur_tokens_len + leaf.0.len() > max_len {
+        } else if cur_tokens_len + leaf.0.unwrap().len() > max_len {
             chunked_splits.push(cur_split);
             cur_split = leaf.clone();
-            cur_tokens_len = leaf.0.len();
+            cur_tokens_len = leaf.0.unwrap().len();
         } else {
             cur_split = (
-                span(cur_split.0.start, leaf.0.end),
+                Some(span(cur_split.0.unwrap().start, leaf.0.unwrap().end)),
                 span(cur_split.1.start, leaf.1.end),
             );
-            cur_tokens_len += leaf.0.len();
+            cur_tokens_len += leaf.0.unwrap().len();
         }
         if idx == spans.len() - 1 {
             chunked_splits.push(cur_split);
@@ -219,7 +135,7 @@ impl TokensResultLite<'_> {
             if let Some(offsets) = self.offsets {
                 offsets.len()
             } else {
-                0
+                self.data_span.len()
             }
         }
     }
@@ -303,71 +219,6 @@ mod tests {
     use super::*;
 
     #[test]
-    fn merge_splits_test() {
-        let splits = vec![
-            Split::new(span(0, 16)),
-            Split::new(span(16, 24)),
-            Split::new(span(24, 36)),
-        ];
-        let max_tokens = 20;
-        let merged_splits = merge_splits(&splits, max_tokens);
-
-        for split in &merged_splits {
-            println!("{:?}", split);
-        }
-
-        assert_eq!(merged_splits.len(), 2);
-        assert_eq!(merged_splits[0].tokens_span, span(0, 16));
-        assert_eq!(merged_splits[1].tokens_span, span(16, 36));
-
-        let splits2 = vec![Split::new(span(0, 16)), Split::new(span(16, 24))];
-        let merged_splits2 = merge_splits(&splits2, max_tokens);
-        assert_eq!(merged_splits2.len(), 2);
-        assert_eq!(merged_splits2[0].tokens_span, span(0, 16));
-        assert_eq!(merged_splits2[1].tokens_span, span(16, 24));
-
-        // Test when splits is empty
-        let splits3: Vec<Split> = vec![];
-        let merged_splits3 = merge_splits(&splits3, max_tokens);
-        assert_eq!(merged_splits3.len(), 0);
-
-        // Test when splits has only one element
-        let splits4 = vec![Split::new(span(0, 16))];
-        let merged_splits4 = merge_splits(&splits4, max_tokens);
-        assert_eq!(merged_splits4.len(), 1);
-        assert_eq!(merged_splits4[0].tokens_span, span(0, 16));
-
-        // test split with empty tokens
-        let splits5 = vec![
-            Split::new(span(0, 0)),
-            Split::new(span(0, 16)),
-            Split::new(span(16, 16)),
-            Split::new(span(16, 24)),
-            Split::new(span(24, 36)),
-            Split::new(span(36, 36)),
-        ];
-        let merged_splits5 = merge_splits(&splits5, max_tokens);
-        assert_eq!(merged_splits5.len(), 2);
-        assert_eq!(merged_splits5[0].tokens_span, span(0, 16));
-        assert_eq!(merged_splits5[1].tokens_span, span(16, 36));
-
-        // test split with wrong span
-        assert_eq!(span(24, 20).len(), 0);
-
-        let splits6 = vec![
-            Split::new(span(0, 16)),
-            Split::new(span(16, 24)),
-            Split::new(span(24, 16)),
-            Split::new(span(24, 36)),
-        ];
-
-        let merged_splits6 = merge_splits(&splits6, max_tokens);
-        assert_eq!(merged_splits6.len(), 2);
-        assert_eq!(merged_splits6[0].tokens_span, span(0, 16));
-        assert_eq!(merged_splits6[1].tokens_span, span(16, 36));
-    }
-
-    #[test]
     fn tokens_result_extend_test() {
         let tk_res = TokensResults::default();
         assert!(tk_res.ids.is_empty());
@@ -411,34 +262,6 @@ mod tests {
         assert!(tk_res.type_ids.is_empty());
         assert!(tk_res.attention_mask.is_empty());
         assert!(tk_res.offsets.is_empty());
-    }
-
-    #[test]
-    fn chunk_spans_test() {
-        let single_span = vec![span(0, 10)];
-        let chunked = chunk_spans(&single_span, 10);
-        assert_eq!(chunked.len(), 1);
-        assert_eq!(chunked[0].len(), 10);
-
-        let even_spans = vec![span(0, 10), span(10, 16), span(16, 36), span(36, 45)];
-        let chunked = chunk_spans(&even_spans, 20);
-        assert_eq!(chunked.len(), 3);
-        assert_eq!(chunked[0], span(0, 16));
-        assert_eq!(chunked[0].len(), 16);
-        assert_eq!(chunked[1], span(16, 36));
-        assert_eq!(chunked[1].len(), 20);
-        assert_eq!(chunked[2], span(36, 45));
-        assert_eq!(chunked[2].len(), 9);
-
-        let odd_spans = vec![
-            span(0, 10),
-            span(10, 16),
-            span(16, 30),
-            span(30, 35),
-            span(35, 40),
-        ];
-        let chunked = chunk_spans(&odd_spans, 20);
-        assert_eq!(chunked.len(), 3);
     }
 }
 
