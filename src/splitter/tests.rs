@@ -322,7 +322,7 @@ mod tests {
             tokenizer,
         };
 
-        let max_len = Some(16);
+        let max_len = Some(4);
 
         let config = SplitterConfig::<HFTokenizer> {
             data,

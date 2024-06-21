@@ -128,10 +128,10 @@ impl SplitNode {
         let mut split_results = Vec::new();
         if self.pattern_id >= merge_level {
             let splits = if max_len_check {
-                let leaves = self.all_leaves_split();
+                let leaves = self.all_leaves_split(max_len);
                 chunk_encoding_splits(&leaves, max_len_value)
             } else {
-                self.all_leaves_split()
+                self.all_leaves_split(max_len)
             };
 
             let split_res = self
@@ -161,10 +161,10 @@ impl SplitNode {
         let mut split_results = Vec::new();
         if self.pattern_id >= merge_level {
             let splits = if max_len_check {
-                let leaves = self.all_leaves_split();
+                let leaves = self.all_leaves_split(max_len);
                 chunk_encoding_splits(&leaves, max_len_value)
             } else {
-                self.all_leaves_split()
+                self.all_leaves_split(max_len)
             };
 
 
@@ -228,17 +228,22 @@ impl SplitNode {
         }
     }
 
-    pub fn all_leaves_split(&self) -> Vec<Split> {
+    pub fn all_leaves_split(&self, max_len: Option<usize>) -> Vec<Split> {
         if self.children.is_empty() {
             vec![Split {
                 tokens_span: self.split_tokens_span.clone(),
                 data_span: Some(self.split_data_span.clone()),
             }]
         } else {
-            self.children
+            let child_splits = self.children
                 .iter()
-                .flat_map(|child| child.all_leaves_split())
-                .collect()
+                .flat_map(|child| child.all_leaves_split(max_len))
+                .collect();
+            if let Some(max_len) = max_len {
+                chunk_encoding_splits(&child_splits, max_len)
+            } else {
+                child_splits
+            }
         }
     }
 }
