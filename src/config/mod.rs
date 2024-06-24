@@ -33,8 +33,7 @@ impl SplitterLiteConfig<NoneTokenizer> {
         Self {
             searchers,
             tokenizer: NoneTokenizer {},
-            //max_tokens: Some(max_tokens),
-            max_tokens: None,
+            max_tokens: Some(max_tokens),
             merge_level: Some(merge_level),
             parallel: Some(parallel),
             patterns_len,

@@ -6,9 +6,8 @@ use std::sync::Arc;
 use aho_corasick::Span;
 
 use crate::common::split::Split;
-use crate::common::split_result::SplitResults;
 use crate::common::tokens_result_lite::TokensResultLite;
-use crate::common::{chunk_encoding_splits, merge_split_results};
+use crate::common::{chunk_encoding_splits};
 use crate::splitter::split_encoding::SplitEncoding;
 use crate::splitter::split_node::utils::{merge_split_result_lite, SplitResultLite};
 
@@ -92,12 +91,6 @@ impl SplitNode {
             .to_string()
     }
 
-    pub fn get_results(&self, max_len: Option<usize>, data: &str) -> Vec<SplitResults> {
-        let merge_level = self.leaf_level().unwrap();
-        let split_res = self.merge_encoding_result(merge_level, max_len, data);
-        merge_split_results(&split_res, max_len.unwrap())
-    }
-
     pub fn get_results_lite(&self, max_len: Option<usize>, data: &[u8]) -> Vec<SplitResultLite> {
         let merge_level = self.leaf_level().unwrap();
         let split_res = self.merge_enc_lite_result(merge_level, max_len);
@@ -112,40 +105,6 @@ impl SplitNode {
                 })
                 .collect()
         }
-    }
-
-    pub fn merge_encoding_result(
-        &self,
-        merge_level: usize,
-        max_len: Option<usize>,
-        data: &str,
-    ) -> Vec<SplitResults> {
-        let max_len_check = max_len.is_some();
-        let max_len_value = max_len.unwrap_or(0);
-
-        let mut split_results = Vec::new();
-        if self.pattern_id >= merge_level {
-            let splits = if max_len_check {
-                let leaves = self.all_leaves_split(max_len);
-                chunk_encoding_splits(&leaves, max_len_value)
-            } else {
-                self.all_leaves_split(max_len)
-            };
-
-            let split_res = self
-                .split_encoding
-                .clone()
-                .unwrap()
-                .encoding
-                .to_split_results(&splits, data);
-
-            split_results.extend(split_res);
-        } else {
-            for child in &self.children {
-                split_results.extend(child.merge_encoding_result(merge_level, max_len, data));
-            }
-        }
-        split_results
     }
 
     pub fn merge_enc_lite_result(

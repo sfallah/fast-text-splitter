@@ -2,8 +2,6 @@ use aho_corasick::Span;
 
 use crate::common::span;
 use crate::common::split::Split;
-use crate::common::split_result::SplitResults;
-use crate::common::tokens_result::TokensResults;
 use crate::common::tokens_result_lite::TokensResultLite;
 use crate::hf_tokenizer::HFEncoding;
 use crate::ws_tokenizer::WSEncoding;
@@ -122,40 +120,6 @@ impl EncodingType {
             EncodingType::WSEncoding(ws_encoding) => ws_encoding.divide_encoding_lite(splits),
             EncodingType::NoneEncoding => vec![],
         }
-    }
-
-    pub fn to_split_results(&self, splits: &Vec<Split>, data: &str) -> Vec<SplitResults> {
-        let encodings: Vec<TokensResults> = match self {
-            EncodingType::HFEncoding(hf_encoding) => hf_encoding.divide_encoding(splits),
-            EncodingType::WSEncoding(ws_encoding) => ws_encoding.divide_encoding(splits),
-            EncodingType::NoneEncoding => vec![],
-        };
-
-        let split_strings: Vec<_> = splits
-            .iter()
-            .map(|split| {
-                let data_span = split.data_span.unwrap();
-                //FIXME: This is not working non-ascii characters
-                let data_bytes = &data.as_bytes()[data_span];
-                std::str::from_utf8(data_bytes).unwrap().to_string()
-            })
-            .collect();
-
-        let res: Vec<_> = splits
-            .iter()
-            .enumerate()
-            .map(|(i, split)| SplitResults {
-                split: split.clone(),
-
-                results: if encodings.is_empty() {
-                    None
-                } else {
-                    Some(encodings.get(i).unwrap().clone())
-                },
-                split_strings: split_strings.get(i).unwrap().clone(),
-            })
-            .collect();
-        res
     }
 }
 

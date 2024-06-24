@@ -1,5 +1,4 @@
 use crate::common::split::Split;
-use crate::common::tokens_result::TokensResults;
 use crate::common::tokens_result_lite::TokensResultLite;
 use tokenizers::normalizers::BertNormalizer;
 use tokenizers::{Encoding, PaddingStrategy, Tokenizer, TruncationStrategy};
@@ -79,32 +78,6 @@ impl HFEncoding {
     }
     pub fn is_empty(&self) -> bool {
         self.hf_encoding.is_empty()
-    }
-    pub fn divide_encoding(&self, splits: &[Split]) -> Vec<TokensResults> {
-        let mut results = Vec::new();
-        for split in splits {
-            let result = {
-                let tk_start = split.tokens_span.map_or(0, |span| span.start);
-                let tk_end = split.tokens_span.map_or(0, |span| span.end);
-
-                let ids = self.hf_encoding.get_ids()[tk_start..tk_end].to_vec();
-                let type_ids = self.hf_encoding.get_type_ids()[tk_start..tk_end].to_vec();
-                let attention_mask =
-                    self.hf_encoding.get_attention_mask()[tk_start..tk_end].to_vec();
-                let offsets = self.hf_encoding.get_offsets()[tk_start..tk_end].to_vec();
-                let tokens = self.hf_encoding.get_tokens()[tk_start..tk_end].to_vec();
-
-                TokensResults {
-                    ids,
-                    type_ids,
-                    attention_mask,
-                    offsets,
-                    tokens,
-                }
-            };
-            results.push(result);
-        }
-        results
     }
 
     pub fn divide_encoding_lite<'a>(&'a self, splits: &[Split]) -> Vec<TokensResultLite<'a>> {

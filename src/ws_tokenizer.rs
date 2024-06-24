@@ -1,5 +1,4 @@
 use crate::common::split::Split;
-use crate::common::tokens_result::TokensResults;
 use crate::common::tokens_result_lite::TokensResultLite;
 use crate::encodings::{EncodingType, Tokenize};
 use unicode_categories::UnicodeCategories;
@@ -94,30 +93,6 @@ impl WSEncoding {
                     data_span: split.data_span.unwrap().clone(),
                     ids: None,
                     offsets: Some(offsets),
-                }
-            };
-            results.push(result);
-        }
-        results
-    }
-    pub fn divide_encoding(&self, splits: &[Split]) -> Vec<TokensResults> {
-        let mut results = Vec::new();
-        for split in splits {
-            let result = {
-                let tk_start = split.tokens_span.map_or(0, |span| span.start);
-                let tk_end = split.tokens_span.map_or(0, |span| span.end);
-                let ids = Vec::new();
-                let type_ids = Vec::new();
-                let attention_mask = Vec::new();
-                let offsets = self.offsets[tk_start..tk_end].to_vec();
-                let tokens = Vec::new();
-
-                TokensResults {
-                    ids,
-                    type_ids,
-                    attention_mask,
-                    offsets,
-                    tokens,
                 }
             };
             results.push(result);

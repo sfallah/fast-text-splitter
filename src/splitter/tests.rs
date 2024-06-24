@@ -75,42 +75,41 @@ mod tests {
 
         println!("Leaf Level: {:?}", leaf_level);
 
-        let split_results = tree.get_results(max_len, from_utf8(data).unwrap());
+        let split_results = tree.get_results_lite(max_len,data);
         println!("Number of Split Results: {:?}", split_results.len());
 
         if _print {
             for res in split_results.iter() {
-                println!("{:?}", res.split_strings);
-                println!("Data Len: {:?}", res.split_strings.len());
-                println!("Tokens Len: {:?}", res.results.as_ref().unwrap().ids.len());
+                println!("{:?}", res.split_string);
+                println!("Data Len: {:?}", res.split_string.len());
+                println!("Tokens Len: {:?}", res.tokens.len());
             }
         }
 
         let total_text_len: usize = split_results
             .iter()
-            .map(|res| res.split_strings.len())
+            .map(|res| res.split_string.len())
             .sum();
         assert_eq!(data.len(), total_text_len);
 
-        //assert_eq!(split_results.len(), splits.len());
         let total_res_len: usize = split_results
             .iter()
-            .map(|res| res.split_strings.len())
+            .map(|res| res.split_string.len())
             .sum();
         assert_eq!(data.len(), total_res_len);
 
         if check_splits {
             for res in split_results.iter() {
-                println!("{:?}", res.split_strings);
+                println!("{:?}", res.split_string);
 
-                let hf_encoded = hf_tokenizer.encode(&res.split_strings).unwrap();
+                let hf_encoded = hf_tokenizer.encode(&res.split_string).unwrap();
                 println!("HF Tokens len: {:?}", hf_encoded.len());
 
                 assert_eq!(
                     hf_encoded.len(),
-                    res.clone().results.unwrap().ids.len(),
+                    res.tokens.len(),
                     "Failed Split: {:?}\n Tokens-Result: {:?}\n Tokens Spans: {:?}",
-                    res.split_strings,
+                    res.split_string,
                     res,
                     origin_dta_span
                 );
@@ -119,7 +118,7 @@ mod tests {
 
         let total_tokens: usize = split_results
             .iter()
-            .map(|res| res.results.as_ref().unwrap().ids.len())
+            .map(|res| res.tokens.len())
             .sum();
         println!("Total Tokens: {:?}", total_tokens);
         let encodings = hf_tokenizer.encode(from_utf8(data).unwrap()).unwrap();
@@ -502,7 +501,7 @@ mod tests {
 
         //assert_eq!(leaf_level_opt, Some(1));
 
-        let split_results = tree.get_results(max_len, from_utf8(data).unwrap());
+        let split_results = tree.get_results_lite(max_len, data);
 
         println!("Number of Split Results: {:?}", split_results.len());
         //assert_eq!(split_results.len(), splits.len());
@@ -534,7 +533,7 @@ mod tests {
 
         let ws_tokenizer = WSTokenizer { ascii: false };
         for res in split_results.iter() {
-            let split_str = res.split_strings.as_str();
+            let split_str = res.split_string.as_str();
             println!("{:?}", split_str);
 
             let ws_encoded = ws_tokenizer.encode(split_str).unwrap();
@@ -545,7 +544,7 @@ mod tests {
 
             assert_eq!(
                 hf_encoded.len(),
-                res.clone().results.unwrap().ids.len(),
+                res.tokens.len(),
                 "Failed Split: {:?}\n Tokens-Result: {:?}\n Tokens Spans: {:?}",
                 split_str,
                 res,
@@ -555,7 +554,7 @@ mod tests {
 
         let total_tokens: usize = split_results
             .iter()
-            .map(|res| res.results.as_ref().unwrap().ids.len())
+            .map(|res| res.tokens.len())
             .sum();
         println!("Total Tokens: {:?}", total_tokens);
         assert_eq!(
