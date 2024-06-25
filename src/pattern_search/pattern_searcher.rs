@@ -1,5 +1,6 @@
 use aho_corasick::{AhoCorasick, Span};
-use memchr::memmem::find_iter;
+use memchr::{memchr2_iter, memchr3_iter};
+use memchr::memmem::{find_iter, Finder};
 
 use crate::common::span;
 use crate::pattern_search::get_aho_corasick;
@@ -9,41 +10,106 @@ use crate::pattern_search::search_split::SearchSplit;
 
 pub struct PatternSearcher {
     pub patterns: Vec<String>,
-    pub engine: Option<AhoCorasick>,
+    pub aho_corasick: Option<AhoCorasick>,
+    pub memchr_finder: Option<Finder<'static>>,
 }
 
 impl PatternSearcher {
     pub fn new(patterns: Vec<String>) -> Self {
-        let engine = if patterns.len() > 1 {
-            Some(get_aho_corasick(patterns.clone()))
+        if patterns.len() > 1 {
+            if patterns.len() > 3 {
+                let aho_corasick = Some(get_aho_corasick(patterns.clone()));
+                Self {
+                    patterns,
+                    aho_corasick,
+                    memchr_finder: None,
+                }
+            } else { // patterns.len() <= 3
+                let all_single_char = patterns.iter().all(|p| p.len() == 1);
+                if all_single_char {
+                    Self {
+                        patterns,
+                        aho_corasick: None,
+                        memchr_finder: None,
+                    }
+                } else {
+                    let aho_corasick = Some(get_aho_corasick(patterns.clone()));
+                    Self {
+                        patterns,
+                        aho_corasick,
+                        memchr_finder: None,
+                    }
+                }
+            }
         } else {
-            None
-        };
-        Self { patterns, engine }
+            if patterns[0].as_bytes().len() > 1 {
+                let memchr_finder = Some(Finder::new(patterns[0].as_bytes()).into_owned());
+                Self {
+                    patterns,
+                    aho_corasick: None,
+                    memchr_finder,
+                }
+            } else {
+                Self {
+                    patterns,
+                    aho_corasick: None,
+                    memchr_finder: None,
+                }
+            }
+        }
     }
 
     pub fn search_patterns(&self, data: &[u8], data_span: Span) -> Vec<SearchMatch> {
         if self.patterns.is_empty() || data_span.is_empty() || data.is_empty() {
             return Vec::new();
         }
-
         if self.patterns.len() == 1 {
             let pattern = self.patterns.first().unwrap();
             let pattern_len = pattern.len();
-            find_iter(&data[data_span.start..data_span.end], pattern.as_bytes())
-                .map(|start| SearchMatch {
-                    pattern_len,
-                    span: span(start, start + pattern_len),
-                })
-                .collect()
+            if let Some(finder) = self.memchr_finder.as_ref() {
+                finder
+                    .find_iter(&data[data_span.start..data_span.end])
+                    .map(|start| SearchMatch {
+                        pattern_len,
+                        span: span(start, start + pattern_len),
+                    })
+                    .collect()
+            } else {
+                find_iter(&data[data_span.start..data_span.end], pattern.as_bytes())
+                    .map(|start| SearchMatch {
+                        pattern_len,
+                        span: span(start, start + pattern_len),
+                    })
+                    .collect()
+            }
         } else {
-            let ac = self.engine.as_ref().unwrap();
-            ac.find_iter(&data[data_span.start..data_span.end])
-                .map(|mt| SearchMatch {
-                    pattern_len: self.patterns[mt.pattern().as_usize()].len(),
-                    span: mt.span().into(),
-                })
-                .collect()
+            if let Some(ac) = self.aho_corasick.as_ref() {
+                ac.find_iter(&data[data_span.start..data_span.end])
+                    .map(|mt| SearchMatch {
+                        pattern_len: self.patterns[mt.pattern().as_usize()].len(),
+                        span: mt.span().into(),
+                    })
+                    .collect()
+            } else {
+                if self.patterns.len() == 2 {
+                    memchr2_iter(self.patterns[0].as_bytes()[0], self.patterns[1].as_bytes()[0], &data[data_span.start..data_span.end])
+                        .map(|start| SearchMatch {
+                            pattern_len: 1,
+                            span: span(start, start + 1),
+                        })
+                        .collect()
+                } else {
+                    memchr3_iter(self.patterns[0].as_bytes()[0],
+                                 self.patterns[1].as_bytes()[0],
+                                 self.patterns[2].as_bytes()[0],
+                                 &data[data_span.start..data_span.end])
+                        .map(|start| SearchMatch {
+                            pattern_len: 1,
+                            span: span(start, start + 1),
+                        })
+                        .collect()
+                }
+            }
         }
     }
 

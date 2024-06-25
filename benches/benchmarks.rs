@@ -8,8 +8,8 @@ use fast_text_splitter::ws_tokenizer::WSTokenizer;
 use std::fs;
 
 pub fn hf_merged_tree_lite_res_benchmark(c: &mut Criterion) {
-    //let data_path = "tests/test_data/superlinear.txt";
-    let data_path = "tests/test_data/United_States.txt";
+    let data_path = "tests/test_data/superlinear.txt";
+    //let data_path = "tests/test_data/United_States.txt";
 
     let binding = fs::read(data_path).unwrap();
     let data = binding.as_slice();
@@ -31,8 +31,8 @@ pub fn hf_merged_tree_lite_res_benchmark(c: &mut Criterion) {
 }
 
 pub fn ws_tree_split_lite_benchmark(c: &mut Criterion) {
-    //let data_path = "tests/test_data/superlinear.txt";
-    let data_path = "tests/test_data/United_States.txt";
+    let data_path = "tests/test_data/superlinear.txt";
+    //let data_path = "tests/test_data/United_States.txt";
 
 
     let binding = fs::read(data_path).unwrap();
@@ -75,8 +75,8 @@ pub fn ws_tree_split_lite_benchmark(c: &mut Criterion) {
 }
 
 pub fn none_tree_split_lite_benchmark(c: &mut Criterion) {
-    //let data_path = "tests/test_data/superlinear.txt";
-    let data_path = "tests/test_data/United_States.txt";
+    let data_path = "tests/test_data/superlinear.txt";
+    // data_path = "tests/test_data/United_States.txt";
 
 
     let binding = fs::read(data_path).unwrap();
