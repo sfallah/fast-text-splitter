@@ -3,11 +3,11 @@ mod tests {
     use std::str::from_utf8;
     use std::{fs, io};
 
+    use crate::config::SplitterLiteConfig;
     use aho_corasick::Span;
     use rand::seq::SliceRandom;
     use rand::thread_rng;
     use rayon::prelude::*;
-    use crate::config::SplitterLiteConfig;
 
     use crate::encodings::{NoneTokenizer, Tokenize};
     use crate::hf_tokenizer::{init_tokenizer, HFTokenizer};
@@ -72,7 +72,7 @@ mod tests {
         );
         let tree = splitter.split();
 
-        let split_results = tree.get_results_lite(max_len,data);
+        let split_results = tree.get_results_lite(max_len, data);
         println!("Number of Split Results: {:?}", split_results.len());
 
         if _print {
@@ -83,12 +83,8 @@ mod tests {
             }
         }
 
-        let total_text_len: usize = split_results
-            .iter()
-            .map(|res| res.split_string.len())
-            .sum();
+        let total_text_len: usize = split_results.iter().map(|res| res.split_string.len()).sum();
         assert_eq!(data.len(), total_text_len);
-
 
         if check_splits {
             for res in split_results.iter() {
@@ -107,10 +103,7 @@ mod tests {
             }
         }
 
-        let total_tokens: usize = split_results
-            .iter()
-            .map(|res| res.tokens.len())
-            .sum();
+        let total_tokens: usize = split_results.iter().map(|res| res.tokens.len()).sum();
         println!("Total Tokens: {:?}", total_tokens);
 
         let encodings = hf_tokenizer.encode(from_utf8(data).unwrap()).unwrap();
@@ -214,8 +207,8 @@ mod tests {
         }
     }
     #[test]
-    fn no_pattern_test(){
-        let data = "this is a sentence.".as_bytes();
+    fn no_pattern_test() {
+        let data = "this is a sentence".as_bytes();
 
         let patterns = vec![
             vec!["\n\n".to_string()],
@@ -253,6 +246,45 @@ mod tests {
             println!("{:?}", res.split_string);
             println!("{:?}", res.tokens.len());
         }
+    }
+
+    #[test]
+    fn long_no_match_test() -> tokenizers::Result<()> {
+        //let data_path = "tests/test_data/en_long_sentence.txt";
+        let data_path = "tests/test_data/en_long_paragraphs.txt";
+        let binding = fs::read(data_path).unwrap();
+        let data = binding.as_slice();
+
+        let patterns = vec![
+            vec!["\n\n".to_string()],
+            vec!["\n".to_string()],
+            vec![".".to_string(), "!".to_string(), "?".to_string()],
+        ];
+        let max_len = 128;
+        let splitter_config = SplitterLiteConfig::new_hf(patterns, max_len, 0, true, None);
+        let splits = splitter_config.hf_splits(data);
+
+        let hf_tokenizer = init_tokenizer(None, None, false).unwrap();
+
+        let total_len: usize = splits.iter().map(|res| res.split_string.len()).sum();
+        assert_eq!(data.len(), total_len);
+        let hf_encoding = hf_tokenizer
+            .encode(from_utf8(data).unwrap(), false)
+            .unwrap();
+        let hf_tokens = hf_encoding.get_ids();
+        let total_tokens: usize = splits.iter().map(|res| res.tokens.len()).sum();
+        assert_eq!(hf_tokens.len(), total_tokens);
+
+        for split in splits.iter() {
+            println!("{:?}", split.split_string);
+            println!("{:?}", split.tokens.len());
+            let hf_encoded = hf_tokenizer.encode(split.split_string.clone(), false)?;
+            assert_eq!(hf_encoded.len(), split.tokens.len());
+            assert!(!split.tokens.is_empty());
+            assert!(split.tokens.len() <= max_len);
+            assert_eq!(hf_encoded.get_ids(), split.tokens);
+        }
+        Ok(())
     }
 
     #[test]
@@ -381,7 +413,7 @@ mod tests {
     }
 
     #[test]
-    fn none_superlinear_test(){
+    fn none_superlinear_test() {
         let data_path = "tests/test_data/superlinear.txt";
         //let data_path = "tests/error_data/2017_elections_in_India.txt";
         let data = fs::read(data_path).unwrap();
@@ -402,7 +434,6 @@ mod tests {
             println!("{:?}", res.split_string);
             println!("{:?}", res.split_string.len());
         }
-
     }
 
     #[test]
@@ -563,7 +594,6 @@ mod tests {
         let total_len: usize = split_results.iter().map(|res| res.split_string.len()).sum();
         assert_eq!(data.len(), total_len);
 
-
         let ws_tokenizer = WSTokenizer { ascii: false };
         for res in split_results.iter() {
             let split_str = res.split_string.as_str();
@@ -585,10 +615,7 @@ mod tests {
             );
         }
 
-        let total_tokens: usize = split_results
-            .iter()
-            .map(|res| res.tokens.len())
-            .sum();
+        let total_tokens: usize = split_results.iter().map(|res| res.tokens.len()).sum();
         println!("Total Tokens: {:?}", total_tokens);
         assert_eq!(
             total_tokens,
@@ -653,7 +680,8 @@ mod tests {
             .map(|p| PatternSearcher::new(p.clone()))
             .collect();
 
-        let (data_len, splits) = split_file(data_path, patterns, &searchers, 512, true, true, false);
+        let (data_len, splits) =
+            split_file(data_path, patterns, &searchers, 512, true, true, false);
 
         let total_len: usize = splits.iter().map(|res| res.split_string.len()).sum();
         assert_eq!(data_len, total_len);

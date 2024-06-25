@@ -1,7 +1,6 @@
 #[cfg(test)]
 mod tests {
 
-
     #[test]
     fn vec_extend_test() {
         let mut empty_vec = vec![];

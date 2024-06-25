@@ -1,6 +1,6 @@
 use aho_corasick::{AhoCorasick, Span};
-use memchr::{memchr2_iter, memchr3_iter};
 use memchr::memmem::{find_iter, Finder};
+use memchr::{memchr2_iter, memchr3_iter};
 
 use crate::common::span;
 use crate::pattern_search::get_aho_corasick;
@@ -24,7 +24,8 @@ impl PatternSearcher {
                     aho_corasick,
                     memchr_finder: None,
                 }
-            } else { // patterns.len() <= 3
+            } else {
+                // patterns.len() <= 3
                 let all_single_char = patterns.iter().all(|p| p.len() == 1);
                 if all_single_char {
                     Self {
@@ -92,22 +93,28 @@ impl PatternSearcher {
                     .collect()
             } else {
                 if self.patterns.len() == 2 {
-                    memchr2_iter(self.patterns[0].as_bytes()[0], self.patterns[1].as_bytes()[0], &data[data_span.start..data_span.end])
-                        .map(|start| SearchMatch {
-                            pattern_len: 1,
-                            span: span(start, start + 1),
-                        })
-                        .collect()
+                    memchr2_iter(
+                        self.patterns[0].as_bytes()[0],
+                        self.patterns[1].as_bytes()[0],
+                        &data[data_span.start..data_span.end],
+                    )
+                    .map(|start| SearchMatch {
+                        pattern_len: 1,
+                        span: span(start, start + 1),
+                    })
+                    .collect()
                 } else {
-                    memchr3_iter(self.patterns[0].as_bytes()[0],
-                                 self.patterns[1].as_bytes()[0],
-                                 self.patterns[2].as_bytes()[0],
-                                 &data[data_span.start..data_span.end])
-                        .map(|start| SearchMatch {
-                            pattern_len: 1,
-                            span: span(start, start + 1),
-                        })
-                        .collect()
+                    memchr3_iter(
+                        self.patterns[0].as_bytes()[0],
+                        self.patterns[1].as_bytes()[0],
+                        self.patterns[2].as_bytes()[0],
+                        &data[data_span.start..data_span.end],
+                    )
+                    .map(|start| SearchMatch {
+                        pattern_len: 1,
+                        span: span(start, start + 1),
+                    })
+                    .collect()
                 }
             }
         }

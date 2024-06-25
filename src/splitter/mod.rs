@@ -79,7 +79,11 @@ impl<'a, T: Tokenize + Sync> Splitter<'a, T> {
     }
 
     pub fn split(&self) -> SplitNode {
-        if self.lt_max_len(self.split_data_span, self.split_encoding.clone(), self.split_tokens_span.clone()) {
+        if self.lt_max_len(
+            self.split_data_span,
+            self.split_encoding.clone(),
+            self.split_tokens_span.clone(),
+        ) {
             let (new_split_encoding, new_split_tokens_span) = self.config.get_split_encoding(
                 &self.split_data_span,
                 &self.split_encoding,
@@ -224,8 +228,17 @@ impl<'a, T: Tokenize + Sync> Splitter<'a, T> {
                     &self.split_tokens_span,
                 );
 
-                if !self.lt_max_len(self.split_data_span, new_split_encoding.clone(), new_split_tokens_span.clone()){
-                    let children = self.chunk_splits(self.pattern_id, self.split_data_span);
+                if !self.lt_max_len(
+                    self.split_data_span,
+                    new_split_encoding.clone(),
+                    new_split_tokens_span.clone(),
+                ) {
+                    let children = self.chunk_splits(
+                        self.pattern_id,
+                        self.split_data_span,
+                        new_split_encoding.clone(),
+                        new_split_tokens_span.clone(),
+                    );
 
                     SplitNode::new(
                         self.pattern_id,
@@ -291,7 +304,11 @@ impl<'a, T: Tokenize + Sync> Splitter<'a, T> {
             }
             child_nodes
         } else {
-            if self.lt_max_len(search_split.full_span(), self.split_encoding.clone(), self.split_tokens_span.clone()){
+            if self.lt_max_len(
+                search_split.full_span(),
+                self.split_encoding.clone(),
+                self.split_tokens_span.clone(),
+            ) {
                 let child_node = SplitNode::new(
                     self.pattern_id + 1,
                     search_split.full_span(),
@@ -301,43 +318,44 @@ impl<'a, T: Tokenize + Sync> Splitter<'a, T> {
                 );
                 vec![child_node]
             } else {
-                self.chunk_splits(self.pattern_id + 1, search_split.full_span())
+                self.chunk_splits(
+                    self.pattern_id + 1,
+                    search_split.full_span(),
+                    self.split_encoding.clone(),
+                    self.split_tokens_span.clone(),
+                )
             }
         }
     }
 
-    pub fn chunk_splits(&self, pattern_id: usize, data_span: Span) -> Vec<SplitNode> {
+    pub fn chunk_splits(
+        &self,
+        pattern_id: usize,
+        data_span: Span,
+        split_encoding: Option<Arc<SplitEncoding>>,
+        split_tokens_span: Option<Span>,
+    ) -> Vec<SplitNode> {
         let max_len_val = self.config.max_len.unwrap_or(0);
         if max_len_val == 0 {
             return vec![SplitNode::new(
                 pattern_id,
                 data_span,
                 Vec::new(),
-                self.split_encoding.clone(),
-                self.split_tokens_span,
+                split_encoding.clone(),
+                split_tokens_span,
             )];
         }
 
-        if self.split_encoding.is_some() {
+        if split_encoding.is_some() {
             let split_spans = utils::chunk_tokens_len(
-                self.split_encoding
-                    .as_ref()
-                    .unwrap()
-                    .encoding
-                    .get_word_ids(),
-                self.split_tokens_span.unwrap(),
+                split_encoding.as_ref().unwrap().encoding.get_word_ids(),
+                split_tokens_span.unwrap(),
                 max_len_val,
             );
 
-            let encoding_offset = self
-                .split_encoding
-                .as_ref()
-                .unwrap()
-                .encoding_data_span
-                .start;
+            let encoding_offset = split_encoding.as_ref().unwrap().encoding_data_span.start;
 
-            let tokens_offsets = self
-                .split_encoding
+            let tokens_offsets = split_encoding
                 .clone()
                 .unwrap()
                 .encoding
@@ -351,7 +369,7 @@ impl<'a, T: Tokenize + Sync> Splitter<'a, T> {
                         pattern_id,
                         tokens_data_span,
                         Vec::new(),
-                        self.split_encoding.clone(),
+                        split_encoding.clone(),
                         Some(tokens_span.clone()),
                     )
                 })
@@ -361,7 +379,12 @@ impl<'a, T: Tokenize + Sync> Splitter<'a, T> {
         }
     }
 
-    pub fn lt_max_len(&self, split_span: Span, split_encoding: Option<Arc<SplitEncoding>>, split_tokens_span: Option<Span>) -> bool {
+    pub fn lt_max_len(
+        &self,
+        split_span: Span,
+        split_encoding: Option<Arc<SplitEncoding>>,
+        split_tokens_span: Option<Span>,
+    ) -> bool {
         let check_max_len = self.config.max_len.is_some();
 
         if check_max_len {

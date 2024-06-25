@@ -1,6 +1,6 @@
 use std::fs;
 
-use criterion::{black_box, Criterion, criterion_main};
+use criterion::{black_box, criterion_main, Criterion};
 
 use fast_text_splitter::config::SplitterLiteConfig;
 
@@ -31,7 +31,6 @@ pub fn ws_tree_split_lite_benchmark(c: &mut Criterion) {
     let data_path = "tests/test_data/superlinear.txt";
     //let data_path = "tests/test_data/United_States.txt";
 
-
     let binding = fs::read(data_path).unwrap();
     let data = binding.as_slice();
     let patterns = vec![
@@ -52,7 +51,6 @@ pub fn ws_tree_split_lite_benchmark(c: &mut Criterion) {
 pub fn none_tree_split_lite_benchmark(c: &mut Criterion) {
     let data_path = "tests/test_data/superlinear.txt";
     // data_path = "tests/test_data/United_States.txt";
-
 
     let binding = fs::read(data_path).unwrap();
     let data = binding.as_slice();
