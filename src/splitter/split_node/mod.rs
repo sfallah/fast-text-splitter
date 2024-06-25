@@ -161,17 +161,6 @@ impl SplitNode {
         }
     }
 
-    pub fn all_leaves(&self) -> Vec<Span> {
-        if self.children.is_empty() {
-            vec![self.split_data_span]
-        } else {
-            self.children
-                .iter()
-                .flat_map(|child| child.all_leaves())
-                .collect()
-        }
-    }
-
     pub fn all_leaves_split(&self, max_len: Option<usize>) -> Vec<Split> {
         if self.children.is_empty() {
             vec![Split {

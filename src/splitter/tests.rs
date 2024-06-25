@@ -482,30 +482,6 @@ mod tests {
 
         println!("{}", tree.to_string(data, true));
         assert_eq!(from_utf8(data).unwrap(), tree.reconstruct(data));
-
-        let tree_leaves = tree.all_leaves();
-        for span in tree_leaves.iter() {
-            println!("{:?}", from_utf8(&data[*span]).unwrap());
-        }
-        let total_len: usize = tree_leaves.iter().map(|span| span.len()).sum();
-        let leaves_concatenated: String = tree_leaves
-            .iter()
-            .map(|span| from_utf8(&data[span.start..span.end]).unwrap())
-            .collect();
-        println!("{:?}", leaves_concatenated);
-        assert_eq!(data.len(), total_len);
-
-        //FIXME: add the new relevant test for max_len none tokenizer
-
-        /*
-        let splits = tree.merge_splits(tree.leaf_level().unwrap(), Some(16));
-        for span in splits.iter() {
-            println!("{:?}", from_utf8(&data[*span]).unwrap());
-        }
-        let total_len: usize = splits.iter().map(|span| span.len()).sum();
-        assert_eq!(data.len(), total_len);
-
-         */
     }
 
     #[test]
