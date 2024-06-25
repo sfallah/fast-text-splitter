@@ -1,12 +1,12 @@
 use aho_corasick::Span;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct SearchMatch<'a> {
-    pub pattern: &'a str,
+pub struct SearchMatch {
+    pub pattern_len: usize,
     pub span: Span,
 }
 
-impl SearchMatch<'_> {
+impl SearchMatch {
     pub fn len(&self) -> usize {
         self.span.len()
     }

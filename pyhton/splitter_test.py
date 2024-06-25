@@ -5,19 +5,31 @@ import fast_text_splitter as fts
 # addd main function
 def main():
     # Test the splitter
-    conf_params = fts.py_ws_config_params(None,["\n\n", "\n"],8,2,True);
-    data = "Hello, you all! \n How are you foo and poo? \n\n I am fine. Nice to meet you all insecure!"
-    splits = fts.text_split_ws(data, conf_params)
-    for split in splits:
-        print("Split")
-        print(split.split_strings)
 
-    hf_conf_params = fts.py_hf_config_params(None,None,["\n\n", "\n"],32,2,True);
+    patterns = [[".", "!", "?"]]
+    len_splitter = fts.create_none_splitter(patterns=patterns, max_tokens=10, merge_level=0, parallel=False)
+    text = "Hello, world! How are you doing today? I am doing fine."
+    for res in len_splitter.splits(text):
+        print(res.text)
+        print(res.tokens)
 
-    splits = fts.text_split_hf(data, hf_conf_params)
-    for split in splits:
-        print("Split")
-        print(split.split_strings)
+    patterns = [[".", "!", "?"]]
+    ws_splitter = fts.create_ws_splitter(patterns=patterns, max_tokens=10, merge_level=0, parallel=False,ascii=True)
+    text = "Hello, world! How are you doing today? I am doing fine."
+    print(ws_splitter.splits(text))
+
+    hf_splitter = fts.create_hf_splitter(patterns=patterns, max_tokens=12, merge_level=0, parallel=False)
+    text = "Hello, world! How are you doing today? I am doing fine."
+    for res in hf_splitter.splits(text):
+        print(res.text)
+        print(res.tokens)
+
+    # Test the splitter
+    new_text = "Once upon a time there was a rabbit. The rabbit was very fast. The rabbit was very happy."
+    print(len(new_text.encode('utf-8')))
+    for res in hf_splitter.splits(new_text):
+        print(res.text)
+        print(res.tokens)
 
 
 if __name__ == "__main__":

@@ -1,19 +1,14 @@
-#[cfg(feature = "tokenizers")]
-use crate::common::TokensResults;
-
-#[cfg(feature = "tokenizers")]
-use crate::hf_tokenizer::divide_encoding;
-#[cfg(feature = "tokenizers")]
-use tokenizers::Encoding;
-
-use crate::common::span;
-use crate::{Split, SplitResults};
 use aho_corasick::Span;
 
+use crate::common::span;
+use crate::common::split::Split;
+use crate::common::tokens_result_lite::TokensResultLite;
+use crate::hf_tokenizer::HFEncoding;
 use crate::ws_tokenizer::WSEncoding;
 
 pub trait Tokenize {
     fn encode(&self, data: &str) -> anyhow::Result<EncodingType>;
+    //fn divide_encoding(&self, splits: &[Split]) -> Vec<TokensResults>;
 }
 
 pub struct NoneTokenizer;
@@ -25,8 +20,7 @@ impl Tokenize for NoneTokenizer {
 }
 
 pub enum EncodingType {
-    #[cfg(feature = "tokenizers")]
-    HFEncoding(Encoding),
+    HFEncoding(HFEncoding),
     WSEncoding(WSEncoding),
     NoneEncoding,
 }
@@ -34,7 +28,6 @@ pub enum EncodingType {
 impl EncodingType {
     pub fn get_offsets(&self) -> &[(usize, usize)] {
         match self {
-            #[cfg(feature = "tokenizers")]
             EncodingType::HFEncoding(enc) => enc.get_offsets(),
             EncodingType::WSEncoding(enc) => &*enc.offsets,
             EncodingType::NoneEncoding => &[],
@@ -43,7 +36,6 @@ impl EncodingType {
 
     pub fn get_word_ids(&self) -> &[Option<u32>] {
         match self {
-            #[cfg(feature = "tokenizers")]
             EncodingType::HFEncoding(enc) => enc.get_word_ids(),
             EncodingType::WSEncoding(enc) => &*enc.word_ids,
             EncodingType::NoneEncoding => &[],
@@ -52,7 +44,6 @@ impl EncodingType {
 
     pub fn len(&self) -> usize {
         match self {
-            #[cfg(feature = "tokenizers")]
             EncodingType::HFEncoding(enc) => enc.len(),
             EncodingType::WSEncoding(enc) => enc.offsets.len(),
             EncodingType::NoneEncoding => 0,
@@ -61,7 +52,6 @@ impl EncodingType {
 
     pub fn is_empty(&self) -> bool {
         match self {
-            #[cfg(feature = "tokenizers")]
             EncodingType::HFEncoding(enc) => enc.is_empty(),
             EncodingType::WSEncoding(enc) => enc.offsets.is_empty(),
             EncodingType::NoneEncoding => true,
@@ -124,40 +114,12 @@ impl EncodingType {
         res
     }
 
-    pub fn to_split_results(&self, splits: &Vec<Split>, data: &str) -> Vec<SplitResults> {
-        #[cfg(feature = "tokenizers")]
-        let encodings: Vec<TokensResults> = match self {
-            #[cfg(feature = "tokenizers")]
-            EncodingType::HFEncoding(enc) => divide_encoding(enc, splits),
-            EncodingType::WSEncoding(_) => vec![],
+    pub fn to_lite_results(&self, splits: &Vec<Split>) -> Vec<TokensResultLite> {
+        match self {
+            EncodingType::HFEncoding(hf_encoding) => hf_encoding.divide_encoding_lite(splits),
+            EncodingType::WSEncoding(ws_encoding) => ws_encoding.divide_encoding_lite(splits),
             EncodingType::NoneEncoding => vec![],
-        };
-
-        let split_strings: Vec<_> = splits
-            .iter()
-            .map(|split| {
-                let data_span = split.data_span.unwrap();
-                //FIXME: This is not working non-ascii characters
-                let data_bytes = &data.as_bytes()[data_span];
-                std::str::from_utf8(data_bytes).unwrap().to_string()
-            })
-            .collect();
-
-        let res: Vec<_> = splits
-            .iter()
-            .enumerate()
-            .map(|(i, split)| SplitResults {
-                split: split.clone(),
-                #[cfg(feature = "tokenizers")]
-                results: if encodings.is_empty() {
-                    None
-                } else {
-                    Some(encodings.get(i).unwrap().clone())
-                },
-                split_strings: split_strings.get(i).unwrap().clone(),
-            })
-            .collect();
-        res
+        }
     }
 }
 

@@ -84,7 +84,7 @@ mod tests {
         let data_spans = vec![span(0, 2), span(2, 4), span(4, 5)];
 
         let res = data_to_token_offsets(&offsets, &data_spans);
-        assert_eq!(res, vec![span(0, 2), span(2, 4), span(4,4)]);
+        assert_eq!(res, vec![span(0, 2), span(2, 4), span(4, 4)]);
     }
 
     #[test]

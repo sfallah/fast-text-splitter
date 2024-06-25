@@ -32,7 +32,7 @@ pub fn span_to_string(data: &str, span: Span) -> Option<String> {
     }
 }
 
-pub fn get_aho_corasick(patterns: &Vec<&str>) -> AhoCorasick {
+pub fn get_aho_corasick(patterns: Vec<String>) -> AhoCorasick {
     AhoCorasick::builder()
         .match_kind(MatchKind::LeftmostFirst)
         .build(patterns)

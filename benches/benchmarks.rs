@@ -1,221 +1,54 @@
-use std::fs;
-use std::str::from_utf8;
-
 use aho_corasick::Span;
 use criterion::{black_box, criterion_main, Criterion};
-use tokenizers::normalizers::bert::BertNormalizer;
-use tokenizers::{NormalizedString, Normalizer};
-
-use fast_text_splitter::ac_matches::init_aho_corasick;
-use fast_text_splitter::config::{ConfigParams, SplitterConfig};
+use fast_text_splitter::config::SplitterLiteConfig;
 use fast_text_splitter::encodings::NoneTokenizer;
-use fast_text_splitter::hf_tokenizer::init_tokenizer;
-#[cfg(feature = "tokenizers")]
-use fast_text_splitter::hf_tokenizer::HFTokenizer;
-use fast_text_splitter::normalizer::TextNormalizer;
 use fast_text_splitter::pattern_search::pattern_searcher::PatternSearcher;
 use fast_text_splitter::splitter::Splitter;
-use fast_text_splitter::text_split_parallel;
 use fast_text_splitter::ws_tokenizer::WSTokenizer;
+use std::fs;
 
-#[cfg(feature = "tokenizers")]
-pub fn tokenizer_single_split_benchmark(c: &mut Criterion) {
+pub fn hf_merged_tree_lite_res_benchmark(c: &mut Criterion) {
     let data_path = "tests/test_data/superlinear.txt";
-    //let data_path = "data/train/Commonwealth_of_Nations.txt";
-    //let data_path = "data/dev/Electroencephalography - Wikipedia.txt";
-    let bytes = fs::read(data_path).unwrap();
-    let data = from_utf8(&bytes).unwrap();
+    //let data_path = "tests/test_data/United_States.txt";
 
-    let conf_params = ConfigParams::builder()
-        .pattern(vec![
-            vec!["\n\n".to_string()],
-            vec!["\n".to_string()],
-            vec![".".to_string(), "!".to_string(), "?".to_string()],
-        ])
-        .tokenizer_max_len(data.len())
-        .merge_level(0)
-        .max_depth(3)
-        .parallel(true)
-        .build();
+    let binding = fs::read(data_path).unwrap();
+    let data = binding.as_slice();
 
-    let conf = SplitterConfig::<HFTokenizer>::from_params(conf_params);
-
-    c.bench_function("tokenizer_single_split", |b| {
-        b.iter(|| {
-            let splits = text_split_parallel(&conf, data);
-            black_box(splits);
-        })
-    });
-}
-
-pub fn text_normalize_benchmark(c: &mut Criterion) {
-    //let data_path = "tests/error_data/Selena Gomez - Wikipedia.txt";
-    let data_path = "tests/test_data/superlinear.txt";
-
-    let data = fs::read_to_string(data_path).unwrap();
-
-    let normalizer = TextNormalizer::new(true, false, None, false);
-    c.bench_function("text_normalize", |b| {
-        b.iter(|| {
-            let normalized = normalizer.normalize(&data);
-            let _ = black_box(normalized);
-        })
-    });
-}
-
-pub fn hf_text_normalize_benchmark(c: &mut Criterion) {
-    //let data_path = "tests/error_data/Selena Gomez - Wikipedia.txt";
-    let data_path = "tests/test_data/superlinear.txt";
-
-    let data = fs::read_to_string(data_path).unwrap();
-
-    let bert_normalizer = BertNormalizer::new(true, false, None, false);
-
-    c.bench_function("hf_text_normalize", |b| {
-        b.iter(|| {
-            let mut normalized_data = NormalizedString::from(data.clone());
-            bert_normalizer.normalize(&mut normalized_data).unwrap();
-            let normalized = normalized_data.get().to_string();
-            black_box(normalized);
-        })
-    });
-}
-
-pub fn aho_corasick_init_benchmark(c: &mut Criterion) {
     let patterns = vec![
         vec!["\n\n".to_string()],
         vec!["\n".to_string()],
         vec![".".to_string(), "!".to_string(), "?".to_string()],
     ];
 
-    c.bench_function("aho_corasick_init", |b| {
+    let splitter_config = SplitterLiteConfig::new_hf(patterns, 512, 0, true, None);
+
+    c.bench_function("hf_merged_tree_lite_splits_benchmark", |b| {
         b.iter(|| {
-            patterns.iter().map(|p| {
-                let ac = init_aho_corasick(p).unwrap();
-                black_box(ac);
-            })
-        })
-    });
-}
-
-#[cfg(feature = "default")]
-pub fn words_single_split_benchmark(c: &mut Criterion) {
-    let data_path = "tests/test_data/superlinear.txt";
-    let bytes = fs::read(data_path).unwrap();
-    let data = std::str::from_utf8(&bytes).unwrap();
-
-    let conf_params = ConfigParams::builder()
-        .pattern(vec![
-            vec!["\n\n".to_string()],
-            vec!["\n".to_string()],
-            vec![".".to_string(), "!".to_string(), "?".to_string()],
-        ])
-        .tokenizer_max_len(data.len())
-        .merge_level(0)
-        .max_depth(3)
-        .parallel(true)
-        .build();
-    let conf = SplitterConfig::<WSTokenizer>::from_params(&conf_params);
-
-    c.bench_function("words_single_split", |b| {
-        b.iter(|| {
-            let splits = text_split_parallel(&conf, data);
+            let splits = splitter_config.hf_splits(data);
             black_box(splits);
         })
     });
 }
 
-#[cfg(feature = "tokenizers")]
-pub fn hf_tree_split_benchmark(c: &mut Criterion) {
+pub fn ws_tree_split_lite_benchmark(c: &mut Criterion) {
     let data_path = "tests/test_data/superlinear.txt";
-    //let data_path = "data/dev/List_of_Game_of_Thrones_characters.txt";
-    //let data_path = "data/train/List_of_Game_of_Thrones_characters.txt";
+    //let data_path = "tests/test_data/United_States.txt";
+
 
     let binding = fs::read(data_path).unwrap();
     let data = binding.as_slice();
-    let patterns = vec![vec!["\n\n"], vec!["\n"], vec![".", "!", "?"]];
+    let patterns = vec![
+        vec!["\n\n".to_string()],
+        vec!["\n".to_string()],
+        vec![".".to_string(), "!".to_string(), "?".to_string()],
+    ];
+    let patterns_len = patterns.len();
+    let searchers: Vec<_> = patterns
+        .iter()
+        .map(|p| PatternSearcher::new(p.clone()))
+        .collect();
 
-    let searchers: Vec<_> = patterns.iter().map(|p| PatternSearcher::new(p)).collect();
-    let hf_tokenizer = HFTokenizer {
-        tokenizer: init_tokenizer(None, None, false).unwrap(),
-    };
-
-    let max_len = Some(512);
-    let data_str = from_utf8(data).unwrap();
-
-    c.bench_function("hf_tree_split_benchmark", |b| {
-        b.iter(|| {
-            let span = Span {
-                start: 0,
-                end: data.len(),
-            };
-            let config =
-                fast_text_splitter::splitter::splitter_config::SplitterConfig::<HFTokenizer> {
-                    data,
-                    patterns: &patterns,
-                    searchers: &searchers,
-                    max_len,
-                    tokenizer: Some(&hf_tokenizer),
-                };
-            let splitter = Splitter::new(&config, span, 0, span, Some(true), None, None);
-            let tree = splitter.split();
-            let merge_level = tree.leaf_level().unwrap_or(0);
-            let splits = tree.merge_encoding_result(merge_level, max_len, data_str);
-            black_box(splits);
-        })
-    });
-}
-
-#[cfg(feature = "tokenizers")]
-pub fn hf_merged_tree_split_benchmark(c: &mut Criterion) {
-    let data_path = "tests/test_data/superlinear.txt";
-    //let data_path = "data/dev/List_of_Game_of_Thrones_characters.txt";
-    //let data_path = "data/train/List_of_Game_of_Thrones_characters.txt";
-
-    let binding = fs::read(data_path).unwrap();
-    let data = binding.as_slice();
-    let patterns = vec![vec!["\n\n"], vec!["\n"], vec![".", "!", "?"]];
-
-    let searchers: Vec<_> = patterns.iter().map(|p| PatternSearcher::new(p)).collect();
-    let hf_tokenizer = HFTokenizer {
-        tokenizer: init_tokenizer(None, None, false).unwrap(),
-    };
-
-    let max_len = Some(512);
-    let data_str = from_utf8(data).unwrap();
-
-    c.bench_function("hf_merged_tree_split_benchmark", |b| {
-        b.iter(|| {
-            let span = Span {
-                start: 0,
-                end: data.len(),
-            };
-            let config =
-                fast_text_splitter::splitter::splitter_config::SplitterConfig::<HFTokenizer> {
-                    data,
-                    patterns: &patterns,
-                    searchers: &searchers,
-                    max_len,
-                    tokenizer: Some(&hf_tokenizer),
-                };
-            let splitter = Splitter::new(&config, span, 0, span, Some(true), None, None);
-            let tree = splitter.split();
-            let splits = tree.get_results(max_len, data_str);
-            black_box(splits);
-        })
-    });
-}
-
-#[cfg(feature = "default")]
-pub fn ws_tree_split_benchmark(c: &mut Criterion) {
-    let data_path = "tests/test_data/superlinear.txt";
-
-    let binding = fs::read(data_path).unwrap();
-    let data = binding.as_slice();
-    let patterns = vec![vec!["\n\n"], vec!["\n"], vec![".", "!", "?"]];
-
-    let searchers: Vec<_> = patterns.iter().map(|p| PatternSearcher::new(p)).collect();
-    let ws_tokenizer = WSTokenizer {};
+    let ws_tokenizer = WSTokenizer { ascii: true };
 
     let max_len = Some(384);
 
@@ -228,33 +61,40 @@ pub fn ws_tree_split_benchmark(c: &mut Criterion) {
             let config =
                 fast_text_splitter::splitter::splitter_config::SplitterConfig::<WSTokenizer> {
                     data,
-                    patterns: &patterns,
                     searchers: &searchers,
                     max_len,
                     tokenizer: Some(&ws_tokenizer),
+                    patterns_len,
                 };
             let splitter = Splitter::new(&config, span, 0, span, Some(false), None, None);
             let tree = splitter.split();
-            let merge_level = tree.leaf_level().unwrap_or(0);
-            let splits = tree.merge_splits_encoding(merge_level, max_len);
+            let splits = tree.get_results_lite(max_len, data);
             black_box(splits);
         })
     });
 }
 
-#[cfg(feature = "default")]
-pub fn none_tree_split_benchmark(c: &mut Criterion) {
+pub fn none_tree_split_lite_benchmark(c: &mut Criterion) {
     let data_path = "tests/test_data/superlinear.txt";
+    // data_path = "tests/test_data/United_States.txt";
+
 
     let binding = fs::read(data_path).unwrap();
     let data = binding.as_slice();
-    let patterns = vec![vec!["\n\n"], vec!["\n"], vec![".", "!", "?"]];
+    let patterns = vec![
+        vec!["\n\n".to_string()],
+        vec!["\n".to_string()],
+        vec![".".to_string(), "!".to_string(), "?".to_string()],
+    ];
+    let patterns_len = patterns.len();
+    let searchers: Vec<_> = patterns
+        .iter()
+        .map(|p| PatternSearcher::new(p.clone()))
+        .collect();
 
-    let searchers: Vec<_> = patterns.iter().map(|p| PatternSearcher::new(p)).collect();
+    let max_len = Some(156);
 
-    let max_len = Some(1024);
-
-    c.bench_function("none_tree_split_benchmark", |b| {
+    c.bench_function("none_tree_split_lite_benchmark", |b| {
         b.iter(|| {
             let span = Span {
                 start: 0,
@@ -263,54 +103,15 @@ pub fn none_tree_split_benchmark(c: &mut Criterion) {
             let config =
                 fast_text_splitter::splitter::splitter_config::SplitterConfig::<NoneTokenizer> {
                     data,
-                    patterns: &patterns,
                     searchers: &searchers,
                     max_len,
                     tokenizer: None,
+                    patterns_len,
                 };
             let splitter = Splitter::new(&config, span, 0, span, Some(false), None, None);
             let tree = splitter.split();
-            let merge_level = tree.leaf_level().unwrap_or(0);
-            let splits = tree.merge_splits(merge_level, max_len);
+            let splits = tree.get_results_lite(max_len, data);
             black_box(splits);
-        })
-    });
-}
-
-pub fn hf_single_tokenize_benchmark(c: &mut Criterion) {
-    let data_path = "tests/test_data/superlinear.txt";
-    let bytes = fs::read(data_path).unwrap();
-    let data = std::str::from_utf8(&bytes).unwrap();
-    tokenizers::utils::parallelism::set_parallelism(true);
-    let hf_tokenizer = init_tokenizer(None, None, false).unwrap();
-
-    c.bench_function("hf_single_tokenize", |b| {
-        b.iter(|| {
-            let encoded = hf_tokenizer.encode(data, false).unwrap();
-            black_box(encoded);
-        })
-    });
-}
-
-pub fn hf_batch_tokenize_benchmark(c: &mut Criterion) {
-    tokenizers::utils::parallelism::set_parallelism(false);
-
-    let data_path = "tests/test_data/superlinear.txt";
-    let bytes = fs::read(data_path).unwrap();
-    let data = std::str::from_utf8(&bytes).unwrap();
-    let ws_splitter = SplitterConfig::<WSTokenizer>::from_params(&ConfigParams::ws_default());
-    let ws_splits = text_split_parallel(&ws_splitter, data);
-    let split_str: Vec<_> = ws_splits
-        .iter()
-        .map(|split| split.split_strings.clone())
-        .collect();
-
-    let hf_tokenizer = init_tokenizer(None, None, false).unwrap();
-
-    c.bench_function("hf_batch_tokenize", |b| {
-        b.iter(|| {
-            let encoded = hf_tokenizer.encode_batch(split_str.clone(), false).unwrap();
-            black_box(encoded);
         })
     });
 }
@@ -320,20 +121,10 @@ pub fn benches() {
         .sample_size(40)
         .measurement_time(std::time::Duration::from_secs(10))
         .configure_from_args();
-    //aho_corasick_init_benchmark(&mut criterion);
-    //hf_text_normalize_benchmark(&mut criterion);
-    //text_normalize_benchmark(&mut criterion);
-    //#[cfg(feature = "default")]
-    //words_single_split_benchmark(&mut criterion);
-    hf_tree_split_benchmark(&mut criterion);
-    hf_merged_tree_split_benchmark(&mut criterion);
-    ws_tree_split_benchmark(&mut criterion);
-    none_tree_split_benchmark(&mut criterion);
-    //#[cfg(feature = "tokenizers")]
-    //tokenizer_single_split_benchmark(&mut criterion);
 
-    //hf_single_tokenize_benchmark(&mut criterion);
-    //hf_batch_tokenize_benchmark(&mut criterion);
+    hf_merged_tree_lite_res_benchmark(&mut criterion);
+    ws_tree_split_lite_benchmark(&mut criterion);
+    none_tree_split_lite_benchmark(&mut criterion);
 }
 
 criterion_main!(benches);

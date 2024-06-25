@@ -1,13 +1,11 @@
+use crate::common::split::Split;
+use crate::common::tokens_result_lite::TokensResultLite;
 use tokenizers::normalizers::BertNormalizer;
-#[cfg(feature = "tokenizers")]
 use tokenizers::{Encoding, PaddingStrategy, Tokenizer, TruncationStrategy};
 use tokenizers::{PaddingParams, TruncationParams};
 
-use crate::common::TokensResults;
-use crate::encodings::EncodingType;
-use crate::{Split, Tokenize};
+use crate::encodings::{EncodingType, Tokenize};
 
-#[cfg(feature = "tokenizers")]
 pub fn init_tokenizer(
     model_path: Option<String>,
     max_len: Option<usize>,
@@ -33,14 +31,14 @@ pub fn init_tokenizer(
     match tokenizer_truncation {
         None => {
             let mut truncation = TruncationParams::default();
-            truncation.max_length = max_len.unwrap_or(40000);
+            truncation.max_length = max_len.unwrap_or(usize::MAX);
             truncation.strategy = TruncationStrategy::LongestFirst;
             tokenizer
                 .with_truncation(Option::from(truncation))
                 .expect("TODO: panic message");
         }
         Some(truncation) => {
-            truncation.max_length = max_len.unwrap_or(40000);
+            truncation.max_length = max_len.unwrap_or(usize::MAX);
             truncation.strategy = TruncationStrategy::LongestFirst;
         }
     }
@@ -51,52 +49,70 @@ pub fn init_tokenizer(
     Ok(tokenizer)
 }
 
-#[cfg(feature = "tokenizers")]
 pub struct HFTokenizer {
     pub tokenizer: Tokenizer,
 }
 
-#[cfg(feature = "tokenizers")]
 impl Tokenize for HFTokenizer {
     fn encode(&self, data: &str) -> anyhow::Result<EncodingType> {
         let encoded = self.tokenizer.encode(data, false).unwrap();
-        Ok(EncodingType::HFEncoding(encoded))
+        Ok(EncodingType::HFEncoding(HFEncoding {
+            hf_encoding: encoded,
+        }))
     }
 }
 
-#[cfg(feature = "tokenizers")]
-pub fn divide_encoding(encoded: &Encoding, splits: &[Split]) -> Vec<TokensResults> {
-    let mut results = Vec::new();
-    for split in splits {
-        let result = {
-            //if split.tokens_span.is_empty() {
-            //TokensResults::default()
-            //} else {
-            let split_range = split.tokens_span.range();
-            let ids = encoded.get_ids()[split_range.clone()].to_vec();
-            let type_ids = encoded.get_type_ids()[split_range.clone()].to_vec();
-            let attention_mask = encoded.get_attention_mask()[split_range.clone()].to_vec();
-            let offsets = encoded.get_offsets()[split_range.clone()].to_vec();
-            let tokens = encoded.get_tokens()[split_range.clone()].to_vec();
-
-            TokensResults {
-                ids,
-                type_ids,
-                attention_mask,
-                offsets,
-                tokens,
-            }
-        };
-        results.push(result);
-    }
-    results
+pub struct HFEncoding {
+    pub hf_encoding: Encoding,
 }
 
-#[cfg(feature = "tokenizers")]
+impl HFEncoding {
+    pub fn get_offsets(&self) -> &[(usize, usize)] {
+        self.hf_encoding.get_offsets()
+    }
+    pub fn get_word_ids(&self) -> &[Option<u32>] {
+        self.hf_encoding.get_word_ids()
+    }
+    pub fn len(&self) -> usize {
+        self.hf_encoding.len()
+    }
+    pub fn is_empty(&self) -> bool {
+        self.hf_encoding.is_empty()
+    }
+
+    pub fn divide_encoding_lite(&self, splits: &[Split]) -> Vec<TokensResultLite> {
+        let mut results = Vec::new();
+        for split in splits {
+            let result = {
+                let tk_start = split.tokens_span.map_or(0, |span| span.start);
+                let tk_end = split.tokens_span.map_or(0, |span| span.end);
+
+                let ids = &self.hf_encoding.get_ids()[tk_start..tk_end];
+                let offsets = &self.hf_encoding.get_offsets()[tk_start..tk_end];
+
+                TokensResultLite {
+                    data_span: split.data_span.unwrap().clone(),
+                    ids: Some(ids),
+                    offsets: Some(offsets),
+                }
+            };
+            results.push(result);
+        }
+        results
+    }
+}
+
 #[cfg(test)]
 mod tests {
-    use super::*;
     use aho_corasick::Span;
+    use tokenizers::pre_tokenizers::punctuation::Punctuation;
+    use tokenizers::pre_tokenizers::sequence::Sequence;
+    use tokenizers::pre_tokenizers::whitespace::WhitespaceSplit;
+    use tokenizers::{
+        OffsetReferential, OffsetType, PreTokenizedString, PreTokenizer, PreTokenizerWrapper,
+    };
+
+    use super::*;
 
     #[test]
     fn tokens_len_test() -> tokenizers::Result<()> {
@@ -155,6 +171,26 @@ mod tests {
             .get_offsets()
             .iter()
             .for_each(|offset| println!("{:?}", offset));
+        Ok(())
+    }
+
+    #[test]
+    fn hf_pre_tokenizer_test() -> tokenizers::Result<()> {
+        let pretokenizers = vec![
+            PreTokenizerWrapper::WhitespaceSplit(WhitespaceSplit),
+            PreTokenizerWrapper::Punctuation(Punctuation::default()),
+        ];
+        let pretok = Sequence::new(pretokenizers);
+        let mut pretokenized: PreTokenizedString = "Hey friend!     How are you?!?".into();
+        pretok.pre_tokenize(&mut pretokenized).unwrap();
+        let offsets: Vec<_> = pretokenized
+            .get_splits(OffsetReferential::Original, OffsetType::Byte)
+            .into_iter()
+            .map(|(s, o, _)| (s, o))
+            .collect();
+        for (s, o) in offsets {
+            println!("{:?} {:?}", s, o);
+        }
         Ok(())
     }
 
