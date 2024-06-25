@@ -136,18 +136,6 @@ impl SplitNode {
                 });
                 split_results.extend(split_res);
             }
-
-            /*
-            let split_res = self
-                .split_encoding
-                .as_ref()
-                .unwrap()
-                .encoding
-                .to_lite_results(&splits);
-
-            split_results.extend(split_res);
-
-             */
         } else {
             for child in &self.children {
                 split_results.extend(child.merge_enc_lite_result(merge_level, max_len));
