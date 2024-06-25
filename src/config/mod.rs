@@ -49,16 +49,16 @@ impl SplitterLiteConfig<NoneTokenizer> {
         let config = crate::splitter::splitter_config::SplitterConfig::<NoneTokenizer> {
             data,
             searchers: &self.searchers,
-            //max_len: self.max_tokens,
-            max_len: None,
+            max_len: self.max_tokens,
+            //max_len: None,
             tokenizer: None,
             patterns_len: self.patterns_len,
         };
         //FIXME: parallel is not used id fixed to true
-        let splitter = Splitter::new(&config, span, 0, span, Some(true), None, None);
+        let splitter = Splitter::new(&config, span, 0, span, self.parallel, None, None);
         let tree = splitter.split();
-        //tree.get_results_lite(self.max_tokens, data)
-        tree.get_results_lite(None, data)
+        tree.get_results_lite(self.max_tokens, data)
+        //tree.get_results_lite(None, data)
     }
 }
 
@@ -98,7 +98,7 @@ impl SplitterLiteConfig<WSTokenizer> {
             tokenizer: Some(&self.tokenizer),
             patterns_len: self.patterns_len,
         };
-        let splitter = Splitter::new(&config, span, 0, span, Some(true), None, None);
+        let splitter = Splitter::new(&config, span, 0, span, self.parallel, None, None);
         let tree = splitter.split();
         tree.get_results_lite(self.max_tokens, data)
     }
@@ -143,7 +143,7 @@ impl SplitterLiteConfig<HFTokenizer> {
             tokenizer: Some(&self.tokenizer),
             patterns_len: self.patterns_len,
         };
-        let splitter = Splitter::new(&config, span, 0, span, Some(true), None, None);
+        let splitter = Splitter::new(&config, span, 0, span, self.parallel, None, None);
         let tree = splitter.split();
         tree.get_results_lite(self.max_tokens, data)
     }

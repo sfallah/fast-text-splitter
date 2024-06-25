@@ -79,7 +79,7 @@ impl<'a, T: Tokenize + Sync> Splitter<'a, T> {
     }
 
     pub fn split(&self) -> SplitNode {
-        if self.lt_max_len(self.split_data_span) {
+        if self.lt_max_len(self.split_data_span, self.split_encoding.clone(), self.split_tokens_span.clone()) {
             let (new_split_encoding, new_split_tokens_span) = self.config.get_split_encoding(
                 &self.split_data_span,
                 &self.split_encoding,
@@ -224,7 +224,7 @@ impl<'a, T: Tokenize + Sync> Splitter<'a, T> {
                     &self.split_tokens_span,
                 );
 
-                if !self.lt_max_len(self.split_data_span) {
+                if !self.lt_max_len(self.split_data_span, new_split_encoding.clone(), new_split_tokens_span.clone()){
                     let children = self.chunk_splits(self.pattern_id, self.split_data_span);
 
                     SplitNode::new(
@@ -291,7 +291,7 @@ impl<'a, T: Tokenize + Sync> Splitter<'a, T> {
             }
             child_nodes
         } else {
-            if self.lt_max_len(search_split.full_span()) {
+            if self.lt_max_len(search_split.full_span(), self.split_encoding.clone(), self.split_tokens_span.clone()){
                 let child_node = SplitNode::new(
                     self.pattern_id + 1,
                     search_split.full_span(),
@@ -361,13 +361,13 @@ impl<'a, T: Tokenize + Sync> Splitter<'a, T> {
         }
     }
 
-    pub fn lt_max_len(&self, split_span: Span) -> bool {
+    pub fn lt_max_len(&self, split_span: Span, split_encoding: Option<Arc<SplitEncoding>>, split_tokens_span: Option<Span>) -> bool {
         let check_max_len = self.config.max_len.is_some();
 
         if check_max_len {
             let max_len_val = self.config.max_len.unwrap();
-            if self.split_encoding.is_some() {
-                self.split_tokens_span.unwrap().len() <= max_len_val
+            if split_encoding.is_some() {
+                split_tokens_span.unwrap().len() <= max_len_val
             } else {
                 // if tokenizer is present, then don't need to check the length just yet
                 // as the data will be tokenized further down the line

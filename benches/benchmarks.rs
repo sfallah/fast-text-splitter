@@ -1,11 +1,8 @@
-use aho_corasick::Span;
-use criterion::{black_box, criterion_main, Criterion};
-use fast_text_splitter::config::SplitterLiteConfig;
-use fast_text_splitter::encodings::NoneTokenizer;
-use fast_text_splitter::pattern_search::pattern_searcher::PatternSearcher;
-use fast_text_splitter::splitter::Splitter;
-use fast_text_splitter::ws_tokenizer::WSTokenizer;
 use std::fs;
+
+use criterion::{black_box, Criterion, criterion_main};
+
+use fast_text_splitter::config::SplitterLiteConfig;
 
 pub fn hf_merged_tree_lite_res_benchmark(c: &mut Criterion) {
     let data_path = "tests/test_data/superlinear.txt";
@@ -42,33 +39,11 @@ pub fn ws_tree_split_lite_benchmark(c: &mut Criterion) {
         vec!["\n".to_string()],
         vec![".".to_string(), "!".to_string(), "?".to_string()],
     ];
-    let patterns_len = patterns.len();
-    let searchers: Vec<_> = patterns
-        .iter()
-        .map(|p| PatternSearcher::new(p.clone()))
-        .collect();
 
-    let ws_tokenizer = WSTokenizer { ascii: true };
-
-    let max_len = Some(384);
-
+    let splitter_config = SplitterLiteConfig::new_ws(patterns, 384, 0, true, true);
     c.bench_function("ws_tree_split_benchmark", |b| {
         b.iter(|| {
-            let span = Span {
-                start: 0,
-                end: data.len(),
-            };
-            let config =
-                fast_text_splitter::splitter::splitter_config::SplitterConfig::<WSTokenizer> {
-                    data,
-                    searchers: &searchers,
-                    max_len,
-                    tokenizer: Some(&ws_tokenizer),
-                    patterns_len,
-                };
-            let splitter = Splitter::new(&config, span, 0, span, Some(false), None, None);
-            let tree = splitter.split();
-            let splits = tree.get_results_lite(max_len, data);
+            let splits = splitter_config.ws_splits(data);
             black_box(splits);
         })
     });
@@ -86,31 +61,12 @@ pub fn none_tree_split_lite_benchmark(c: &mut Criterion) {
         vec!["\n".to_string()],
         vec![".".to_string(), "!".to_string(), "?".to_string()],
     ];
-    let patterns_len = patterns.len();
-    let searchers: Vec<_> = patterns
-        .iter()
-        .map(|p| PatternSearcher::new(p.clone()))
-        .collect();
 
-    let max_len = Some(156);
+    let splitter_config = SplitterLiteConfig::new_none(patterns, 512, 0, false);
 
     c.bench_function("none_tree_split_lite_benchmark", |b| {
         b.iter(|| {
-            let span = Span {
-                start: 0,
-                end: data.len(),
-            };
-            let config =
-                fast_text_splitter::splitter::splitter_config::SplitterConfig::<NoneTokenizer> {
-                    data,
-                    searchers: &searchers,
-                    max_len,
-                    tokenizer: None,
-                    patterns_len,
-                };
-            let splitter = Splitter::new(&config, span, 0, span, Some(false), None, None);
-            let tree = splitter.split();
-            let splits = tree.get_results_lite(max_len, data);
+            let splits = splitter_config.len_splits(data);
             black_box(splits);
         })
     });

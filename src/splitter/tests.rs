@@ -7,6 +7,7 @@ mod tests {
     use rand::seq::SliceRandom;
     use rand::thread_rng;
     use rayon::prelude::*;
+    use crate::config::SplitterLiteConfig;
 
     use crate::encodings::{NoneTokenizer, Tokenize};
     use crate::hf_tokenizer::{init_tokenizer, HFTokenizer};
@@ -212,6 +213,47 @@ mod tests {
             println!("len: {:?}", res.split_string.len());
         }
     }
+    #[test]
+    fn no_pattern_test(){
+        let data = "this is a sentence.".as_bytes();
+
+        let patterns = vec![
+            vec!["\n\n".to_string()],
+            vec!["\n".to_string()],
+            vec![".".to_string(), "!".to_string(), "?".to_string()],
+        ];
+        let patterns_len = patterns.len();
+        let span = Span {
+            start: 0,
+            end: data.len(),
+        };
+        let searchers: Vec<_> = patterns
+            .iter()
+            .map(|p| PatternSearcher::new(p.clone()))
+            .collect();
+        let hf_tokenizer = HFTokenizer {
+            tokenizer: init_tokenizer(None, None, false).unwrap(),
+        };
+        let max_len = Some(512);
+
+        let config = SplitterConfig::<HFTokenizer> {
+            data,
+            searchers: &searchers,
+            max_len,
+            tokenizer: Some(&hf_tokenizer),
+            patterns_len,
+        };
+        let splitter = Splitter::new(&config, span, 0, span, None, None, None);
+        let tree = splitter.split();
+        println!("{}", tree.to_string(data, true));
+
+        let lite_results = tree.get_results_lite(Some(512), data);
+        println!("Number of Lite Results: {:?}", lite_results.len());
+        for res in lite_results.iter() {
+            println!("{:?}", res.split_string);
+            println!("{:?}", res.tokens.len());
+        }
+    }
 
     #[test]
     fn multi_level_ws_tokenizer_split() {
@@ -339,6 +381,31 @@ mod tests {
     }
 
     #[test]
+    fn none_superlinear_test(){
+        let data_path = "tests/test_data/superlinear.txt";
+        //let data_path = "tests/error_data/2017_elections_in_India.txt";
+        let data = fs::read(data_path).unwrap();
+        let patterns = vec![
+            vec!["\n\n".to_string()],
+            vec!["\n".to_string()],
+            vec![".".to_string(), "!".to_string(), "?".to_string()],
+        ];
+        let splitter_config = SplitterLiteConfig::new_none(patterns, 512, 0, false);
+
+        let split_results = splitter_config.len_splits(data.as_slice());
+
+        println!("Number of Split Results: {:?}", split_results.len());
+        let total_len: usize = split_results.iter().map(|res| res.split_string.len()).sum();
+        assert_eq!(data.len(), total_len);
+
+        for res in split_results.iter() {
+            println!("{:?}", res.split_string);
+            println!("{:?}", res.split_string.len());
+        }
+
+    }
+
+    #[test]
     fn max_len_splits() {
         let _data_raw = "\n\n\
         \n\n\
@@ -381,6 +448,7 @@ mod tests {
         };
         let splitter = Splitter::new(&config, span, 0, span, None, None, None);
         let tree = splitter.split();
+
         println!("{}", tree.to_string(data, true));
         assert_eq!(from_utf8(data).unwrap(), tree.reconstruct(data));
 
