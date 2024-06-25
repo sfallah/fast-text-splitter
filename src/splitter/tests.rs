@@ -71,10 +71,6 @@ mod tests {
         );
         let tree = splitter.split();
 
-        let leaf_level = tree.leaf_level().unwrap_or(0);
-
-        println!("Leaf Level: {:?}", leaf_level);
-
         let split_results = tree.get_results_lite(max_len,data);
         println!("Number of Split Results: {:?}", split_results.len());
 
@@ -92,11 +88,6 @@ mod tests {
             .sum();
         assert_eq!(data.len(), total_text_len);
 
-        let total_res_len: usize = split_results
-            .iter()
-            .map(|res| res.split_string.len())
-            .sum();
-        assert_eq!(data.len(), total_res_len);
 
         if check_splits {
             for res in split_results.iter() {
@@ -108,10 +99,9 @@ mod tests {
                 assert_eq!(
                     hf_encoded.len(),
                     res.tokens.len(),
-                    "Failed Split: {:?}\n Tokens-Result: {:?}\n Tokens Spans: {:?}",
+                    "Failed Split: {:?}\n Tokens-Result: {:?}",
                     res.split_string,
                     res,
-                    origin_dta_span
                 );
             }
         }
@@ -121,15 +111,11 @@ mod tests {
             .map(|res| res.tokens.len())
             .sum();
         println!("Total Tokens: {:?}", total_tokens);
+
         let encodings = hf_tokenizer.encode(from_utf8(data).unwrap()).unwrap();
         assert_eq!(total_tokens, encodings.len());
 
-        let lite_results = tree.get_results_lite(max_len, data);
-        let total_lite_tokens: usize = lite_results.iter().map(|res| res.tokens.len()).sum();
-        println!("Total Lite Tokens: {:?}", total_lite_tokens);
-
-        assert_eq!(encodings.len(), total_lite_tokens);
-        (data.len(), lite_results)
+        (data.len(), split_results)
     }
 
     #[test]
@@ -480,7 +466,7 @@ mod tests {
             tokenizer: init_tokenizer(None, None, false).unwrap(),
         };
 
-        let max_len = Some(512);
+        let max_len = Some(128);
         let config = SplitterConfig::<HFTokenizer> {
             data,
             searchers: &searchers,
@@ -501,35 +487,14 @@ mod tests {
 
         //assert_eq!(leaf_level_opt, Some(1));
 
-        let split_results = tree.get_results_lite(max_len, data);
+        let split_results = tree.get_results_lite(None, data);
 
         println!("Number of Split Results: {:?}", split_results.len());
         //assert_eq!(split_results.len(), splits.len());
 
-        /*
-        let ws_tokenizer = WSTokenizer {};
-        for (span, result) in splits_encoding.iter().zip(split_results.iter()) {
-            println!("Span: {:?}", span);
-            let split_str = from_utf8(&data[span.1.range()]).unwrap();
-            println!("{:?}", split_str);
-            let ws_encoded = ws_tokenizer.encode(split_str).unwrap();
-            println!("WS Tokens len: {:?}", ws_encoded.len());
+        let total_len: usize = split_results.iter().map(|res| res.split_string.len()).sum();
+        assert_eq!(data.len(), total_len);
 
-            let hf_encoded = hf_tokenizer.encode(split_str).unwrap();
-            println!("HF Tokens len: {:?}", hf_encoded.len());
-
-            println!("{:?}", result);
-            assert_eq!(
-                hf_encoded.len(),
-                result.clone().results.unwrap().ids.len(),
-                "Failed Split: {:?}\n Tokens-Result: {:?}\n Tokens Spans: {:?}",
-                split_str,
-                result,
-                span
-            );
-        }
-
-         */
 
         let ws_tokenizer = WSTokenizer { ascii: false };
         for res in split_results.iter() {
@@ -620,7 +585,7 @@ mod tests {
             .map(|p| PatternSearcher::new(p.clone()))
             .collect();
 
-        let (data_len, splits) = split_file(data_path, patterns, &searchers, 40, true, true, false);
+        let (data_len, splits) = split_file(data_path, patterns, &searchers, 512, true, true, false);
 
         let total_len: usize = splits.iter().map(|res| res.split_string.len()).sum();
         assert_eq!(data_len, total_len);
@@ -634,7 +599,7 @@ mod tests {
 
         tokenizers::utils::parallelism::set_parallelism(true);
         //let files = list_text_files("data/dev/")?;
-        let files = list_text_files("data/train/")?;
+        let files = list_text_files("data/dev/")?;
 
         let patterns = vec![
             vec!["\n\n".to_string()],
@@ -646,7 +611,7 @@ mod tests {
             .map(|p| PatternSearcher::new(p.clone()))
             .collect();
 
-        let rnd_files: Vec<_> = files.choose_multiple(&mut rng, 600).collect();
+        let rnd_files: Vec<_> = files.choose_multiple(&mut rng, 1200).collect();
 
         rnd_files.par_iter().for_each(|file| {
             let (data_len, results) =

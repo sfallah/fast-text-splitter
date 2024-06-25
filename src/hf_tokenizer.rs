@@ -31,14 +31,14 @@ pub fn init_tokenizer(
     match tokenizer_truncation {
         None => {
             let mut truncation = TruncationParams::default();
-            truncation.max_length = max_len.unwrap_or(40000);
+            truncation.max_length = max_len.unwrap_or(usize::MAX);
             truncation.strategy = TruncationStrategy::LongestFirst;
             tokenizer
                 .with_truncation(Option::from(truncation))
                 .expect("TODO: panic message");
         }
         Some(truncation) => {
-            truncation.max_length = max_len.unwrap_or(40000);
+            truncation.max_length = max_len.unwrap_or(usize::MAX);
             truncation.strategy = TruncationStrategy::LongestFirst;
         }
     }
@@ -80,7 +80,7 @@ impl HFEncoding {
         self.hf_encoding.is_empty()
     }
 
-    pub fn divide_encoding_lite<'a>(&'a self, splits: &[Split]) -> Vec<TokensResultLite<'a>> {
+    pub fn divide_encoding_lite(&self, splits: &[Split]) -> Vec<TokensResultLite> {
         let mut results = Vec::new();
         for split in splits {
             let result = {
