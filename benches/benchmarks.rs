@@ -39,7 +39,7 @@ pub fn ws_tree_split_lite_benchmark(c: &mut Criterion) {
         vec![".".to_string(), "!".to_string(), "?".to_string()],
     ];
 
-    let splitter_config = SplitterLiteConfig::new_ws(patterns, 384, 0, true, true);
+    let splitter_config = SplitterLiteConfig::new_ws(patterns, 384, 0, true, false);
     c.bench_function("ws_tree_split_benchmark", |b| {
         b.iter(|| {
             let splits = splitter_config.ws_splits(data);

@@ -92,7 +92,7 @@ impl WSEncoding {
                 TokensResultLite {
                     data_span: split.data_span.unwrap().clone(),
                     ids: None,
-                    offsets: Some(offsets),
+                    offsets: Some(offsets.to_vec()),
                     pattern_id: split.pattern_id,
                 }
             };

@@ -92,8 +92,8 @@ impl HFEncoding {
 
                 TokensResultLite {
                     data_span: split.data_span.unwrap().clone(),
-                    ids: Some(ids),
-                    offsets: Some(offsets),
+                    ids: Some(ids.to_vec()),
+                    offsets: Some(offsets.to_vec()),
                     pattern_id: split.pattern_id,
                 }
             };

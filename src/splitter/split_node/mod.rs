@@ -9,7 +9,7 @@ use crate::common::chunk_encoding_splits;
 use crate::common::split::Split;
 use crate::common::tokens_result_lite::TokensResultLite;
 use crate::splitter::split_encoding::SplitEncoding;
-use crate::splitter::split_node::utils::{merge_split_result_lite, SplitResultLite};
+use crate::splitter::split_node::utils::{merge_split_result_lite, merge_split_tokens_result_lite, SplitResultLite};
 
 #[derive(Clone)]
 pub struct SplitNode {
@@ -100,7 +100,7 @@ impl SplitNode {
             split_res
                 .iter()
                 .map(|res| SplitResultLite {
-                    tokens: res.ids.map_or_else(Vec::new, |ids| ids.to_vec()),
+                    tokens: res.ids.as_ref().map_or_else(Vec::new, |ids| ids.to_vec()),
                     split_string: from_utf8(&data[res.data_span.range()]).unwrap().to_string(),
                 })
                 .collect()
@@ -138,8 +138,14 @@ impl SplitNode {
                 split_results.extend(split_res);
             }
         } else {
-            for child in &self.children {
-                split_results.extend(child.merge_enc_lite_result(merge_level, max_len));
+            let children_resuls: Vec<_> = self.children.iter().flat_map(|child| {
+                child.merge_enc_lite_result(merge_level, max_len)
+            }).collect();
+
+            return if max_len_check {
+                merge_split_tokens_result_lite(&children_resuls, max_len_value)
+            } else {
+                children_resuls
             }
         }
         split_results
