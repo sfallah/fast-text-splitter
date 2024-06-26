@@ -485,6 +485,57 @@ mod tests {
     }
 
     #[test]
+    fn fast_none_tree_splits() {
+        let data_path = "tests/test_data/superlinear.txt";
+        let binding = fs::read_to_string(data_path).unwrap();
+        let data = binding.as_bytes();
+        let patterns = vec![
+            vec!["\n\n".to_string()],
+            vec!["\n".to_string()],
+            vec![".".to_string(), "!".to_string(), "?".to_string()],
+        ];
+
+        let splitter_config = SplitterLiteConfig::new_none(patterns, 256, 0, false);
+        let splits = splitter_config.len_splits(data);
+
+        let chunk_lens: usize = splits.iter().map(|c| c.split_string.len()).sum();
+        println!("{:?}", chunk_lens);
+        assert_eq!(chunk_lens, data.len());
+
+        println!("{:?}", splits.len());
+        for split in splits.iter() {
+            println!("{:?}", split.split_string);
+            println!("{:?}", split.split_string.len());
+        }
+    }
+
+    #[test]
+    fn fast_hf_tree_splits() {
+        let data_path = "tests/test_data/superlinear.txt";
+        let binding = fs::read_to_string(data_path).unwrap();
+        let data = binding.as_bytes();
+        let patterns = vec![
+            vec!["\n\n".to_string()],
+            vec!["\n".to_string()],
+            vec![".".to_string(), "!".to_string(), "?".to_string()],
+        ];
+
+        let splitter_config = SplitterLiteConfig::new_hf(patterns, 128, 0, true, None);
+        let splits = splitter_config.hf_splits(data);
+
+        let chunk_lens: usize = splits.iter().map(|c| c.split_string.len()).sum();
+        println!("{:?}", chunk_lens);
+        assert_eq!(chunk_lens, data.len());
+
+        println!("{:?}", splits.len());
+        for split in splits.iter() {
+            println!("{:?}", split.split_string);
+            println!("{:?}", split.split_string.len());
+            println!("{:?}", split.tokens.len());
+        }
+    }
+
+    #[test]
     fn with_encoding_superlinear_test() {
         let data_path = "tests/test_data/superlinear.txt";
         //let data_path = "tests/error_data/2017_elections_in_India.txt";

@@ -119,7 +119,7 @@ impl SplitNode {
         if self.pattern_id >= merge_level {
             let splits = if max_len_check {
                 let leaves = self.all_leaves_split(max_len);
-                chunk_encoding_splits(&leaves, max_len_value)
+                chunk_encoding_splits(&leaves, max_len_value, self.pattern_id)
             } else {
                 self.all_leaves_split(max_len)
             };
@@ -128,11 +128,12 @@ impl SplitNode {
                 let split_res = encoding.encoding.to_lite_results(&splits);
                 split_results.extend(split_res);
             } else {
-                //FIXME: This is a temporary fix, we need to adapt it to work with like for the HFEncoding nad WSEncoding
+                //FIXME: This is a temporary fix, we need to adapt it to work with like for the HFEncoding and WSEncoding
                 let split_res = splits.iter().map(|split| TokensResultLite {
                     data_span: split.data_span.clone().unwrap(),
                     ids: None,
                     offsets: None,
+                    pattern_id: split.pattern_id,
                 });
                 split_results.extend(split_res);
             }
@@ -166,6 +167,7 @@ impl SplitNode {
             vec![Split {
                 tokens_span: self.split_tokens_span.clone(),
                 data_span: Some(self.split_data_span.clone()),
+                pattern_id: self.pattern_id,
             }]
         } else {
             let child_splits = self
@@ -176,7 +178,7 @@ impl SplitNode {
             // handling of special case where split max_len is smaller than
             // get_result max_len (when we merge the results back again)
             if let Some(max_len) = max_len {
-                chunk_encoding_splits(&child_splits, max_len)
+                chunk_encoding_splits(&child_splits, max_len, self.pattern_id)
             } else {
                 child_splits
             }

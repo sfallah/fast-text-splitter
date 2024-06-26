@@ -29,9 +29,10 @@ pub fn merge_split_result_lite(
     let mut cur_data_span = first_sp_res.data_span.clone();
     let mut cur_tokens = first_sp_res.ids.map_or_else(Vec::new, |ids| ids.to_vec());
     let mut cur_no_tokens = first_sp_res.no_tokens();
+    let mut cur_pattern_id = first_sp_res.pattern_id;
 
     for (i, split_res) in split_ruslts.iter().enumerate().skip(1) {
-        if cur_no_tokens + split_res.no_tokens() <= max_tokens {
+        if cur_pattern_id <= split_res.pattern_id && cur_no_tokens + split_res.no_tokens() <= max_tokens {
             cur_tokens.extend(split_res.ids.map_or_else(Vec::new, |ids| ids.to_vec()));
             cur_data_span = span(cur_data_span.start, split_res.data_span.end);
             cur_no_tokens += split_res.no_tokens();
@@ -43,6 +44,7 @@ pub fn merge_split_result_lite(
             cur_tokens = split_res.ids.map_or_else(Vec::new, |ids| ids.to_vec());
             cur_data_span = split_res.data_span.clone();
             cur_no_tokens = split_res.no_tokens();
+            cur_pattern_id = split_res.pattern_id;
         }
 
         if i == split_ruslts.len() - 1 {

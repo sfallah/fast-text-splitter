@@ -5,6 +5,7 @@ pub struct TokensResultLite<'a> {
     pub data_span: Span,
     pub ids: Option<&'a [u32]>,
     pub offsets: Option<&'a [(usize, usize)]>,
+    pub pattern_id: usize,
 }
 
 impl TokensResultLite<'_> {

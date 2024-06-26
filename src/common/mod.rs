@@ -5,7 +5,7 @@ pub mod split;
 mod tests;
 pub mod tokens_result_lite;
 
-pub fn chunk_encoding_splits(spans: &Vec<Split>, max_len: usize) -> Vec<Split> {
+pub fn chunk_encoding_splits(spans: &Vec<Split>, max_len: usize, pattern_id: usize) -> Vec<Split> {
     if spans.is_empty() {
         return Vec::new();
     }
@@ -59,6 +59,7 @@ pub fn chunk_encoding_splits(spans: &Vec<Split>, max_len: usize) -> Vec<Split> {
             cur_split = Split {
                 tokens_span,
                 data_span,
+                pattern_id
             };
             cur_tokens_len += leaf.no_tokens();
         }

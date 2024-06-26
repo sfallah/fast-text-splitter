@@ -5,15 +5,7 @@ use std::fmt;
 pub struct Split {
     pub tokens_span: Option<Span>,
     pub data_span: Option<Span>,
-}
-
-impl Split {
-    pub fn new(tokens_span: Span) -> Self {
-        Self {
-            tokens_span: Some(tokens_span),
-            data_span: None,
-        }
-    }
+    pub pattern_id: usize,
 }
 
 impl fmt::Debug for Split {
