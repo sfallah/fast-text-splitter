@@ -100,7 +100,7 @@ impl SplitNode {
             split_res
                 .iter()
                 .map(|res| SplitResultLite {
-                    tokens: res.ids.map_or_else(Vec::new, |ids| ids.to_vec()),
+                    tokens: res.ids.map(|ids| ids.to_vec()),
                     split_string: from_utf8(&data[res.data_span.range()]).unwrap().to_string(),
                 })
                 .collect()

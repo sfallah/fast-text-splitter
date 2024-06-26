@@ -59,7 +59,7 @@ pub fn chunk_encoding_splits(spans: &Vec<Split>, max_len: usize, pattern_id: usi
             cur_split = Split {
                 tokens_span,
                 data_span,
-                pattern_id
+                pattern_id,
             };
             cur_tokens_len += leaf.no_tokens();
         }

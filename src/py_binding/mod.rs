@@ -39,7 +39,7 @@ impl PyNoneSplitterConfig {
             .len_splits(data.as_bytes())
             .iter()
             .map(|x| PySplitLiteResult {
-                tokens: x.tokens.clone(),
+                tokens: x.tokens.clone().map_or_else(|| vec![], |ids| ids.to_vec()),
                 text: x.split_string.clone(),
             })
             .collect())
@@ -72,7 +72,7 @@ impl PyWSSplitterConfig {
             .ws_splits(data.as_bytes())
             .iter()
             .map(|x| PySplitLiteResult {
-                tokens: x.tokens.clone(),
+                tokens: x.tokens.clone().map_or_else(|| vec![], |ids| ids.to_vec()),
                 text: x.split_string.clone(),
             })
             .collect())
@@ -106,7 +106,7 @@ impl PyHFSplitterConfig {
             .hf_splits(data.as_bytes())
             .iter()
             .map(|x| PySplitLiteResult {
-                tokens: x.tokens.clone(),
+                tokens: x.tokens.clone().map_or_else(|| vec![], |ids| ids.to_vec()),
                 text: x.split_string.clone(),
             })
             .collect())

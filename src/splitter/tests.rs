@@ -79,7 +79,10 @@ mod tests {
             for res in split_results.iter() {
                 println!("{:?}", res.split_string);
                 println!("Data Len: {:?}", res.split_string.len());
-                println!("Tokens Len: {:?}", res.tokens.len());
+                println!(
+                    "Tokens Len: {:?}",
+                    res.tokens.clone().map_or_else(|| 0, |t| t.len())
+                );
             }
         }
 
@@ -95,7 +98,7 @@ mod tests {
 
                 assert_eq!(
                     hf_encoded.len(),
-                    res.tokens.len(),
+                    res.no_tokens(),
                     "Failed Split: {:?}\n Tokens-Result: {:?}",
                     res.split_string,
                     res,
@@ -103,7 +106,7 @@ mod tests {
             }
         }
 
-        let total_tokens: usize = split_results.iter().map(|res| res.tokens.len()).sum();
+        let total_tokens: usize = split_results.iter().map(|res| res.no_tokens()).sum();
         println!("Total Tokens: {:?}", total_tokens);
 
         let encodings = hf_tokenizer.encode(from_utf8(data).unwrap()).unwrap();
@@ -244,7 +247,7 @@ mod tests {
         println!("Number of Lite Results: {:?}", lite_results.len());
         for res in lite_results.iter() {
             println!("{:?}", res.split_string);
-            println!("{:?}", res.tokens.len());
+            println!("{:?}", res.no_tokens());
         }
     }
 
@@ -272,17 +275,17 @@ mod tests {
             .encode(from_utf8(data).unwrap(), false)
             .unwrap();
         let hf_tokens = hf_encoding.get_ids();
-        let total_tokens: usize = splits.iter().map(|res| res.tokens.len()).sum();
+        let total_tokens: usize = splits.iter().map(|res| res.no_tokens()).sum();
         assert_eq!(hf_tokens.len(), total_tokens);
 
         for split in splits.iter() {
             println!("{:?}", split.split_string);
-            println!("{:?}", split.tokens.len());
+            println!("{:?}", split.no_tokens());
             let hf_encoded = hf_tokenizer.encode(split.split_string.clone(), false)?;
-            assert_eq!(hf_encoded.len(), split.tokens.len());
-            assert!(!split.tokens.is_empty());
-            assert!(split.tokens.len() <= max_len);
-            assert_eq!(hf_encoded.get_ids(), split.tokens);
+            assert_eq!(hf_encoded.len(), split.no_tokens());
+            assert!(!split.tokens_is_empty());
+            assert!(split.no_tokens() <= max_len);
+            assert_eq!(hf_encoded.get_ids(), split.tokens.clone().unwrap());
         }
         Ok(())
     }
@@ -338,7 +341,7 @@ mod tests {
         println!("Number of Lite Results: {:?}", lite_results.len());
         for res in lite_results.iter() {
             println!("{:?}", res.split_string);
-            println!("{:?}", res.tokens.len());
+            println!("{:?}", res.no_tokens());
         }
     }
 
@@ -395,19 +398,19 @@ mod tests {
         println!("Number of Lite Results: {:?}", lite_results.len());
         for res in lite_results.iter() {
             println!("{:?}", res.split_string);
-            println!("{:?}", res.tokens.len());
+            println!("{:?}", res.no_tokens());
         }
 
         let encoding = hf_tokenizer
             .tokenizer
             .encode(from_utf8(data).unwrap(), false)
             .unwrap();
-        let total_no_tokens: usize = lite_results.iter().map(|res| res.tokens.len()).sum();
+        let total_no_tokens: usize = lite_results.iter().map(|res| res.no_tokens()).sum();
         assert_eq!(encoding.len(), total_no_tokens);
 
         let all_tokens: Vec<u32> = lite_results
             .iter()
-            .flat_map(|res| res.tokens.clone())
+            .flat_map(|res| res.tokens.clone().unwrap())
             .collect();
         assert_eq!(encoding.get_ids(), all_tokens);
     }
@@ -531,7 +534,7 @@ mod tests {
         for split in splits.iter() {
             println!("{:?}", split.split_string);
             println!("{:?}", split.split_string.len());
-            println!("{:?}", split.tokens.len());
+            println!("{:?}", split.no_tokens());
         }
     }
 
@@ -634,7 +637,7 @@ mod tests {
 
             assert_eq!(
                 hf_encoded.len(),
-                res.tokens.len(),
+                res.no_tokens(),
                 "Failed Split: {:?}\n Tokens-Result: {:?}\n Tokens Spans: {:?}",
                 split_str,
                 res,
@@ -642,7 +645,7 @@ mod tests {
             );
         }
 
-        let total_tokens: usize = split_results.iter().map(|res| res.tokens.len()).sum();
+        let total_tokens: usize = split_results.iter().map(|res| res.no_tokens()).sum();
         println!("Total Tokens: {:?}", total_tokens);
         assert_eq!(
             total_tokens,
