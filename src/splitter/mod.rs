@@ -10,6 +10,7 @@ use crate::splitter::split_encoding::SplitEncoding;
 use crate::splitter::split_node::SplitNode;
 use crate::splitter::splitter_config::SplitterConfig;
 
+pub mod parse_tree;
 mod split_encoding;
 pub mod split_node;
 pub mod splitter_config;

@@ -1,6 +1,6 @@
 use aho_corasick::{AhoCorasick, Span};
-use memchr::memmem::{find_iter, Finder};
-use memchr::{memchr2_iter, memchr3_iter};
+use memchr::memmem::Finder;
+use memchr::{memchr2_iter, memchr3_iter, memchr_iter};
 
 use crate::common::span;
 use crate::pattern_search::get_aho_corasick;
@@ -76,7 +76,7 @@ impl PatternSearcher {
                     })
                     .collect()
             } else {
-                find_iter(&data[data_span.start..data_span.end], pattern.as_bytes())
+                memchr_iter(pattern.as_bytes()[0],&data[data_span.start..data_span.end])
                     .map(|start| SearchMatch {
                         pattern_len,
                         span: span(start, start + pattern_len),
