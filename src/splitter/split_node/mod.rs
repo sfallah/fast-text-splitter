@@ -31,25 +31,31 @@ impl std::fmt::Debug for SplitNode {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         if !self.children.is_empty() {
             f.debug_struct("Node")
-                .field("pattern_id", &self.pattern_id)
-                .field("data_span", &self.split_data_span)
-                .field("len", &self.split_data_span.len())
-                .field("tokens_span", &self.split_tokens_span)
+                .field("pattern_id", &format_args!("{:#?}", &self.pattern_id))
+                //.field("data_span",&format_args!("{:#?}", &self.split_data_span))
+                .field("len", &format_args!("{:#?}", &self.split_data_span.len()))
+                //.field("tokens_span",&format_args!("{:#?}", &self.split_tokens_span))
                 .field(
                     "no_tokens",
-                    &self.split_tokens_span.map_or_else(|| 0, |span| span.len()),
+                    &format_args!(
+                        "{:#?}",
+                        &self.split_tokens_span.map_or_else(|| 0, |span| span.len())
+                    ),
                 )
-                .field("no_children", &self.children.len())
+                .field("no_children", &format_args!("{:#?}", &self.children.len()))
                 .finish()
         } else {
             f.debug_struct("Leaf")
-                .field("pattern_id", &self.pattern_id)
-                .field("data_span", &self.split_data_span)
-                .field("len", &self.split_data_span.len())
-                .field("tokens_span", &self.split_tokens_span)
+                .field("pattern_id", &format_args!("{:#?}", &self.pattern_id))
+                //.field("data_span", &format_args!("{:#?}",&self.split_data_span))
+                .field("len", &format_args!("{:#?}", &self.split_data_span.len()))
+                //.field("tokens_span", &format_args!("{:#?}", &self.split_tokens_span))
                 .field(
                     "no_tokens",
-                    &self.split_tokens_span.map_or_else(|| 0, |span| span.len()),
+                    &format_args!(
+                        "{:#?}",
+                        &self.split_tokens_span.map_or_else(|| 0, |span| span.len())
+                    ),
                 )
                 .finish()
         }
