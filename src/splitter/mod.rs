@@ -235,7 +235,7 @@ impl<'a, T: Tokenize + Sync> Splitter<'a, T> {
                 ) {
                     let children = self.chunk_splits(
                         self.pattern_id,
-                        self.split_data_span,
+                        self.search_data_span,
                         new_split_encoding.clone(),
                         new_split_tokens_span.clone(),
                     );
