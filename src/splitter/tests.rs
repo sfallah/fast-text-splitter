@@ -13,6 +13,7 @@ mod tests {
     use crate::hf_tokenizer::{init_tokenizer, HFTokenizer};
     use crate::pattern_search::pattern_searcher::PatternSearcher;
     use crate::splitter::split_node::utils::SplitResultLite;
+    use crate::splitter::split_node::visualization::term_tree;
     use crate::splitter::{Splitter, SplitterConfig};
     use crate::ws_tokenizer::WSTokenizer;
 
@@ -429,6 +430,10 @@ mod tests {
 
         let split_results = splitter_config.len_splits(data.as_slice());
 
+        for res in split_results.iter() {
+            println!("{:?}", res.split_string);
+        }
+
         println!("Number of Split Results: {:?}", split_results.len());
         let total_len: usize = split_results.iter().map(|res| res.split_string.len()).sum();
         assert_eq!(data.len(), total_len);
@@ -485,6 +490,57 @@ mod tests {
 
         println!("{}", tree.to_string(data, true));
         assert_eq!(from_utf8(data).unwrap(), tree.reconstruct(data));
+    }
+
+    #[test]
+    fn tree_visual_test() {
+        let _data_raw = "\n\n\
+        Returns and inequality is so strong, that it yields.\n\n\
+        Another heuristic for.\n\
+        \n\n\
+        Outperform everyone else.\n\n"
+            .as_bytes();
+
+        let data = _data_raw;
+
+        let patterns = vec![
+            vec!["\n\n".to_string()],
+            vec!["\n".to_string()],
+            vec![".".to_string(), ",".to_string()],
+        ];
+        let patterns_len = patterns.len();
+
+        let span = Span {
+            start: 0,
+            end: data.len(),
+        };
+        let searchers: Vec<_> = patterns
+            .iter()
+            .map(|p| PatternSearcher::new(p.clone()))
+            .collect();
+        let config = SplitterConfig::<NoneTokenizer> {
+            data,
+            searchers: &searchers,
+            max_len: None,
+            tokenizer: None,
+            patterns_len,
+        };
+        let splitter = Splitter::new(&config, span, 0, span, None, None, None);
+        let tree = splitter.split();
+
+        //println!("{}", tree.to_string(data, true));
+        assert_eq!(from_utf8(data).unwrap(), tree.reconstruct(data));
+        match term_tree(tree.clone(), data) {
+            Ok(tree) => println!("{}", tree),
+            Err(err) => println!("error: {}", err),
+        }
+
+        let lite_results = tree.get_results_lite(None, data);
+        println!("Number of Lite Results: {:?}", lite_results.len());
+        for res in lite_results.iter() {
+            println!("{:?}", res.split_string);
+            println!("{:?}", res.tokens.len());
+        }
     }
 
     #[test]
@@ -616,7 +672,7 @@ mod tests {
 
         //assert_eq!(leaf_level_opt, Some(1));
 
-        let split_results = tree.get_results_lite(None, data);
+        let split_results = tree.get_results_lite(max_len, data);
 
         println!("Number of Split Results: {:?}", split_results.len());
         //assert_eq!(split_results.len(), splits.len());

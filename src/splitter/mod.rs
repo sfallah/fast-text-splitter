@@ -71,7 +71,7 @@ impl<'a, T: Tokenize + Sync> Splitter<'a, T> {
             self.config,
             search_split.span,
             pattern_id,
-            search_split.span,
+            search_split.full_span(),
             parallel,
             split_encoding,
             split_tokens_span,
@@ -228,11 +228,19 @@ impl<'a, T: Tokenize + Sync> Splitter<'a, T> {
                     &self.split_tokens_span,
                 );
 
-                if !self.lt_max_len(
+                if self.lt_max_len(
                     self.split_data_span,
                     new_split_encoding.clone(),
                     new_split_tokens_span.clone(),
                 ) {
+                    SplitNode::new(
+                        self.pattern_id,
+                        self.split_data_span,
+                        Vec::new(),
+                        new_split_encoding,
+                        new_split_tokens_span,
+                    )
+                } else {
                     let children = self.chunk_splits(
                         self.pattern_id + 1,
                         self.split_data_span,
@@ -247,84 +255,72 @@ impl<'a, T: Tokenize + Sync> Splitter<'a, T> {
                         new_split_encoding,
                         new_split_tokens_span,
                     )
-                } else {
-                    SplitNode::new(
-                        self.pattern_id,
-                        self.split_data_span,
-                        Vec::new(),
-                        new_split_encoding,
-                        new_split_tokens_span,
-                    )
                 }
             }
         }
     }
 
     fn sub_split(&self, search_split: &SearchSplit) -> Vec<SplitNode> {
-        if self.pattern_id + 1 < self.config.patterns_len() && !search_split.span.is_empty() {
-            let mut child_nodes = Vec::new();
-
-            let splitter = self.to_sub_splitter(
-                search_split,
-                self.pattern_id + 1,
-                self.parallel,
-                self.split_encoding.clone(),
-                self.split_tokens_span,
-            );
-
-            let child_node = splitter.split();
-            child_nodes.push(child_node);
-
-            if search_split.stride > 0 {
-                let pattern_data_span = span(
-                    search_split.span.end,
-                    search_split.span.end + search_split.pattern_len(),
-                );
-
-                let pattern_tokens_span = if self.split_encoding.is_some() {
-                    let split_encoding = self.split_encoding.clone().unwrap();
-                    let tokens_offset = self.split_tokens_span.clone().map_or(0, |span| span.end);
-                    split_encoding
-                        .split_encoding_tokens_spans(&vec![pattern_data_span], tokens_offset)
-                        .first()
-                        .cloned()
-                } else {
-                    self.split_tokens_span.clone()
-                };
-
-                let child_node = SplitNode::new(
-                    self.pattern_id + 1,
-                    pattern_data_span,
-                    Vec::new(),
-                    //FIXME: this will give an issue with encoding
-                    self.split_encoding.clone(),
-                    pattern_tokens_span,
-                );
-                child_nodes.push(child_node);
-            }
-            child_nodes
-        } else {
-            if self.lt_max_len(
-                search_split.full_span(),
-                self.split_encoding.clone(),
-                self.split_tokens_span.clone(),
-            ) {
-                let child_node = SplitNode::new(
-                    self.pattern_id + 1,
-                    search_split.full_span(),
-                    Vec::new(),
-                    self.split_encoding.clone(),
-                    self.split_tokens_span,
-                );
-                vec![child_node]
+        let mut child_nodes =
+            if self.pattern_id + 1 < self.config.patterns_len() && !search_split.span.is_empty() {
+                let splitter = self.to_next_splitter();
+                vec![splitter.split()]
             } else {
-                self.chunk_splits(
-                    self.pattern_id + 1,
+                if self.lt_max_len(
                     search_split.full_span(),
                     self.split_encoding.clone(),
                     self.split_tokens_span.clone(),
-                )
-            }
+                ) {
+                    let child_node = SplitNode::new(
+                        self.pattern_id + 1,
+                        search_split.span,
+                        Vec::new(),
+                        self.split_encoding.clone(),
+                        self.split_tokens_span,
+                    );
+                    vec![child_node]
+                } else {
+                    self.chunk_splits(
+                        self.pattern_id + 1,
+                        search_split.span,
+                        self.split_encoding.clone(),
+                        self.split_tokens_span.clone(),
+                    )
+                }
+            };
+        self.add_pattern_node(search_split, &mut child_nodes);
+        child_nodes
+    }
+
+    fn add_pattern_node(&self, search_split: &SearchSplit, child_nodes: &mut Vec<SplitNode>) {
+        if search_split.stride > 0
+        //&& !search_split.span.is_empty()
+        {
+            let pattern_data_span = span(
+                search_split.span.end,
+                search_split.span.end + search_split.pattern_len(),
+            );
+
+            let pattern_tokens_span = if self.split_encoding.is_some() {
+                let split_encoding = self.split_encoding.clone().unwrap();
+                let tokens_offset = self.split_tokens_span.clone().map_or(0, |span| span.end);
+                split_encoding
+                    .split_encoding_tokens_spans(&vec![pattern_data_span], tokens_offset)
+                    .first()
+                    .cloned()
+            } else {
+                self.split_tokens_span.clone()
+            };
+
+            let child_node = SplitNode::new(
+                self.pattern_id + 1,
+                pattern_data_span,
+                Vec::new(),
+                //FIXME: this will give an issue with encoding
+                self.split_encoding.clone(),
+                pattern_tokens_span,
+            );
+            child_nodes.push(child_node);
         }
     }
 
@@ -335,6 +331,9 @@ impl<'a, T: Tokenize + Sync> Splitter<'a, T> {
         split_encoding: Option<Arc<SplitEncoding>>,
         split_tokens_span: Option<Span>,
     ) -> Vec<SplitNode> {
+        if data_span.is_empty() {
+            return Vec::new();
+        }
         let max_len_val = self.config.max_len.unwrap_or(0);
         if max_len_val == 0 {
             return vec![SplitNode::new(
