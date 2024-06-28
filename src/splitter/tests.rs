@@ -492,9 +492,10 @@ mod tests {
     #[test]
     fn tree_visual_test() {
         let _data_raw = "\n\n\
-        Returns and inequality is so strong, that it yields.\n\n\
-        Another heuristic for.\n\
-        \n\n\
+        Returns and inequality, is so strong.\n\
+        That it yields.\n\n\
+        Another heuristic for.\n\n\
+        \n\
         Outperform everyone else.\n\n"
             .as_bytes();
 

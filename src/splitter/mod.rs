@@ -71,7 +71,7 @@ impl<'a, T: Tokenize + Sync> Splitter<'a, T> {
             self.config,
             search_split.span,
             pattern_id,
-            search_split.full_span(),
+            search_split.span,
             parallel,
             split_encoding,
             split_tokens_span,
@@ -229,15 +229,12 @@ impl<'a, T: Tokenize + Sync> Splitter<'a, T> {
 
                 SplitNode::new(
                     self.pattern_id,
-                    self.split_data_span,
+                    self.search_data_span,
                     vec![child],
                     new_split_encoding,
                     new_split_tokens_span,
                 )
-
             } else {
-
-
                 if self.lt_max_len(
                     self.split_data_span,
                     new_split_encoding.clone(),

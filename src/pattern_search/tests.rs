@@ -7,6 +7,25 @@ mod tests {
     use std::str::from_utf8;
 
     #[test]
+    fn new_splitter_tree_error_test() -> anyhow::Result<()> {
+        let _data_raw = "\n\n\
+        Returns and inequality, is so strong.\n\
+        That it yields.\n\n\
+        Another heuristic for.\n\n\
+        \n\
+        Outperform everyone else.\n\n"
+            .as_bytes();
+        let pattern = vec!["\n\n".to_string()];
+        let searcher = PatternSearcher::new(pattern);
+        let result = searcher.find_pattern(_data_raw, span(0, _data_raw.len()));
+        assert_eq!(result.splits.len(), 4);
+        for split in result.splits.iter() {
+            println!("{:?}", split.reconstruct());
+        }
+        Ok(())
+    }
+
+    #[test]
     fn strange_case_test() -> anyhow::Result<()> {
         let pattern = vec!["\n".to_string()];
         let data = "In fact, the correlation. Between superlinear.\nReturns and inequality is so strong that it yields.";
