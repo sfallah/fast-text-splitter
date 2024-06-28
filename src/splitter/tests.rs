@@ -542,6 +542,60 @@ mod tests {
     }
 
     #[test]
+    fn tree_visual_max_len_test() {
+        let _data_raw = "\n\n\
+        Returns and inequality, is so strong.\n\
+        That it yields.\n\n\
+        Another heuristic for.\n\n\
+        \n\
+        Outperform everyone else.\n\n"
+            .as_bytes();
+
+        let data = _data_raw;
+
+        let patterns = vec![
+            vec!["\n\n".to_string()],
+            vec!["\n".to_string()],
+            vec![".".to_string(), ",".to_string()],
+        ];
+        let patterns_len = patterns.len();
+
+        let span = Span {
+            start: 0,
+            end: data.len(),
+        };
+        let searchers: Vec<_> = patterns
+            .iter()
+            .map(|p| PatternSearcher::new(p.clone()))
+            .collect();
+
+        let max_len: Option<usize> = Some(16);
+        let config = SplitterConfig::<NoneTokenizer> {
+            data,
+            searchers: &searchers,
+            max_len,
+            tokenizer: None,
+            patterns_len,
+        };
+        let splitter = Splitter::new(&config, span, 0, span, None, None, None);
+        let tree = splitter.split();
+
+        //println!("{}", tree.to_string(data, true));
+        assert_eq!(from_utf8(data).unwrap(), tree.reconstruct(data));
+        match term_tree(tree.clone(), data) {
+            Ok(tree) => println!("{}", tree),
+            Err(err) => println!("error: {}", err),
+        }
+
+        let lite_results = tree.get_results_lite(None, data);
+        println!("Number of Lite Results: {:?}", lite_results.len());
+        for res in lite_results.iter() {
+            println!("{:?}", res.split_string);
+            println!("{:?}", res.tokens.len());
+        }
+    }
+
+    #[test]
     fn with_encoding_superlinear_test() {
         let data_path = "tests/test_data/superlinear.txt";
         //let data_path = "tests/error_data/2017_elections_in_India.txt";
