@@ -539,7 +539,7 @@ mod tests {
         println!("Number of Lite Results: {:?}", lite_results.len());
         for res in lite_results.iter() {
             println!("{:?}", res.split_string);
-            println!("{:?}", res.tokens.len());
+            println!("{:?}", res.no_tokens());
         }
     }
 
@@ -559,13 +559,13 @@ mod tests {
 
         let chunk_lens: usize = splits.iter().map(|c| c.split_string.len()).sum();
         println!("{:?}", chunk_lens);
-        assert_eq!(chunk_lens, data.len());
 
         println!("{:?}", splits.len());
         for split in splits.iter() {
             println!("{:?}", split.split_string);
             println!("{:?}", split.split_string.len());
         }
+        assert_eq!(chunk_lens, data.len());
     }
 
     #[test]
