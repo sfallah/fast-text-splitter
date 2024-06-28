@@ -217,16 +217,26 @@ impl<'a, T: Tokenize + Sync> Splitter<'a, T> {
                 self.split_tokens_span,
             )
         } else {
+            let (new_split_encoding, new_split_tokens_span) = self.config.get_split_encoding(
+                &self.split_data_span,
+                &self.split_encoding,
+                &self.split_tokens_span,
+            );
             if self.pattern_id + 1 < self.config.patterns_len() && !self.search_data_span.is_empty()
             {
                 let new_splitter = self.to_next_splitter();
-                new_splitter.split()
+                let child = new_splitter.split();
+
+                SplitNode::new(
+                    self.pattern_id,
+                    self.split_data_span,
+                    vec![child],
+                    new_split_encoding,
+                    new_split_tokens_span,
+                )
+
             } else {
-                let (new_split_encoding, new_split_tokens_span) = self.config.get_split_encoding(
-                    &self.split_data_span,
-                    &self.split_encoding,
-                    &self.split_tokens_span,
-                );
+
 
                 if self.lt_max_len(
                     self.split_data_span,
