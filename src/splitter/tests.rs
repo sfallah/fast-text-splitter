@@ -427,6 +427,10 @@ mod tests {
 
         let split_results = splitter_config.len_splits(data.as_slice());
 
+        for res in split_results.iter() {
+            println!("{:?}", res.split_string);
+        }
+
         println!("Number of Split Results: {:?}", split_results.len());
         let total_len: usize = split_results.iter().map(|res| res.split_string.len()).sum();
         assert_eq!(data.len(), total_len);
@@ -523,9 +527,16 @@ mod tests {
 
         //println!("{}", tree.to_string(data, true));
         assert_eq!(from_utf8(data).unwrap(), tree.reconstruct(data));
-        match term_tree(tree, data) {
+        match term_tree(tree.clone(), data) {
             Ok(tree) => println!("{}", tree),
             Err(err) => println!("error: {}", err),
+        }
+
+        let lite_results = tree.get_results_lite(None, data);
+        println!("Number of Lite Results: {:?}", lite_results.len());
+        for res in lite_results.iter() {
+            println!("{:?}", res.split_string);
+            println!("{:?}", res.tokens.len());
         }
     }
 
@@ -607,7 +618,7 @@ mod tests {
 
         //assert_eq!(leaf_level_opt, Some(1));
 
-        let split_results = tree.get_results_lite(None, data);
+        let split_results = tree.get_results_lite(max_len, data);
 
         println!("Number of Split Results: {:?}", split_results.len());
         //assert_eq!(split_results.len(), splits.len());
@@ -642,6 +653,58 @@ mod tests {
             total_tokens,
             hf_tokenizer.encode(from_utf8(data).unwrap()).unwrap().len()
         );
+    }
+
+
+    #[test]
+    fn fast_none_tree_splits() {
+        let data_path = "tests/test_data/superlinear.txt";
+        let binding = fs::read_to_string(data_path).unwrap();
+        let data = binding.as_bytes();
+        let patterns = vec![
+            vec!["\n\n".to_string()],
+            vec!["\n".to_string()],
+            vec![".".to_string(), "!".to_string(), "?".to_string()],
+        ];
+
+        let splitter_config = SplitterLiteConfig::new_none(patterns, 256, 0, false);
+        let splits = splitter_config.len_splits(data);
+
+        let chunk_lens: usize = splits.iter().map(|c| c.split_string.len()).sum();
+        println!("{:?}", chunk_lens);
+        assert_eq!(chunk_lens, data.len());
+
+        println!("{:?}", splits.len());
+        for split in splits.iter() {
+            println!("{:?}", split.split_string);
+            println!("{:?}", split.split_string.len());
+        }
+    }
+
+    #[test]
+    fn fast_hf_tree_splits() {
+        let data_path = "tests/test_data/superlinear.txt";
+        let binding = fs::read_to_string(data_path).unwrap();
+        let data = binding.as_bytes();
+        let patterns = vec![
+            vec!["\n\n".to_string()],
+            vec!["\n".to_string()],
+            vec![".".to_string(), "!".to_string(), "?".to_string()],
+        ];
+
+        let splitter_config = SplitterLiteConfig::new_hf(patterns, 128, 0, true, None);
+        let splits = splitter_config.hf_splits(data);
+
+        let chunk_lens: usize = splits.iter().map(|c| c.split_string.len()).sum();
+        println!("{:?}", chunk_lens);
+        assert_eq!(chunk_lens, data.len());
+
+        println!("{:?}", splits.len());
+        for split in splits.iter() {
+            println!("{:?}", split.split_string);
+            println!("{:?}", split.split_string.len());
+            println!("{:?}", split.tokens.len());
+        }
     }
 
     #[test]

@@ -71,7 +71,7 @@ impl<'a, T: Tokenize + Sync> Splitter<'a, T> {
             self.config,
             search_split.span,
             pattern_id,
-            search_split.span,
+            search_split.full_span(),
             parallel,
             split_encoding,
             split_tokens_span,
@@ -282,7 +282,7 @@ impl<'a, T: Tokenize + Sync> Splitter<'a, T> {
                 } else {
                     self.chunk_splits(
                         self.pattern_id + 1,
-                        search_split.full_span(),
+                        search_split.span,
                         self.split_encoding.clone(),
                         self.split_tokens_span.clone(),
                     )
@@ -293,7 +293,9 @@ impl<'a, T: Tokenize + Sync> Splitter<'a, T> {
     }
 
     fn add_pattern_node(&self, search_split: &SearchSplit, child_nodes: &mut Vec<SplitNode>) {
-        if search_split.stride > 0 && search_split.full_span().len() > search_split.pattern_len(){
+        if search_split.stride > 0
+            //&& !search_split.span.is_empty()
+        {
             let pattern_data_span = span(
                 search_split.span.end,
                 search_split.span.end + search_split.pattern_len(),
