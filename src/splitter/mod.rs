@@ -228,11 +228,19 @@ impl<'a, T: Tokenize + Sync> Splitter<'a, T> {
                     &self.split_tokens_span,
                 );
 
-                if !self.lt_max_len(
+                if self.lt_max_len(
                     self.split_data_span,
                     new_split_encoding.clone(),
                     new_split_tokens_span.clone(),
                 ) {
+                    SplitNode::new(
+                        self.pattern_id,
+                        self.split_data_span,
+                        Vec::new(),
+                        new_split_encoding,
+                        new_split_tokens_span,
+                    )
+                } else {
                     let children = self.chunk_splits(
                         self.pattern_id,
                         self.split_data_span,
@@ -244,14 +252,6 @@ impl<'a, T: Tokenize + Sync> Splitter<'a, T> {
                         self.pattern_id,
                         self.split_data_span,
                         children,
-                        new_split_encoding,
-                        new_split_tokens_span,
-                    )
-                } else {
-                    SplitNode::new(
-                        self.pattern_id,
-                        self.split_data_span,
-                        Vec::new(),
                         new_split_encoding,
                         new_split_tokens_span,
                     )
@@ -294,7 +294,7 @@ impl<'a, T: Tokenize + Sync> Splitter<'a, T> {
 
     fn add_pattern_node(&self, search_split: &SearchSplit, child_nodes: &mut Vec<SplitNode>) {
         if search_split.stride > 0
-            //&& !search_split.span.is_empty()
+        //&& !search_split.span.is_empty()
         {
             let pattern_data_span = span(
                 search_split.span.end,
@@ -331,6 +331,9 @@ impl<'a, T: Tokenize + Sync> Splitter<'a, T> {
         split_encoding: Option<Arc<SplitEncoding>>,
         split_tokens_span: Option<Span>,
     ) -> Vec<SplitNode> {
+        if data_span.is_empty() {
+            return Vec::new();
+        }
         let max_len_val = self.config.max_len.unwrap_or(0);
         if max_len_val == 0 {
             return vec![SplitNode::new(

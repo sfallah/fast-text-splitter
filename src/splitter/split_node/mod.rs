@@ -32,7 +32,7 @@ impl std::fmt::Debug for SplitNode {
         if !self.children.is_empty() {
             f.debug_struct("Node")
                 .field("pattern_id", &format_args!("{:#?}", &self.pattern_id))
-                .field("data_span",&format_args!("{:#?}", &self.split_data_span))
+                .field("data_span", &format_args!("{:#?}", &self.split_data_span))
                 .field("len", &format_args!("{:#?}", &self.split_data_span.len()))
                 //.field("tokens_span",&format_args!("{:#?}", &self.split_tokens_span))
                 .field(
@@ -47,7 +47,7 @@ impl std::fmt::Debug for SplitNode {
         } else {
             f.debug_struct("Leaf")
                 .field("pattern_id", &format_args!("{:#?}", &self.pattern_id))
-                .field("data_span", &format_args!("{:#?}",&self.split_data_span))
+                .field("data_span", &format_args!("{:#?}", &self.split_data_span))
                 .field("len", &format_args!("{:#?}", &self.split_data_span.len()))
                 //.field("tokens_span", &format_args!("{:#?}", &self.split_tokens_span))
                 .field(
