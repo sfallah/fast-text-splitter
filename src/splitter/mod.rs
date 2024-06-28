@@ -242,7 +242,7 @@ impl<'a, T: Tokenize + Sync> Splitter<'a, T> {
                     )
                 } else {
                     let children = self.chunk_splits(
-                        self.pattern_id + 1,
+                        self.pattern_id,
                         self.split_data_span,
                         new_split_encoding.clone(),
                         new_split_tokens_span.clone(),
@@ -261,36 +261,35 @@ impl<'a, T: Tokenize + Sync> Splitter<'a, T> {
     }
 
     fn sub_split(&self, search_split: &SearchSplit) -> Vec<SplitNode> {
-        if self.pattern_id + 1 < self.config.patterns_len() && !search_split.span.is_empty() {
-            let splitter = self.to_next_splitter();
-            let mut child_nodes = vec![splitter.split()];
-            self.add_pattern_node(search_split, &mut child_nodes);
-            child_nodes
-        } else {
-            if self.lt_max_len(
-                search_split.span,
-                self.split_encoding.clone(),
-                self.split_tokens_span.clone(),
-            ) {
-                let child_node = SplitNode::new(
-                    self.pattern_id + 1,
-                    search_split.span,
-                    Vec::new(),
-                    self.split_encoding.clone(),
-                    self.split_tokens_span,
-                );
-                let mut child_nodes = vec![child_node];
-                self.add_pattern_node(search_split, &mut child_nodes);
-                child_nodes
+        let mut child_nodes =
+            if self.pattern_id + 1 < self.config.patterns_len() && !search_split.span.is_empty() {
+                let splitter = self.to_next_splitter();
+                vec![splitter.split()]
             } else {
-                self.chunk_splits(
-                    self.pattern_id + 1,
-                    search_split.span,
+                if self.lt_max_len(
+                    search_split.full_span(),
                     self.split_encoding.clone(),
                     self.split_tokens_span.clone(),
-                )
-            }
-        }
+                ) {
+                    let child_node = SplitNode::new(
+                        self.pattern_id + 1,
+                        search_split.span,
+                        Vec::new(),
+                        self.split_encoding.clone(),
+                        self.split_tokens_span,
+                    );
+                    vec![child_node]
+                } else {
+                    self.chunk_splits(
+                        self.pattern_id + 1,
+                        search_split.span,
+                        self.split_encoding.clone(),
+                        self.split_tokens_span.clone(),
+                    )
+                }
+            };
+        self.add_pattern_node(search_split, &mut child_nodes);
+        child_nodes
     }
 
     fn add_pattern_node(&self, search_split: &SearchSplit, child_nodes: &mut Vec<SplitNode>) {
