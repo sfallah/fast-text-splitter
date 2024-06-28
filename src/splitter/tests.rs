@@ -1,13 +1,13 @@
 #[cfg(test)]
 mod tests {
-    use std::str::from_utf8;
-    use std::{fs, io};
-
     use crate::config::SplitterLiteConfig;
     use aho_corasick::Span;
     use rand::seq::SliceRandom;
     use rand::thread_rng;
     use rayon::prelude::*;
+    use std::io::Write;
+    use std::str::from_utf8;
+    use std::{fs, io};
 
     use crate::encodings::{NoneTokenizer, Tokenize};
     use crate::hf_tokenizer::{init_tokenizer, HFTokenizer};
@@ -565,6 +565,13 @@ mod tests {
             println!("{:?}", split.split_string);
             println!("{:?}", split.split_string.len());
         }
+        let result_concated: String = splits.iter().map(|c| c.split_string.clone()).collect();
+        // write to file output/debug/superlinear_splits_concated.txt
+        // add date and time to file name
+        let mut file = fs::File::create("output/debug/superlinear_splits_concated.txt").unwrap();
+        //if file doesn't exist, create it
+        file.write_all(result_concated.as_bytes()).unwrap();
+        //assert_eq!(result_concated, binding);
         assert_eq!(chunk_lens, data.len());
     }
 
@@ -579,12 +586,21 @@ mod tests {
             vec![".".to_string(), "!".to_string(), "?".to_string()],
         ];
 
-        let splitter_config = SplitterLiteConfig::new_hf(patterns, 128, 0, true, None);
+        let splitter_config = SplitterLiteConfig::new_hf(patterns, 64, 0, true, None);
         let splits = splitter_config.hf_splits(data);
 
         let chunk_lens: usize = splits.iter().map(|c| c.split_string.len()).sum();
         println!("{:?}", chunk_lens);
+
+        let result_concated: String = splits.iter().map(|c| c.split_string.clone()).collect();
+        // write to file output/debug/superlinear_splits_concated.txt
+        // add date and time to file name
+        let mut file = fs::File::create("output/debug/superlinear_splits_concated_hf.txt").unwrap();
+        //if file doesn't exist, create it
+        file.write_all(result_concated.as_bytes()).unwrap();
+
         assert_eq!(chunk_lens, data.len());
+        assert_eq!(result_concated, binding);
 
         println!("{:?}", splits.len());
         for split in splits.iter() {
