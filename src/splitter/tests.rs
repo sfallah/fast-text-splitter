@@ -655,7 +655,6 @@ mod tests {
         );
     }
 
-
     #[test]
     fn fast_none_tree_splits() {
         let data_path = "tests/test_data/superlinear.txt";
