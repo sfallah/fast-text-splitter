@@ -1,8 +1,9 @@
 #[cfg(test)]
 mod tests {
     use crate::common::span;
-    use crate::splitter::split_encoding::utils::{data_to_token_offsets, ne_offset_spans, splits_tokens_spans};
-    use super::*;
+    use crate::splitter::split_encoding::utils::{
+        data_to_token_offsets, ne_offset_spans, splits_tokens_spans,
+    };
 
     #[test]
     fn test_zero_offset() {

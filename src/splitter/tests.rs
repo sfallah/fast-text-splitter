@@ -3,12 +3,12 @@ mod tests {
     use std::str::from_utf8;
     use std::{fs, io};
 
-    use crate::config::SplitterLiteConfig;
     use aho_corasick::Span;
     use rand::seq::SliceRandom;
     use rand::thread_rng;
     use rayon::prelude::*;
 
+    use crate::config::SplitterLiteConfig;
     use crate::encodings::{NoneTokenizer, Tokenize};
     use crate::hf_tokenizer::{init_tokenizer, HFTokenizer};
     use crate::pattern_search::pattern_searcher::PatternSearcher;
@@ -593,6 +593,7 @@ mod tests {
         println!("Number of Lite Results: {:?}", lite_results.len());
         for res in lite_results.iter() {
             println!("{:?}", res.split_string);
+            println!("{:?}", res.split_string.len());
             println!("{:?}", res.tokens.len());
         }
     }
@@ -706,6 +707,239 @@ mod tests {
     }
 
     #[test]
+    fn tree_visual_ws_max_len_test() {
+        let _data_raw = "\n\n\
+        Returns and inequality, is so strong.\n\
+        That it yields.\n\n\
+        Another heuristic for.\n\n\
+        \n\
+        Outperform everyone else.\n\n"
+            .as_bytes();
+
+        let _data = "\n\
+        In fact, the correlation. Between superlinear.\n\
+        Returns and inequality is so strong that it yields.\n\
+        Another heuristic for.\n\
+        Finding work of this type.\n\
+        Look for fields where.\n\
+        A few big winners. \n\
+        Outperform everyone else.\n"
+            .as_bytes();
+
+        let data = _data_raw;
+
+        let patterns = vec![
+            vec!["\n\n".to_string()],
+            vec!["\n".to_string()],
+            vec![".".to_string(), ",".to_string()],
+        ];
+        let patterns_len = patterns.len();
+
+        let span = Span {
+            start: 0,
+            end: data.len(),
+        };
+        let searchers: Vec<_> = patterns
+            .iter()
+            .map(|p| PatternSearcher::new(p.clone()))
+            .collect();
+
+        let ws_tokenizer = WSTokenizer { ascii: false };
+
+        let max_len: Option<usize> = Some(2);
+        let config = SplitterConfig::<WSTokenizer> {
+            data,
+            searchers: &searchers,
+            max_len,
+            tokenizer: Some(&ws_tokenizer),
+            patterns_len,
+        };
+        let splitter = Splitter::new(&config, span, 0, span, None, None, None);
+        let tree = splitter.split();
+
+        //println!("{}", tree.to_string(data, true));
+        assert_eq!(from_utf8(data).unwrap(), tree.reconstruct(data));
+        match term_tree(tree.clone(), data) {
+            Ok(tree) => println!("{}", tree),
+            Err(err) => println!("error: {}", err),
+        }
+
+        let lite_results = tree.get_results_lite(None, data);
+        println!("Number of Lite Results: {:?}", lite_results.len());
+        for res in lite_results.iter() {
+            println!("{:?}", res.split_string);
+            println!("{:?}", res.split_string.len());
+            println!("{:?}", res.tokens.len());
+        }
+    }
+
+    #[test]
+    fn tree_visual_level_1_match_max_len_test() {
+        let data = "\n\
+        In fact, the correlation. Between superlinear.\n\
+        Returns and inequality is so strong that it yields.\n\
+        Another heuristic for.\n\
+        Finding work of this type.\n\
+        Look for fields where.\n\
+        A few big winners. \n\
+        Outperform everyone else.\n"
+            .as_bytes();
+
+
+        let patterns = vec![
+            vec!["\n\n".to_string()],
+            vec!["\n".to_string()],
+            vec![".".to_string(), ",".to_string()],
+        ];
+        let patterns_len = patterns.len();
+
+        let span = Span {
+            start: 0,
+            end: data.len(),
+        };
+        let searchers: Vec<_> = patterns
+            .iter()
+            .map(|p| PatternSearcher::new(p.clone()))
+            .collect();
+
+
+        let max_len: Option<usize> = Some(16);
+        let config = SplitterConfig::<NoneTokenizer> {
+            data,
+            searchers: &searchers,
+            max_len,
+            tokenizer: None,
+            patterns_len,
+        };
+        let splitter = Splitter::new(&config, span, 0, span, None, None, None);
+        let tree = splitter.split();
+
+        //println!("{}", tree.to_string(data, true));
+        assert_eq!(from_utf8(data).unwrap(), tree.reconstruct(data));
+        match term_tree(tree.clone(), data) {
+            Ok(tree) => println!("{}", tree),
+            Err(err) => println!("error: {}", err),
+        }
+
+        let lite_results = tree.get_results_lite(None, data);
+        println!("Number of Lite Results: {:?}", lite_results.len());
+        for res in lite_results.iter() {
+            println!("{:?}", res.split_string);
+            println!("{:?}", res.split_string.len());
+            println!("{:?}", res.tokens.len());
+        }
+    }
+
+    #[test]
+    fn tree_visual_ws_level_1_match_max_len_test() {
+        let data = "\n\
+        In fact, the correlation. Between superlinear.\n\
+        Returns and inequality is so strong that it yields.\n\
+        Another heuristic for.\n\
+        Finding work of this type.\n\
+        Look for fields where.\n\
+        A few big winners. \n\
+        Outperform everyone else.\n"
+            .as_bytes();
+
+
+        let patterns = vec![
+            vec!["\n\n".to_string()],
+            vec!["\n".to_string()],
+            vec![".".to_string(), ",".to_string()],
+        ];
+        let patterns_len = patterns.len();
+
+        let span = Span {
+            start: 0,
+            end: data.len(),
+        };
+        let searchers: Vec<_> = patterns
+            .iter()
+            .map(|p| PatternSearcher::new(p.clone()))
+            .collect();
+
+        let ws_tokenizer = WSTokenizer { ascii: false };
+
+        let max_len: Option<usize> = Some(3);
+        let config = SplitterConfig::<WSTokenizer> {
+            data,
+            searchers: &searchers,
+            max_len,
+            tokenizer: Some(&ws_tokenizer),
+            patterns_len,
+        };
+        let splitter = Splitter::new(&config, span, 0, span, None, None, None);
+        let tree = splitter.split();
+
+        //println!("{}", tree.to_string(data, true));
+        assert_eq!(from_utf8(data).unwrap(), tree.reconstruct(data));
+        match term_tree(tree.clone(), data) {
+            Ok(tree) => println!("{}", tree),
+            Err(err) => println!("error: {}", err),
+        }
+
+        let lite_results = tree.get_results_lite(None, data);
+        println!("Number of Lite Results: {:?}", lite_results.len());
+        for res in lite_results.iter() {
+            println!("{:?}", res.split_string);
+            println!("{:?}", res.split_string.len());
+            println!("{:?}", res.tokens.len());
+        }
+    }
+
+    #[test]
+    fn tree_visual_ws_no_match_max_len_test() {
+        let file_path = "tests/test_data/en_long_sentence.txt";
+        let data_string = fs::read_to_string(file_path).unwrap();
+        let data = data_string.as_bytes();
+
+        let patterns = vec![
+            vec!["\n\n".to_string()],
+            vec!["\n".to_string()],
+            vec![".".to_string()],
+        ];
+        let patterns_len = patterns.len();
+
+        let span = Span {
+            start: 0,
+            end: data.len(),
+        };
+        let searchers: Vec<_> = patterns
+            .iter()
+            .map(|p| PatternSearcher::new(p.clone()))
+            .collect();
+
+        let ws_tokenizer = WSTokenizer { ascii: false };
+
+        let max_len: Option<usize> = Some(8);
+        let config = SplitterConfig::<WSTokenizer> {
+            data,
+            searchers: &searchers,
+            max_len,
+            tokenizer: Some(&ws_tokenizer),
+            patterns_len,
+        };
+        let splitter = Splitter::new(&config, span, 0, span, None, None, None);
+        let tree = splitter.split();
+
+        //println!("{}", tree.to_string(data, true));
+        assert_eq!(from_utf8(data).unwrap(), tree.reconstruct(data));
+        match term_tree(tree.clone(), data) {
+            Ok(tree) => println!("{}", tree),
+            Err(err) => println!("error: {}", err),
+        }
+
+        let lite_results = tree.get_results_lite(None, data);
+        println!("Number of Lite Results: {:?}", lite_results.len());
+        for res in lite_results.iter() {
+            println!("{:?}", res.split_string);
+            println!("{:?}", res.split_string.len());
+            println!("{:?}", res.tokens.len());
+        }
+    }
+
+    #[test]
     fn with_encoding_superlinear_test() {
         let _data = "\n\n\
         \n\n\
@@ -779,7 +1013,10 @@ mod tests {
         println!("Number of Leaves: {:?}", leaves.len());
         for leaf in leaves.iter() {
             println!("{:#?}", leaf);
-            println!("{:?}", from_utf8(&data[leaf.data_span.unwrap().range()]).unwrap());
+            println!(
+                "{:?}",
+                from_utf8(&data[leaf.data_span.unwrap().range()]).unwrap()
+            );
         }
 
         let leaf_tokens: usize = leaves.iter().map(|leaf| leaf.no_tokens()).sum();
@@ -886,7 +1123,7 @@ mod tests {
 
     #[test]
     fn pattern_split_superlinear_print() {
-        let data_path = "tests/test_data/superlinear.txt";
+        //let data_path = "tests/test_data/superlinear.txt";
         let data_path = "data/train/List_of_Game_of_Thrones_characters.txt";
 
         let patterns = vec![

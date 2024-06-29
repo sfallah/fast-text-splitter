@@ -1,5 +1,5 @@
-use aho_corasick::Span;
 use crate::common::{span, span_ge_offset};
+use aho_corasick::Span;
 
 pub fn splits_tokens_spans(
     tokens_offsets: &[(usize, usize)],

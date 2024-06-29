@@ -1,11 +1,10 @@
-mod tests;
-mod utils;
-
 use aho_corasick::Span;
 
-use crate::common::{span, span_ge_offset};
 use crate::encodings::EncodingType;
 use crate::splitter::split_encoding::utils::splits_tokens_spans;
+
+mod tests;
+mod utils;
 
 pub struct SplitEncoding {
     pub encoding_data_span: Span,
@@ -23,4 +22,3 @@ impl SplitEncoding {
         splits_tokens_spans(tokens_offsets, data_spans, data_offset, tokens_offset)
     }
 }
-

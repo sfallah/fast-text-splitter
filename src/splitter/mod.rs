@@ -10,11 +10,11 @@ use crate::splitter::split_encoding::SplitEncoding;
 use crate::splitter::split_node::SplitNode;
 use crate::splitter::splitter_config::SplitterConfig;
 
+mod split_encoding;
 pub mod split_node;
 pub mod splitter_config;
 mod tests;
 mod utils;
-mod split_encoding;
 
 pub struct Splitter<'a, T: Tokenize + Sync> {
     config: &'a SplitterConfig<'a, T>,
@@ -228,21 +228,20 @@ impl<'a, T: Tokenize + Sync> Splitter<'a, T> {
                 let child = new_splitter.split();
 
                 SplitNode::new(
-                    self.pattern_id,
+                    self.pattern_id +1,
                     self.search_data_span,
                     vec![child],
                     new_split_encoding,
                     new_split_tokens_span,
                 )
             } else {
-
                 if self.lt_max_len(
                     self.split_data_span,
                     new_split_encoding.clone(),
                     new_split_tokens_span.clone(),
                 ) {
                     SplitNode::new(
-                        self.pattern_id,
+                        self.pattern_id + 1,
                         self.split_data_span,
                         Vec::new(),
                         new_split_encoding,
@@ -250,14 +249,14 @@ impl<'a, T: Tokenize + Sync> Splitter<'a, T> {
                     )
                 } else {
                     let children = self.chunk_splits(
-                        self.pattern_id + 1,
+                        self.pattern_id + 2,
                         self.split_data_span,
                         new_split_encoding.clone(),
                         new_split_tokens_span.clone(),
                     );
 
                     SplitNode::new(
-                        self.pattern_id,
+                        self.pattern_id + 1,
                         self.split_data_span,
                         children,
                         new_split_encoding,
@@ -269,22 +268,46 @@ impl<'a, T: Tokenize + Sync> Splitter<'a, T> {
     }
 
     fn sub_split(&self, search_split: &SearchSplit) -> Vec<SplitNode> {
+        // split the tokens if needed
+        // in two, one for the data and one for the pattern
+        let sub_split_tokens_spans = if let Some(split_encoding) = self.split_encoding.clone() {
+            let data_spans: Vec<Span> = if search_split.stride > 0 {
+                let pattern_data_span = span(
+                    search_split.span.end,
+                    search_split.span.end + search_split.pattern_len(),
+                );
+                vec![search_split.span, pattern_data_span]
+            } else {
+                vec![search_split.span]
+            };
+            let tokens_offset = self.split_tokens_span.clone().unwrap().start;
+            let split_tokens_spans =
+                split_encoding.split_encoding_tokens_spans(&data_spans, tokens_offset);
+            Some(split_tokens_spans)
+        } else {
+            None
+        };
+
         let mut child_nodes = if !search_split.span.is_empty() {
+            let tokens_span = sub_split_tokens_spans
+                .clone()
+                .map(|x| x.first().unwrap().clone());
+
             if self.pattern_id + 1 < self.config.patterns_len() {
                 let splitter = self.to_next_splitter();
                 vec![splitter.split()]
             } else {
                 if self.lt_max_len(
-                    search_split.full_span(),
+                    search_split.span,
                     self.split_encoding.clone(),
-                    self.split_tokens_span.clone(),
+                    tokens_span.clone(),
                 ) {
                     let child_node = SplitNode::new(
                         self.pattern_id + 1,
                         search_split.span,
                         Vec::new(),
                         self.split_encoding.clone(),
-                        self.split_tokens_span,
+                        tokens_span,
                     );
                     vec![child_node]
                 } else {
@@ -292,7 +315,7 @@ impl<'a, T: Tokenize + Sync> Splitter<'a, T> {
                         self.pattern_id + 2,
                         search_split.span,
                         self.split_encoding.clone(),
-                        self.split_tokens_span.clone(),
+                        tokens_span,
                     );
 
                     let child_node = SplitNode::new(
@@ -300,7 +323,7 @@ impl<'a, T: Tokenize + Sync> Splitter<'a, T> {
                         search_split.span,
                         children,
                         self.split_encoding.clone(),
-                        self.split_tokens_span,
+                        tokens_span,
                     );
                     vec![child_node]
                 }
@@ -308,28 +331,32 @@ impl<'a, T: Tokenize + Sync> Splitter<'a, T> {
         } else {
             Vec::new()
         };
-        self.add_pattern_node(search_split, &mut child_nodes);
+        self.add_pattern_node(search_split, &sub_split_tokens_spans, &mut child_nodes);
         child_nodes
     }
 
-    fn add_pattern_node(&self, search_split: &SearchSplit, child_nodes: &mut Vec<SplitNode>) {
+    fn add_pattern_node(
+        &self,
+        search_split: &SearchSplit,
+        sub_tokens_spans: &Option<Vec<Span>>,
+        child_nodes: &mut Vec<SplitNode>,
+    ) {
         if search_split.stride > 0 {
             let pattern_data_span = span(
                 search_split.span.end,
                 search_split.span.end + search_split.pattern_len(),
             );
-
-            let pattern_tokens_span = if self.split_encoding.is_some() {
-                let split_encoding = self.split_encoding.clone().unwrap();
-                let tokens_offset = self.split_tokens_span.clone().map_or(0, |span| span.end);
-                split_encoding
-                    .split_encoding_tokens_spans(&vec![pattern_data_span], tokens_offset)
-                    .first()
-                    .cloned()
-            } else {
-                self.split_tokens_span.clone()
-            };
-
+            let pattern_tokens_span = sub_tokens_spans.clone().map(|x| {
+                if let Some(pt_tokens_span) = x.last() {
+                    pt_tokens_span.clone()
+                } else {
+                    let tokens_span = self.split_tokens_span.clone().unwrap();
+                    Span {
+                        start: tokens_span.end,
+                        end: tokens_span.end,
+                    }
+                }
+            });
             let child_node = SplitNode::new(
                 self.pattern_id + 1,
                 pattern_data_span,
