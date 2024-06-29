@@ -18,12 +18,15 @@ impl Split {
 
 impl fmt::Debug for Split {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(
-            f,
-            "SplitOffset {{ tokens_span: {:?}, no_tokens: {}}}",
-            self.tokens_span,
-            self.no_tokens(),
-        )
+        f.debug_struct("Split")
+            .field("tokens_span", &format!("{:?}", &self.tokens_span))
+            .field("no_tokens", &format!("{:?}", &self.no_tokens()))
+            .field("data_span", &format!("{:?}", &self.data_span))
+            .field(
+                "no_chars",
+                &format!("{:?}", &self.data_span.map_or(0, |span| span.len())),
+            )
+            .finish()
     }
 }
 

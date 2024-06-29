@@ -235,6 +235,7 @@ impl<'a, T: Tokenize + Sync> Splitter<'a, T> {
                     new_split_tokens_span,
                 )
             } else {
+
                 if self.lt_max_len(
                     self.split_data_span,
                     new_split_encoding.clone(),
@@ -352,7 +353,6 @@ impl<'a, T: Tokenize + Sync> Splitter<'a, T> {
             return Vec::new();
         }
         let max_len_val = self.config.max_len.unwrap();
-
 
         if split_encoding.is_some() {
             let split_spans = utils::chunk_tokens_len(

@@ -542,6 +542,116 @@ mod tests {
     }
 
     #[test]
+    fn tree_visual_hf_test() {
+        let _data_raw = "\n\n\
+        Returns and inequality, is so strong.\n\
+        That it yields.\n\n\
+        Another heuristic for.\n\n\
+        \n\
+        Outperform everyone else.\n\n"
+            .as_bytes();
+
+        let data = _data_raw;
+
+        let patterns = vec![
+            vec!["\n\n".to_string()],
+            vec!["\n".to_string()],
+            vec![".".to_string(), ",".to_string()],
+        ];
+        let patterns_len = patterns.len();
+
+        let span = Span {
+            start: 0,
+            end: data.len(),
+        };
+        let searchers: Vec<_> = patterns
+            .iter()
+            .map(|p| PatternSearcher::new(p.clone()))
+            .collect();
+        let hf_tokenizer = HFTokenizer {
+            tokenizer: init_tokenizer(None, None, false).unwrap(),
+        };
+
+        let config = SplitterConfig::<HFTokenizer> {
+            data,
+            searchers: &searchers,
+            max_len: None,
+            tokenizer: Some(&hf_tokenizer),
+            patterns_len,
+        };
+        let splitter = Splitter::new(&config, span, 0, span, None, None, None);
+        let tree = splitter.split();
+
+        //println!("{}", tree.to_string(data, true));
+        assert_eq!(from_utf8(data).unwrap(), tree.reconstruct(data));
+        match term_tree(tree.clone(), data) {
+            Ok(tree) => println!("{}", tree),
+            Err(err) => println!("error: {}", err),
+        }
+
+        let lite_results = tree.get_results_lite(None, data);
+        println!("Number of Lite Results: {:?}", lite_results.len());
+        for res in lite_results.iter() {
+            println!("{:?}", res.split_string);
+            println!("{:?}", res.tokens.len());
+        }
+    }
+
+    #[test]
+    fn tree_visual_ws_test() {
+        let _data_raw = "\n\n\
+        Returns and inequality, is so strong.\n\
+        That it yields.\n\n\
+        Another heuristic for.\n\n\
+        \n\
+        Outperform everyone else.\n\n"
+            .as_bytes();
+
+        let data = _data_raw;
+
+        let patterns = vec![
+            vec!["\n\n".to_string()],
+            vec!["\n".to_string()],
+            vec![".".to_string(), ",".to_string()],
+        ];
+        let patterns_len = patterns.len();
+
+        let span = Span {
+            start: 0,
+            end: data.len(),
+        };
+        let searchers: Vec<_> = patterns
+            .iter()
+            .map(|p| PatternSearcher::new(p.clone()))
+            .collect();
+        let ws_tokenizer = WSTokenizer { ascii: false };
+
+        let config = SplitterConfig::<WSTokenizer> {
+            data,
+            searchers: &searchers,
+            max_len: None,
+            tokenizer: Some(&ws_tokenizer),
+            patterns_len,
+        };
+        let splitter = Splitter::new(&config, span, 0, span, None, None, None);
+        let tree = splitter.split();
+
+        //println!("{}", tree.to_string(data, true));
+        assert_eq!(from_utf8(data).unwrap(), tree.reconstruct(data));
+        match term_tree(tree.clone(), data) {
+            Ok(tree) => println!("{}", tree),
+            Err(err) => println!("error: {}", err),
+        }
+
+        let lite_results = tree.get_results_lite(None, data);
+        println!("Number of Lite Results: {:?}", lite_results.len());
+        for res in lite_results.iter() {
+            println!("{:?}", res.split_string);
+            println!("{:?}", res.tokens.len());
+        }
+    }
+
+    #[test]
     fn tree_visual_max_len_test() {
         let _data_raw = "\n\n\
         Returns and inequality, is so strong.\n\
@@ -597,12 +707,6 @@ mod tests {
 
     #[test]
     fn with_encoding_superlinear_test() {
-        let data_path = "tests/test_data/superlinear.txt";
-        //let data_path = "tests/error_data/2017_elections_in_India.txt";
-
-        let binding = fs::read_to_string(data_path).unwrap();
-        let data = binding.as_bytes();
-
         let _data = "\n\n\
         \n\n\
         \n\n\
@@ -629,7 +733,7 @@ mod tests {
         Outperform everyone else.\n"
             .as_bytes();
 
-        //let data = _data;
+        let data = _data;
 
         let patterns = vec![
             vec!["\n\n".to_string()],
@@ -652,10 +756,11 @@ mod tests {
             tokenizer: init_tokenizer(None, None, false).unwrap(),
         };
 
-        let max_len = Some(128);
+        let max_len = Some(16);
         let config = SplitterConfig::<HFTokenizer> {
             data,
             searchers: &searchers,
+            //max_len:None,
             max_len,
             //tokenizer: Some(&ws_tokenizer),
             tokenizer: Some(&hf_tokenizer),
@@ -664,50 +769,26 @@ mod tests {
         let splitter = Splitter::new(&config, span, 0, span, Some(true), None, None);
         let tree = splitter.split();
 
-        //write to file
-        //let mut file = fs::File::create("output/test_data/superlinear_tree.txt").unwrap();
-        //if file doesn't exist, create it
-
-        //file.write_all(tree.to_string(data, true).as_bytes()).unwrap();
-        //println!("{}", tree.to_string(data, true));
-
-        //assert_eq!(leaf_level_opt, Some(1));
-
-        let split_results = tree.get_results_lite(max_len, data);
-
-        println!("Number of Split Results: {:?}", split_results.len());
-        //assert_eq!(split_results.len(), splits.len());
-
-        let total_len: usize = split_results.iter().map(|res| res.split_string.len()).sum();
-        assert_eq!(data.len(), total_len);
-
-        let ws_tokenizer = WSTokenizer { ascii: false };
-        for res in split_results.iter() {
-            let split_str = res.split_string.as_str();
-            println!("{:?}", split_str);
-
-            let ws_encoded = ws_tokenizer.encode(split_str).unwrap();
-            println!("WS Tokens len: {:?}", ws_encoded.len());
-
-            let hf_encoded = hf_tokenizer.encode(split_str).unwrap();
-            println!("HF Tokens len: {:?}", hf_encoded.len());
-
-            assert_eq!(
-                hf_encoded.len(),
-                res.tokens.len(),
-                "Failed Split: {:?}\n Tokens-Result: {:?}\n Tokens Spans: {:?}",
-                split_str,
-                res,
-                span
-            );
+        match term_tree(tree.clone(), data) {
+            Ok(tree) => println!("{}", tree),
+            Err(err) => println!("error: {}", err),
         }
 
-        let total_tokens: usize = split_results.iter().map(|res| res.tokens.len()).sum();
-        println!("Total Tokens: {:?}", total_tokens);
-        assert_eq!(
-            total_tokens,
-            hf_tokenizer.encode(from_utf8(data).unwrap()).unwrap().len()
-        );
+        let leaves = tree.all_leaves_split(max_len);
+
+        println!("Number of Leaves: {:?}", leaves.len());
+        for leaf in leaves.iter() {
+            println!("{:#?}", leaf);
+            println!("{:?}", from_utf8(&data[leaf.data_span.unwrap().range()]).unwrap());
+        }
+
+        let leaf_tokens: usize = leaves.iter().map(|leaf| leaf.no_tokens()).sum();
+        println!("Total Tokens: {:?}", leaf_tokens);
+        let encoding = hf_tokenizer
+            .tokenizer
+            .encode(from_utf8(data).unwrap(), false)
+            .unwrap();
+        assert_eq!(leaf_tokens, encoding.len());
     }
 
     #[test]
@@ -806,7 +887,7 @@ mod tests {
     #[test]
     fn pattern_split_superlinear_print() {
         let data_path = "tests/test_data/superlinear.txt";
-        //let data_path = "data/train/List_of_Game_of_Thrones_characters.txt";
+        let data_path = "data/train/List_of_Game_of_Thrones_characters.txt";
 
         let patterns = vec![
             vec!["\n\n".to_string()],
@@ -818,8 +899,7 @@ mod tests {
             .map(|p| PatternSearcher::new(p.clone()))
             .collect();
 
-        let (data_len, splits) =
-            split_file(data_path, patterns, &searchers, 512, true, true, false);
+        let (data_len, splits) = split_file(data_path, patterns, &searchers, 512, true, true, true);
 
         let total_len: usize = splits.iter().map(|res| res.split_string.len()).sum();
         assert_eq!(data_len, total_len);
