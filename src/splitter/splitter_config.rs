@@ -34,13 +34,13 @@ impl<'a, T: Tokenize + Sync> SplitterConfig<'a, T> {
     //FIXME: need to be moved to Splitter
     pub fn get_split_encoding(
         &self,
-        split_span: &Span,
+        split_data_span: &Span,
         split_encoding: &Option<Arc<SplitEncoding>>,
         split_tokens_span: &Option<Span>,
     ) -> (Option<Arc<SplitEncoding>>, Option<Span>) {
         let new_split_encoding = split_encoding
             .clone()
-            .or_else(|| self.encode_search_split(&split_span));
+            .or_else(|| self.encode_search_split(&split_data_span));
 
         let new_split_tokens_span = split_tokens_span.clone().or_else(|| {
             new_split_encoding

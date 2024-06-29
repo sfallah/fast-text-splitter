@@ -10,11 +10,11 @@ use crate::splitter::split_encoding::SplitEncoding;
 use crate::splitter::split_node::SplitNode;
 use crate::splitter::splitter_config::SplitterConfig;
 
-mod split_encoding;
 pub mod split_node;
 pub mod splitter_config;
 mod tests;
 mod utils;
+mod split_encoding;
 
 pub struct Splitter<'a, T: Tokenize + Sync> {
     config: &'a SplitterConfig<'a, T>,
