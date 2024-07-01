@@ -10,7 +10,7 @@ use crate::common::chunk_encoding_splits;
 use crate::common::split::Split;
 use crate::common::tokens_result_lite::TokensResultLite;
 use crate::splitter::split_encoding::SplitEncoding;
-use crate::splitter::split_node::utils::{merge_split_result_lite, SplitResultLite};
+use crate::splitter::split_node::utils::{add_splits, merge_splits, SplitResultLite};
 
 #[derive(Clone)]
 pub struct SplitNode {
@@ -19,6 +19,7 @@ pub struct SplitNode {
     pub children: Vec<SplitNode>,
     pub split_encoding: Option<Arc<SplitEncoding>>,
     pub split_tokens_span: Option<Span>,
+    pattern_node: bool
 }
 
 impl AsRef<SplitNode> for SplitNode {
@@ -69,6 +70,7 @@ impl SplitNode {
         children: Vec<SplitNode>,
         split_encoding: Option<Arc<SplitEncoding>>,
         split_tokens_span: Option<Span>,
+        pattern_node: bool,
     ) -> Self {
         SplitNode {
             split_data_span,
@@ -76,6 +78,7 @@ impl SplitNode {
             children,
             split_encoding,
             split_tokens_span,
+            pattern_node,
         }
     }
     pub fn to_string_with_indent(&self, data: &[u8], indent: usize, reconstruct: bool) -> String {
@@ -134,11 +137,11 @@ impl SplitNode {
     }
 
     pub fn get_results_lite(&self, max_len: Option<usize>, data: &[u8]) -> Vec<SplitResultLite> {
-        let merge_level = self.leaf_level().unwrap();
-        let split_res = self.merge_enc_lite_result(merge_level, max_len);
-        if let Some(max_len) = max_len {
-            merge_split_result_lite(&split_res, max_len, data)
-        } else {
+        //let merge_level = self.leaf_level().unwrap();
+        let split_res = self.merge_enc_lite_result(0, max_len);
+        //if let Some(max_len) = max_len {
+            //merge_split_result_lite(&split_res, max_len, data)
+        //} else {
             split_res
                 .iter()
                 .map(|res| SplitResultLite {
@@ -146,6 +149,25 @@ impl SplitNode {
                     split_string: from_utf8(&data[res.data_span.range()]).unwrap().to_string(),
                 })
                 .collect()
+        //}
+    }
+
+    pub fn get_node_results(&self, max_tokens: Option<usize>) -> Vec<Split> {
+        if self.children.is_empty() {
+            vec![Split {
+                pattern_id: self.pattern_id,
+                tokens_span: self.split_tokens_span.clone(),
+                data_span: Some(self.split_data_span.clone()),
+                pattern_node: self.pattern_node,
+            }]
+        } else {
+            let children_splits: Vec<Vec<Split>> = self.children.iter().map(|child| child.get_node_results(max_tokens)).collect();
+            let merged_splits: Vec<Split> = Vec::new();
+            children_splits.into_iter().fold(merged_splits, |mut acc, child_splits| {
+                let merged_child_splits = merge_splits(&child_splits, max_tokens.unwrap());
+                add_splits(&mut acc, &merged_child_splits, max_tokens.unwrap());
+                acc
+            })
         }
     }
 
@@ -206,8 +228,10 @@ impl SplitNode {
     pub fn all_leaves_split(&self, max_len: Option<usize>) -> Vec<Split> {
         if self.children.is_empty() {
             vec![Split {
+                pattern_id: self.pattern_id,
                 tokens_span: self.split_tokens_span.clone(),
                 data_span: Some(self.split_data_span.clone()),
+                pattern_node: self.pattern_node,
             }]
         } else {
             let child_splits = self

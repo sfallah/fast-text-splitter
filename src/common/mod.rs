@@ -57,8 +57,10 @@ pub fn chunk_encoding_splits(spans: &Vec<Split>, max_len: usize) -> Vec<Split> {
                 None
             };
             cur_split = Split {
+                pattern_id: 0,
                 tokens_span,
                 data_span,
+                pattern_node: false,
             };
             cur_tokens_len += leaf.no_tokens();
         }
@@ -72,6 +74,7 @@ pub fn chunk_encoding_splits(spans: &Vec<Split>, max_len: usize) -> Vec<Split> {
 
 #[inline]
 pub fn span(start: usize, end: usize) -> Span {
+    assert!(start <= end, "Start: {} must be less than or equal to End: {}", start, end);
     Span { start, end }
 }
 

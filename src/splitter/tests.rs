@@ -572,10 +572,12 @@ mod tests {
             tokenizer: init_tokenizer(None, None, false).unwrap(),
         };
 
+        let max_len = Some(4);
+
         let config = SplitterConfig::<HFTokenizer> {
             data,
             searchers: &searchers,
-            max_len: None,
+            max_len,
             tokenizer: Some(&hf_tokenizer),
             patterns_len,
         };
@@ -589,12 +591,12 @@ mod tests {
             Err(err) => println!("error: {}", err),
         }
 
-        let lite_results = tree.get_results_lite(None, data);
-        println!("Number of Lite Results: {:?}", lite_results.len());
-        for res in lite_results.iter() {
-            println!("{:?}", res.split_string);
-            println!("{:?}", res.split_string.len());
-            println!("{:?}", res.tokens.len());
+        let splits = tree.get_node_results(max_len);
+        println!("Number of Splits: {:?}", splits.len());
+        for split in splits.iter() {
+            let split_str = from_utf8(&data[split.data_span.unwrap().range()]).unwrap();
+            println!("{:?}", split_str);
+            println!("{:?}", split.no_tokens());
         }
     }
 
@@ -803,7 +805,7 @@ mod tests {
             .collect();
 
 
-        let max_len: Option<usize> = Some(16);
+        let max_len: Option<usize> = Some(56);
         let config = SplitterConfig::<NoneTokenizer> {
             data,
             searchers: &searchers,
@@ -821,12 +823,13 @@ mod tests {
             Err(err) => println!("error: {}", err),
         }
 
-        let lite_results = tree.get_results_lite(None, data);
+        let lite_results = tree.get_node_results(max_len);
         println!("Number of Lite Results: {:?}", lite_results.len());
         for res in lite_results.iter() {
-            println!("{:?}", res.split_string);
-            println!("{:?}", res.split_string.len());
-            println!("{:?}", res.tokens.len());
+            let split_data_span = res.data_span.unwrap();
+            let split_string = from_utf8(&data[split_data_span.start..split_data_span.end]).unwrap();
+            println!("{:?}", split_string);
+            println!("{:?}", split_string.len());
         }
     }
 
@@ -1054,6 +1057,54 @@ mod tests {
     }
 
     #[test]
+    fn nw_tree_splits_superlinear() {
+        let data_path = "tests/test_data/superlinear.txt";
+        let binding = fs::read_to_string(data_path).unwrap();
+        let data = binding.as_bytes();
+        let patterns = vec![
+            vec!["\n\n".to_string()],
+            vec!["\n".to_string()],
+            vec![".".to_string(), "!".to_string(), "?".to_string()],
+        ];
+
+        let patterns_len = patterns.len();
+
+        let span = Span {
+            start: 0,
+            end: data.len(),
+        };
+        let searchers: Vec<_> = patterns
+            .iter()
+            .map(|p| PatternSearcher::new(p.clone()))
+            .collect();
+
+        let max_len = Some(256);
+        let config = SplitterConfig::<NoneTokenizer> {
+            data,
+            searchers: &searchers,
+            max_len,
+            tokenizer: None,
+            patterns_len,
+        };
+        let splitter = Splitter::new(&config, span, 0, span, None, None, None);
+        let tree = splitter.split();
+
+        let splits = tree.get_node_results(max_len);
+        println!("Number of Splits: {:?}", splits.len());
+        for res in splits.iter() {
+            let split_data_span = res.data_span.unwrap();
+            let split_string = from_utf8(&data[split_data_span.start..split_data_span.end]).unwrap();
+            println!("{:?}", split_string);
+            println!("{:?}", split_string.len());
+            //println!("pattern: {:?}", res.pattern_id);
+        }
+
+        let total_len: usize = splits.iter().map(|res| res.no_tokens()).sum();
+        assert_eq!(data.len(), total_len);
+
+    }
+
+    #[test]
     fn fast_hf_tree_splits() {
         let data_path = "tests/test_data/superlinear.txt";
         let binding = fs::read_to_string(data_path).unwrap();
@@ -1123,8 +1174,8 @@ mod tests {
 
     #[test]
     fn pattern_split_superlinear_print() {
-        //let data_path = "tests/test_data/superlinear.txt";
-        let data_path = "data/train/List_of_Game_of_Thrones_characters.txt";
+        let data_path = "tests/test_data/superlinear.txt";
+        //let data_path = "data/train/List_of_Game_of_Thrones_characters.txt";
 
         let patterns = vec![
             vec!["\n\n".to_string()],
