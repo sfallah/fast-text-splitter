@@ -16,6 +16,9 @@ mod tests {
     use crate::splitter::{Splitter, SplitterConfig};
     use crate::ws_tokenizer::WSTokenizer;
 
+    use std::collections::VecDeque;
+
+
     fn list_text_files(dir: &str) -> io::Result<Vec<String>> {
         let mut files = Vec::new();
 
@@ -536,6 +539,103 @@ mod tests {
     }
 
     #[test]
+    fn splits_parse() {
+
+        // Initialize data
+        let _data_raw = "\n\n\
+        Returns and inequality is so strong, that it yields.\n\n\
+        Another heuristic for.\n\
+        \n\n\
+        Outperform everyone else.\n\n"
+            .as_bytes();
+
+        let data = _data_raw;
+
+        let span = Span {
+            start: 0,
+            end: data.len(),
+        };
+
+        // Initialize patterns and searcher 
+        let patterns = vec![
+            vec!["\n\n".to_string()],
+            vec!["\n".to_string()],
+            vec![".".to_string(), ",".to_string()],
+        ];
+        let patterns_len = patterns.len();
+
+        let searchers: Vec<_> = patterns
+            .iter()
+            .map(|p| PatternSearcher::new(p.clone()))
+            .collect();
+        let config = SplitterConfig::<NoneTokenizer> {
+            data,
+            searchers: &searchers,
+            max_len: None,
+            tokenizer: None,
+            patterns_len,
+        };
+
+
+        struct Node {
+            info: String,
+            parent: Option<usize>,
+            children: Option<Vec<usize>>,
+            lvl: usize,
+            start_idx: usize,
+            end_idx: usize,
+            pattern: usize,
+        }
+
+        // Initalize 
+        let mut initial_node = Node {
+            info: "Root".to_string(),
+            parent: None,
+            children: None,
+            lvl: 0,
+            start_idx: 0,
+            end_idx: data.len(),
+            pattern: 0,
+        };
+
+        let mut queue = VecDeque::new();
+        queue.push_back(initial_node);
+    
+        while let Some(node) = queue.pop_front() {
+            println!("{:?}", node.info);
+            let mut children = Vec::new();
+            for (pattern_id, searcher) in searchers.iter().enumerate() {
+                let search_res = searcher.find_pattern(data, Span {
+                    start: node.start_idx,
+                    end: node.end_idx,
+                });
+                if search_res.matched {
+                    for split in search_res.splits.iter() {
+                        let child = Node {
+                            info: "Child".to_string(),
+                            parent: Some(0),
+                            children: None,
+                            lvl: node.lvl + 1,
+                            start_idx: split.start_idx,
+                            end_idx: split.end_idx,
+                            pattern: pattern_id,
+                        };
+                        children.push(child);
+                    }
+                }
+            }
+            if !children.is_empty() {
+                node.children = Some(children.iter().map(|c| c.lvl).collect());
+                queue.extend(children);
+            }
+        
+        }
+        //println!("{}", tree.to_string(data, true));
+        //assert_eq!(from_utf8(data).unwrap(), tree.reconstruct(data));
+    }
+
+
+    #[test]
     fn max_len_splits_simple() {
         let _data_raw = "\n\n\
         Returns and inequality is so strong, that it yields.\n\n\
@@ -574,6 +674,7 @@ mod tests {
         println!("{}", tree.to_string(data, true));
         assert_eq!(from_utf8(data).unwrap(), tree.reconstruct(data));
     }
+
 
     #[test]
     fn with_encoding_superlinear_test() {
