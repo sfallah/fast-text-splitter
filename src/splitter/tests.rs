@@ -543,10 +543,11 @@ mod tests {
 
         // Initialize data
         let _data_raw = "\n\n\
-        Returns and inequality is so strong, that it yields.\n\n\
-        Another heuristic for.\n\
-        \n\n\
-        Outperform everyone else.\n\n"
+            Returns and inequality. is so strong.\n\
+            That it yields.\n\n\
+            Another heuristic for.\n\n\
+            \n\
+            Outperform everyone else.\n\n"
             .as_bytes();
 
         let data = _data_raw;
@@ -568,14 +569,6 @@ mod tests {
             .iter()
             .map(|p| PatternSearcher::new(p.clone()))
             .collect();
-        let config = SplitterConfig::<NoneTokenizer> {
-            data,
-            searchers: &searchers,
-            max_len: None,
-            tokenizer: None,
-            patterns_len,
-        };
-
 
         struct Node {
             info: String,
@@ -585,9 +578,23 @@ mod tests {
             split_data_span: Span,
             pattern_found: usize,
         }
+        // implement debug
+        impl std::fmt::Debug for Node {
+            fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+                f.debug_struct("Node")
+                    .field("info", &self.info)
+                    .field("parent", &self.parent)
+                    .field("children", &self.children)
+                    .field("lvl", &self.lvl)
+                    .field("split_data_span", &self.split_data_span)
+                    .field("pattern_found", &self.pattern_found)
+                    .finish()
+            }
+        }
 
-        // Initalize node and queue
-        let mut initial_node = Node {
+
+        // Initalize node and queue => TODO: solve the issue with parallelism (reference to parent node)
+        let initial_node = Node {
             info: "Root".to_string(),
             parent: None,
             children: None,
@@ -596,27 +603,82 @@ mod tests {
             pattern_found: 0,
         };
         let mut queue = VecDeque::new();
-        queue.push_back(initial_node);
+        let mut nodes = Vec::new();
+        queue.push_back(0);
+        nodes.push(initial_node);
         
         // Iterate over the queue 
-        while let Some(node) = queue.pop_front() {
-            println!("{:?}", node.info);
+        while let Some(node_idx) = queue.pop_front() {
+            let lvl = nodes[node_idx].lvl;
+            let span = nodes[node_idx].split_data_span.clone();
 
-            // Initialize children
-            //let mut children = Vec::new();
+            // Initialize children 
+            let mut children: Vec<usize> = Vec::new();
 
-            // Get the pattern at the current level
-            let pattern = &patterns[node.lvl];
-            let searcher = &searchers[node.lvl];
+            // Get the pattern at the current lvel
+            let searcher = &searchers[lvl];
 
-            // Find all matches in current data span
-            let search_res = searcher.find_pattern(data, node.split_data_span.clone());
+            // Find all matches in current data span and iterate over them
+            let search_res = searcher.find_pattern(data, span);
             println!("{:?}", search_res);
-        
-        
+            println!("{:?}", search_res.splits.len());
+
+            let mut start_next_idx = span.start;
+            for split in search_res.splits.iter() {
+                let end_next_idx = split.span.end;
+                
+                let child = Node {
+                    info: "Child".to_string(),
+                    parent: Some(node_idx),
+                    children: None,
+                    lvl: lvl + 1,
+                    split_data_span: Span {
+                        start: start_next_idx,
+                        end: end_next_idx,
+                    },
+                    pattern_found: split.pattern_len * split.stride,
+                };
+                // Add the child to the nodes_vec, oriignal node 
+                children.push(nodes.len());
+                nodes.push(child);
+
+                // Push if child has span_len > 0 and lvl is less than patterns_len
+                if end_next_idx - start_next_idx > 0 && (lvl + 1) < patterns_len {
+                    queue.push_back(nodes.len() - 1);
+                }
+
+                start_next_idx = end_next_idx + split.pattern_len * split.stride;
+            }
+            
+            // assign children to the current node dereference for that
+            nodes[node_idx].children = Some(children);
+
+            println!("Queue: {:?}", queue);
         }
-        //println!("{}", tree.to_string(data, true));
-        //assert_eq!(from_utf8(data).unwrap(), tree.reconstruct(data));
+        
+        // Print the tree belonging to the first node
+        // Print the tree belonging to the first node
+        println!("{:?}", nodes[0]);
+
+        if let Some(children) = nodes[0].children.as_ref() {
+            for &child_idx in children {
+                println!("---{:?}", nodes[child_idx]);
+
+                // Print grandchildren if they exist
+                if let Some(grandchildren) = nodes[child_idx].children.as_ref() {
+                    for &grandchild_idx in grandchildren {
+                        println!("------{:?}", nodes[grandchild_idx]);
+
+                        // Print great-grandchildren if they exist
+                        if let Some(greatgrandchildren) = nodes[grandchild_idx].children.as_ref() {
+                            for &greatgrandchild_idx in greatgrandchildren {
+                                println!("---------{:?}", nodes[greatgrandchild_idx]);
+                            }
+                        }
+                    }
+                }
+            }
+        }
     }
 
 
