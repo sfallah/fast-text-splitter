@@ -582,52 +582,37 @@ mod tests {
             parent: Option<usize>,
             children: Option<Vec<usize>>,
             lvl: usize,
-            start_idx: usize,
-            end_idx: usize,
-            pattern: usize,
+            split_data_span: Span,
+            pattern_found: usize,
         }
 
-        // Initalize 
+        // Initalize node and queue
         let mut initial_node = Node {
             info: "Root".to_string(),
             parent: None,
             children: None,
             lvl: 0,
-            start_idx: 0,
-            end_idx: data.len(),
-            pattern: 0,
+            split_data_span: span,
+            pattern_found: 0,
         };
-
         let mut queue = VecDeque::new();
         queue.push_back(initial_node);
-    
+        
+        // Iterate over the queue 
         while let Some(node) = queue.pop_front() {
             println!("{:?}", node.info);
-            let mut children = Vec::new();
-            for (pattern_id, searcher) in searchers.iter().enumerate() {
-                let search_res = searcher.find_pattern(data, Span {
-                    start: node.start_idx,
-                    end: node.end_idx,
-                });
-                if search_res.matched {
-                    for split in search_res.splits.iter() {
-                        let child = Node {
-                            info: "Child".to_string(),
-                            parent: Some(0),
-                            children: None,
-                            lvl: node.lvl + 1,
-                            start_idx: split.start_idx,
-                            end_idx: split.end_idx,
-                            pattern: pattern_id,
-                        };
-                        children.push(child);
-                    }
-                }
-            }
-            if !children.is_empty() {
-                node.children = Some(children.iter().map(|c| c.lvl).collect());
-                queue.extend(children);
-            }
+
+            // Initialize children
+            //let mut children = Vec::new();
+
+            // Get the pattern at the current level
+            let pattern = &patterns[node.lvl];
+            let searcher = &searchers[node.lvl];
+
+            // Find all matches in current data span
+            let search_res = searcher.find_pattern(data, node.split_data_span.clone());
+            println!("{:?}", search_res);
+        
         
         }
         //println!("{}", tree.to_string(data, true));
