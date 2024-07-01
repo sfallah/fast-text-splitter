@@ -19,3 +19,19 @@ impl std::fmt::Debug for Node {
             .finish()
     }
 }
+
+pub fn print_tree(nodes: &Vec<Node>, start_index: usize, indent: usize) {
+    if start_index >= nodes.len() {
+        return;
+    }
+    
+    // Print the current node with the appropriate indentation
+    println!("{:indent$}{:?}", "", nodes[start_index], indent = indent);
+
+    // Check if the current node has children and recursively print them
+    if let Some(children) = nodes[start_index].children.as_ref() {
+        for &child_idx in children {
+            print_tree(nodes, child_idx, indent + 3); // Increase indentation for children
+        }
+    }
+}
