@@ -16,6 +16,7 @@ pub mod split_node;
 pub mod splitter_config;
 mod tests;
 mod utils;
+mod node_visualization;
 
 pub struct Splitter<'a, T: Tokenize + Sync> {
     config: &'a SplitterConfig<'a, T>,

@@ -1,5 +1,6 @@
 use aho_corasick::Span;
 
+#[derive(Clone)]
 pub struct Node {
     pub parent: Option<usize>,
     pub children: Option<Vec<usize>>,
@@ -17,6 +18,13 @@ impl std::fmt::Debug for Node {
             .field("split_data_span", &self.split_data_span)
             .field("pattern_found", &self.pattern_found)
             .finish()
+    }
+}
+
+// implement as_ref
+impl AsRef<Node> for Node {
+    fn as_ref(&self) -> &Node {
+        self
     }
 }
 

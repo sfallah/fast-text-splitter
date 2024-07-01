@@ -18,6 +18,7 @@ mod tests {
 
     // Added in branch
     use std::collections::VecDeque;
+    use crate::splitter::node_visualization::term_tree;
     use crate::splitter::parse_tree::{Node, print_tree};
 
     fn list_text_files(dir: &str) -> io::Result<Vec<String>> {
@@ -635,6 +636,12 @@ mod tests {
 
         //___________________ Print out results_______________________
         print_tree(&nodes, 0, 0);
+
+        match term_tree(nodes.get(0).unwrap(), &nodes) {
+            Ok(tree) => println!("{}", tree),
+            Err(err) => println!("error: {}", err),
+        }
+
     }
 
     #[test]
