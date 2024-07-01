@@ -18,7 +18,7 @@ mod tests {
 
     // Added in branch
     use std::collections::VecDeque;
-    use crate::splitter::parse_tree::Node;
+    use crate::splitter::parse_tree::{Node, print_tree};
 
     fn list_text_files(dir: &str) -> io::Result<Vec<String>> {
         let mut files = Vec::new();
@@ -632,31 +632,112 @@ mod tests {
 
             println!("Queue: {:?}", queue);
         }
-        
 
         //___________________ Print out results_______________________
-        // Print the tree belonging to the first node
-        println!("{:?}", nodes[0]);
-        if let Some(children) = nodes[0].children.as_ref() {
-            for &child_idx in children {
-                println!("---{:?}", nodes[child_idx]);
-
-                // Print grandchildren if they exist
-                if let Some(grandchildren) = nodes[child_idx].children.as_ref() {
-                    for &grandchild_idx in grandchildren {
-                        println!("------{:?}", nodes[grandchild_idx]);
-
-                        // Print great-grandchildren if they exist
-                        if let Some(greatgrandchildren) = nodes[grandchild_idx].children.as_ref() {
-                            for &greatgrandchild_idx in greatgrandchildren {
-                                println!("---------{:?}", nodes[greatgrandchild_idx]);
-                            }
-                        }
-                    }
-                }
-            }
-        }
+        print_tree(&nodes, 0, 0);
     }
+
+    #[test]
+    fn splits_parse_max_len() {
+
+        let max_len = 30;
+
+        // Initialize data
+        let _data_raw = "\n\n\
+            Returns and inequality. is so strong.\n\
+            That it yields.\n\n\
+            Another heuristic for.\n\n\
+            \n\
+            Outperform everyone else.\n\n"
+            .as_bytes();
+
+        let data = _data_raw;
+
+        let span = Span {
+            start: 0,
+            end: data.len(),
+        };
+
+        // Initialize patterns and searcher 
+        let patterns = vec![
+            vec!["\n\n".to_string()],
+            vec!["\n".to_string()],
+            vec![".".to_string(), ",".to_string()],
+        ];
+        let patterns_len = patterns.len();
+
+        let searchers: Vec<_> = patterns
+            .iter()
+            .map(|p| PatternSearcher::new(p.clone()))
+            .collect();
+
+
+        // Initalize node and queue => TODO: solve the issue with parallelism (reference to parent node)
+        let initial_node = Node {
+            parent: None,
+            children: None,
+            lvl: 0,
+            split_data_span: span,
+            pattern_found: 0,
+        };
+        let mut queue = VecDeque::new();
+        let mut nodes = Vec::new();
+        queue.push_back(0);
+        nodes.push(initial_node);
+        
+        // Iterate over the queue 
+        while let Some(node_idx) = queue.pop_front() {
+            let lvl = nodes[node_idx].lvl;
+            let span = nodes[node_idx].split_data_span.clone();
+
+            // Initialize children 
+            let mut children: Vec<usize> = Vec::new();
+
+            // Get the pattern at the current lvel
+            let searcher = &searchers[lvl];
+
+            // Find all matches in current data span and iterate over them
+            let search_res = searcher.find_pattern(data, span);
+            println!("{:?}", search_res);
+            println!("{:?}", search_res.splits.len());
+
+            let mut start_next_idx = span.start;
+            for split in search_res.splits.iter() {
+                let end_next_idx = split.span.end;
+                
+                let child = Node {
+                    parent: Some(node_idx),
+                    children: None,
+                    lvl: lvl + 1,
+                    split_data_span: Span {
+                        start: start_next_idx,
+                        end: end_next_idx,
+                    },
+                    pattern_found: split.pattern_len * split.stride,
+                };
+                // Add the child to the nodes_vec, oriignal node 
+                children.push(nodes.len());
+                nodes.push(child);
+
+                // Push if child has span_len > max_len and lvl is less than patterns_len
+                if (end_next_idx - start_next_idx > max_len) && (lvl + 1) < patterns_len {
+                    queue.push_back(nodes.len() - 1);
+                }
+
+                start_next_idx = end_next_idx + split.pattern_len * split.stride;
+            }
+            
+            // assign children to the current node dereference for that
+            nodes[node_idx].children = Some(children);
+
+            println!("Queue: {:?}", queue);
+        }
+
+        //___________________ Print out results_______________________
+        print_tree(&nodes, 0, 0);
+    }
+
+
 
 
     #[test]
