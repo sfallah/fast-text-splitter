@@ -16,8 +16,9 @@ mod tests {
     use crate::splitter::{Splitter, SplitterConfig};
     use crate::ws_tokenizer::WSTokenizer;
 
+    // Added in branch
     use std::collections::VecDeque;
-
+    use crate::splitter::parse_tree::Node;
 
     fn list_text_files(dir: &str) -> io::Result<Vec<String>> {
         let mut files = Vec::new();
@@ -570,29 +571,6 @@ mod tests {
             .map(|p| PatternSearcher::new(p.clone()))
             .collect();
 
-        struct Node {
-            info: String,
-            parent: Option<usize>,
-            children: Option<Vec<usize>>,
-            lvl: usize,
-            split_data_span: Span,
-            pattern_found: usize,
-        }
-        // implement debug
-        impl std::fmt::Debug for Node {
-            fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-                f.debug_struct("Node")
-                    .field("info", &self.info)
-                    .field("parent", &self.parent)
-                    .field("children", &self.children)
-                    .field("lvl", &self.lvl)
-                    .field("split_data_span", &self.split_data_span)
-                    .field("pattern_found", &self.pattern_found)
-                    .finish()
-            }
-        }
-
-
         // Initalize node and queue => TODO: solve the issue with parallelism (reference to parent node)
         let initial_node = Node {
             info: "Root".to_string(),
@@ -656,10 +634,10 @@ mod tests {
             println!("Queue: {:?}", queue);
         }
         
-        // Print the tree belonging to the first node
+
+        //___________________ Print out results_______________________
         // Print the tree belonging to the first node
         println!("{:?}", nodes[0]);
-
         if let Some(children) = nodes[0].children.as_ref() {
             for &child_idx in children {
                 println!("---{:?}", nodes[child_idx]);
