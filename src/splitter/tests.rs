@@ -571,9 +571,9 @@ mod tests {
             .map(|p| PatternSearcher::new(p.clone()))
             .collect();
 
+
         // Initalize node and queue => TODO: solve the issue with parallelism (reference to parent node)
         let initial_node = Node {
-            info: "Root".to_string(),
             parent: None,
             children: None,
             lvl: 0,
@@ -606,7 +606,6 @@ mod tests {
                 let end_next_idx = split.span.end;
                 
                 let child = Node {
-                    info: "Child".to_string(),
                     parent: Some(node_idx),
                     children: None,
                     lvl: lvl + 1,
