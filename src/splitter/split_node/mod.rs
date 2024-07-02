@@ -19,7 +19,7 @@ pub struct SplitNode {
     pub children: Vec<SplitNode>,
     pub split_encoding: Option<Arc<SplitEncoding>>,
     pub split_tokens_span: Option<Span>,
-    pattern_node: bool
+    pattern_node: bool,
 }
 
 impl AsRef<SplitNode> for SplitNode {
@@ -140,15 +140,15 @@ impl SplitNode {
         //let merge_level = self.leaf_level().unwrap();
         let split_res = self.merge_enc_lite_result(0, max_len);
         //if let Some(max_len) = max_len {
-            //merge_split_result_lite(&split_res, max_len, data)
+        //merge_split_result_lite(&split_res, max_len, data)
         //} else {
-            split_res
-                .iter()
-                .map(|res| SplitResultLite {
-                    tokens: res.ids.map_or_else(Vec::new, |ids| ids.to_vec()),
-                    split_string: from_utf8(&data[res.data_span.range()]).unwrap().to_string(),
-                })
-                .collect()
+        split_res
+            .iter()
+            .map(|res| SplitResultLite {
+                tokens: res.ids.map_or_else(Vec::new, |ids| ids.to_vec()),
+                split_string: from_utf8(&data[res.data_span.range()]).unwrap().to_string(),
+            })
+            .collect()
         //}
     }
 
@@ -161,13 +161,20 @@ impl SplitNode {
                 pattern_node: self.pattern_node,
             }]
         } else {
-            let children_splits: Vec<Vec<Split>> = self.children.iter().map(|child| child.get_node_results(max_tokens)).collect();
-            let merged_splits: Vec<Split> = Vec::new();
-            children_splits.into_iter().fold(merged_splits, |mut acc, child_splits| {
-                let merged_child_splits = merge_splits(&child_splits, max_tokens.unwrap());
-                add_splits(&mut acc, &merged_child_splits, max_tokens.unwrap());
-                acc
-            })
+            let children_all_leaves: bool = self.children.iter().all(|child| child.children.is_empty());
+            if children_all_leaves {
+                let children_splits: Vec<Split> = self.children.iter().map(|child| child.get_node_results(max_tokens)).flatten().collect();
+                let merged_splits = merge_splits(&children_splits, max_tokens.unwrap());
+                merged_splits
+            } else {
+                let children_splits: Vec<Vec<Split>> = self.children.iter().map(|child| child.get_node_results(max_tokens)).collect();
+                let merged_splits: Vec<Split> = Vec::new();
+                children_splits.into_iter().fold(merged_splits, |mut acc, child_splits| {
+                    let merged_child_splits = merge_splits(&child_splits, max_tokens.unwrap());
+                    add_splits(&mut acc, &merged_child_splits, max_tokens.unwrap());
+                    acc
+                })
+            }
         }
     }
 

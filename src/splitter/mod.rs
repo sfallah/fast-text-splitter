@@ -96,7 +96,7 @@ impl<'a, T: Tokenize + Sync> Splitter<'a, T> {
                 Vec::new(),
                 new_split_encoding.clone(),
                 new_split_tokens_span.clone(),
-                false
+                false,
             );
         }
 
@@ -216,7 +216,7 @@ impl<'a, T: Tokenize + Sync> Splitter<'a, T> {
                 children,
                 self.split_encoding.clone(),
                 self.split_tokens_span,
-                false
+                false,
             )
         } else {
             let (new_split_encoding, new_split_tokens_span) = self.config.get_split_encoding(
@@ -230,12 +230,12 @@ impl<'a, T: Tokenize + Sync> Splitter<'a, T> {
                 let child = new_splitter.split();
 
                 SplitNode::new(
-                    self.pattern_id +1,
+                    self.pattern_id,
                     self.search_data_span,
                     vec![child],
                     new_split_encoding,
                     new_split_tokens_span,
-                    false
+                    false,
                 )
             } else {
                 if self.lt_max_len(
@@ -244,28 +244,28 @@ impl<'a, T: Tokenize + Sync> Splitter<'a, T> {
                     new_split_tokens_span.clone(),
                 ) {
                     SplitNode::new(
-                        self.pattern_id + 1,
+                        self.pattern_id,
                         self.split_data_span,
                         Vec::new(),
                         new_split_encoding,
                         new_split_tokens_span,
-                        false
+                        false,
                     )
                 } else {
                     let children = self.chunk_splits(
-                        self.pattern_id + 2,
+                        self.pattern_id + 1,
                         self.split_data_span,
                         new_split_encoding.clone(),
                         new_split_tokens_span.clone(),
                     );
 
                     SplitNode::new(
-                        self.pattern_id + 1,
+                        self.pattern_id,
                         self.split_data_span,
                         children,
                         new_split_encoding,
                         new_split_tokens_span,
-                        false
+                        false,
                     )
                 }
             }
@@ -313,7 +313,7 @@ impl<'a, T: Tokenize + Sync> Splitter<'a, T> {
                         Vec::new(),
                         self.split_encoding.clone(),
                         tokens_span,
-                        false
+                        false,
                     );
                     vec![child_node]
                 } else {
@@ -330,7 +330,7 @@ impl<'a, T: Tokenize + Sync> Splitter<'a, T> {
                         children,
                         self.split_encoding.clone(),
                         tokens_span,
-                        false
+                        false,
                     );
                     vec![child_node]
                 }
@@ -371,7 +371,7 @@ impl<'a, T: Tokenize + Sync> Splitter<'a, T> {
                 //FIXME: this will give an issue with encoding
                 self.split_encoding.clone(),
                 pattern_tokens_span,
-                true
+                true,
             );
             child_nodes.push(child_node);
         }
@@ -414,7 +414,7 @@ impl<'a, T: Tokenize + Sync> Splitter<'a, T> {
                         Vec::new(),
                         split_encoding.clone(),
                         Some(tokens_span.clone()),
-                        false
+                        false,
                     )
                 })
                 .collect()

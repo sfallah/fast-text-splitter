@@ -2,7 +2,7 @@
 mod tests {
     use std::str::from_utf8;
     use std::{fs, io};
-
+    use std::io::Write;
     use aho_corasick::Span;
     use rand::seq::SliceRandom;
     use rand::thread_rng;
@@ -433,7 +433,7 @@ mod tests {
 
         println!("Number of Split Results: {:?}", split_results.len());
         let total_len: usize = split_results.iter().map(|res| res.split_string.len()).sum();
-        assert_eq!(data.len(), total_len);
+        assert_eq!(data.len(),total_len);
 
         for res in split_results.iter() {
             println!("{:?}", res.split_string);
@@ -572,7 +572,7 @@ mod tests {
             tokenizer: init_tokenizer(None, None, false).unwrap(),
         };
 
-        let max_len = Some(4);
+        let max_len = Some(8);
 
         let config = SplitterConfig::<HFTokenizer> {
             data,
@@ -1059,6 +1059,7 @@ mod tests {
     #[test]
     fn nw_tree_splits_superlinear() {
         let data_path = "tests/test_data/superlinear.txt";
+        //let data_path = "tests/error_data/superlinear_loose_pattern.txt";
         let binding = fs::read_to_string(data_path).unwrap();
         let data = binding.as_bytes();
         let patterns = vec![
@@ -1101,6 +1102,30 @@ mod tests {
 
         let total_len: usize = splits.iter().map(|res| res.no_tokens()).sum();
         assert_eq!(data.len(), total_len);
+
+        match term_tree(tree, data) {
+            Ok(tree) => {
+                let mut file = fs::File::create("output/debug/tree_len_mx_256_superlinear.txt").unwrap();
+                file.write_all(format!("{}", tree).as_bytes()).unwrap();
+                //println!("{}", tree)
+            },
+            Err(err) => println!("error: {}", err),
+        }
+
+        //let result_concated: String = splits.iter().map(|split| from_utf8(&data[split.data_span.unwrap().range()]).unwrap()).collect();
+        // write to file output/debug/superlinear_splits_concated.txt
+        // add date and time to file name
+        //let mut file = fs::File::create("output/debug/superlinear_splits_concated.txt").unwrap();
+        //if file doesn't exist, create it
+        //file.write_all(result_concated.as_bytes()).unwrap();
+
+        /*
+        match term_tree(tree, data) {
+            Ok(tree) => println!("{}", tree),
+            Err(err) => println!("error: {}", err),
+        }
+
+         */
 
     }
 

@@ -97,20 +97,34 @@ pub fn merge_splits(
 
 
     for (i, split_res) in splits.iter().enumerate().skip(1) {
-        if cur_no_tokens + split_res.no_tokens() <= max_tokens {
-            cur_splits.push(split_res.clone());
-            cur_no_tokens += split_res.no_tokens();
+        let mut cur_split = split_res.clone();
+
+        if split_res.pattern_node {
+            if cur_splits.len() >= 1 {
+                let last_merge_split = cur_splits.pop().unwrap();
+                if last_merge_split.no_tokens() + cur_split.no_tokens() <= max_tokens {
+                    cur_no_tokens -= last_merge_split.no_tokens();
+                    cur_split = into_one_split(&vec![last_merge_split, cur_split.clone()]);
+                } else {
+                    cur_splits.push(last_merge_split);
+                }
+            }
+        }
+
+        if cur_no_tokens + cur_split.no_tokens() <= max_tokens {
+            cur_splits.push(cur_split.clone());
+            cur_no_tokens += cur_split.no_tokens();
         } else {
-            merged_splits.push(into_one_split(&cur_splits));
-            cur_splits = vec![split_res.clone()];
-            cur_no_tokens = split_res.no_tokens();
+            merged_splits.push(cur_splits.clone());
+            cur_splits = vec![cur_split.clone()];
+            cur_no_tokens = cur_split.no_tokens();
         }
 
         if i == splits.len() - 1 {
-            merged_splits.push(into_one_split(&cur_splits));
+            merged_splits.push(cur_splits.clone());
         }
     }
-    merged_splits
+    merged_splits.iter().map(|splits| into_one_split(splits)).collect()
 }
 
 pub fn into_one_split(splits: &Vec<Split>) -> Split {
