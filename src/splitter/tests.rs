@@ -591,7 +591,7 @@ mod tests {
             Err(err) => println!("error: {}", err),
         }
 
-        let splits = tree.get_node_results(max_len);
+        let splits = tree.get_node_splits(max_len);
         println!("Number of Splits: {:?}", splits.len());
         for split in splits.iter() {
             let split_str = from_utf8(&data[split.data_span.unwrap().range()]).unwrap();
@@ -823,7 +823,7 @@ mod tests {
             Err(err) => println!("error: {}", err),
         }
 
-        let lite_results = tree.get_node_results(max_len);
+        let lite_results = tree.get_node_splits(max_len);
         println!("Number of Lite Results: {:?}", lite_results.len());
         for res in lite_results.iter() {
             let split_data_span = res.data_span.unwrap();
@@ -1090,7 +1090,7 @@ mod tests {
         let splitter = Splitter::new(&config, span, 0, span, None, None, None);
         let tree = splitter.split();
 
-        let splits = tree.get_node_results(max_len);
+        let splits = tree.get_node_splits(max_len);
         println!("Number of Splits: {:?}", splits.len());
         for res in splits.iter() {
             let split_data_span = res.data_span.unwrap();

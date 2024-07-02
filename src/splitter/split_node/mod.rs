@@ -152,7 +152,7 @@ impl SplitNode {
         //}
     }
 
-    pub fn get_node_results(&self, max_tokens: Option<usize>) -> Vec<Split> {
+    pub fn get_node_splits(&self, max_tokens: Option<usize>) -> Vec<Split> {
         if self.children.is_empty() {
             vec![Split {
                 pattern_id: self.pattern_id,
@@ -163,11 +163,11 @@ impl SplitNode {
         } else {
             let children_all_leaves: bool = self.children.iter().all(|child| child.children.is_empty());
             if children_all_leaves {
-                let children_splits: Vec<Split> = self.children.iter().map(|child| child.get_node_results(max_tokens)).flatten().collect();
+                let children_splits: Vec<Split> = self.children.iter().map(|child| child.get_node_splits(max_tokens)).flatten().collect();
                 let merged_splits = merge_splits(&children_splits, max_tokens.unwrap());
                 merged_splits
             } else {
-                let children_splits: Vec<Vec<Split>> = self.children.iter().map(|child| child.get_node_results(max_tokens)).collect();
+                let children_splits: Vec<Vec<Split>> = self.children.iter().map(|child| child.get_node_splits(max_tokens)).collect();
                 let merged_splits: Vec<Split> = Vec::new();
                 children_splits.into_iter().fold(merged_splits, |mut acc, child_splits| {
                     let merged_child_splits = merge_splits(&child_splits, max_tokens.unwrap());
