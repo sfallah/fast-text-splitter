@@ -1,9 +1,19 @@
 use std::fmt;
+use smallvec::SmallVec;
 
-#[derive(Clone)]
+//#[derive(Clone)]
 pub struct TokensResultLite {
-    pub ids: Option<Vec<u32>>,
-    pub offsets: Option<Vec<(usize, usize)>>,
+    pub ids: Option<SmallVec<[u32;4]>>,
+    pub offsets: Option<SmallVec<[(usize, usize);4]>>,
+}
+
+impl Clone for TokensResultLite {
+    fn clone(&self) -> Self {
+        TokensResultLite {
+            ids: self.ids.clone(),
+            offsets: self.offsets.clone(),
+        }
+    }
 }
 
 impl Default for TokensResultLite {

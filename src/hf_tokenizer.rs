@@ -1,4 +1,5 @@
 use aho_corasick::Span;
+use smallvec::ToSmallVec;
 use crate::common::tokens_result_lite::TokensResultLite;
 use tokenizers::normalizers::BertNormalizer;
 use tokenizers::{Encoding, PaddingStrategy, Tokenizer, TruncationStrategy};
@@ -87,8 +88,8 @@ impl HFEncoding {
                 let offsets = &self.hf_encoding.get_offsets()[tokens_span.range()];
 
                 TokensResultLite {
-                    ids: Some(ids.to_vec()),
-                    offsets: Some(offsets.to_vec()),
+                    ids: Some(ids.to_smallvec()),
+                    offsets: Some(offsets.to_smallvec()),
                 }
             };
             result

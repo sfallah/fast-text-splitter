@@ -1,4 +1,5 @@
 use aho_corasick::Span;
+use smallvec::ToSmallVec;
 use crate::common::tokens_result_lite::TokensResultLite;
 use crate::encodings::{EncodingType, Tokenize};
 use unicode_categories::UnicodeCategories;
@@ -87,7 +88,7 @@ impl WSEncoding {
 
             TokensResultLite {
                 ids: None,
-                offsets: Some(offsets.to_vec()),
+                offsets: Some(offsets.to_smallvec()),
             }
         };
         result
