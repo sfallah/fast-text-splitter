@@ -1041,6 +1041,47 @@ mod tests {
     }
 
     #[test]
+    fn nw_tree_hf_splits_superlinear() {
+        //let data_path = "tests/test_data/superlinear.txt";
+        //let data_path = "tests/error_data/superlinear_loose_pattern.txt";
+        let data_path = "tests/test_data/United_States.txt";
+        let binding = fs::read_to_string(data_path).unwrap();
+        let data = binding.as_bytes();
+        let patterns = vec![
+            vec!["\n\n".to_string()],
+            vec!["\n".to_string()],
+            vec![".".to_string(), "!".to_string(), "?".to_string()],
+        ];
+
+        let splitter_config = SplitterLiteConfig::new_hf(patterns, 512, 0, true, None);
+        let splits = splitter_config.hf_splits(data);
+
+        println!("{:?}", splits.len());
+
+        for split in splits.iter() {
+            println!("{:?}", split.split_string);
+            println!("{:?}", split.tokens.len());
+        }
+
+        let total_len: usize = splits.iter().map(|c| c.split_string.len()).sum();
+        assert_eq!(data.len(), total_len);
+
+        let hf_tokenizer = init_tokenizer(None, Some(usize::MAX), false).unwrap();
+        let hf_encoding = hf_tokenizer.encode(from_utf8(data).unwrap(), false).unwrap();
+        let total_tokens: usize = splits.iter().map(|res| res.tokens.len()).sum();
+        assert_eq!(hf_encoding.len(), total_tokens);
+
+        for split in splits.iter() {
+            let hf_encoded = hf_tokenizer.encode(split.split_string.clone(), false).unwrap();
+            assert_eq!(hf_encoded.len(), split.tokens.len());
+            assert!(!split.tokens.is_empty());
+            assert!(split.tokens.len() <= 512);
+            assert_eq!(hf_encoded.get_ids(), split.tokens);
+        }
+
+    }
+
+    #[test]
     fn fast_hf_tree_splits() {
         let data_path = "tests/test_data/superlinear.txt";
         let binding = fs::read_to_string(data_path).unwrap();
