@@ -1,34 +1,37 @@
-use aho_corasick::Span;
 use std::fmt;
 
-pub struct TokensResultLite<'a> {
-    pub data_span: Span,
-    pub ids: Option<&'a [u32]>,
-    pub offsets: Option<&'a [(usize, usize)]>,
+#[derive(Clone)]
+pub struct TokensResultLite {
+    pub ids: Option<Vec<u32>>,
+    pub offsets: Option<Vec<(usize, usize)>>,
 }
 
-impl TokensResultLite<'_> {
-    pub fn no_tokens(&self) -> usize {
-        if let Some(ids) = self.ids {
-            ids.len()
-        } else {
-            if let Some(offsets) = self.offsets {
-                offsets.len()
-            } else {
-                self.data_span.len()
-            }
+impl Default for TokensResultLite {
+    fn default() -> Self {
+        TokensResultLite {
+            ids: None,
+            offsets: None,
         }
     }
 }
 
-impl fmt::Debug for TokensResultLite<'_> {
+impl TokensResultLite {
+    pub fn no_tokens(&self) -> usize {
+        if let Some(ids) = self.ids.as_ref() {
+            ids.len()
+        } else {
+            0
+        }
+    }
+}
+
+impl fmt::Debug for TokensResultLite {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
             f,
-            "TokensResultLite {{ data_span: {:?}, ids: {:?}, offsets: {:?} }}",
-            self.data_span,
+            "TokensResultLite {{ ids: {:?}, offsets: {:?} }}",
             self.no_tokens(),
-            self.offsets.map_or_else(|| 0, |offsets| offsets.len())
+            self.offsets.as_ref().map_or_else(|| 0, |offsets| offsets.len())
         )
     }
 }

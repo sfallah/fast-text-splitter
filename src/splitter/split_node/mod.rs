@@ -6,9 +6,7 @@ use std::sync::Arc;
 
 use aho_corasick::Span;
 
-use crate::common::chunk_encoding_splits;
 use crate::common::split::Split;
-use crate::common::tokens_result_lite::TokensResultLite;
 use crate::splitter::split_encoding::SplitEncoding;
 use crate::splitter::split_node::utils::{add_splits, merge_splits, SplitResultLite};
 
@@ -137,121 +135,54 @@ impl SplitNode {
     }
 
     pub fn get_results_lite(&self, max_len: Option<usize>, data: &[u8]) -> Vec<SplitResultLite> {
-        //let merge_level = self.leaf_level().unwrap();
-        let split_res = self.merge_enc_lite_result(0, max_len);
-        //if let Some(max_len) = max_len {
-        //merge_split_result_lite(&split_res, max_len, data)
-        //} else {
-        split_res
+        let splits = self.get_node_splits(max_len);
+        splits
             .iter()
-            .map(|res| SplitResultLite {
-                tokens: res.ids.map_or_else(Vec::new, |ids| ids.to_vec()),
-                split_string: from_utf8(&data[res.data_span.range()]).unwrap().to_string(),
-            })
-            .collect()
-        //}
+            .map(|split| {
+                let mut tokens = Vec::new();
+                if let Some(tokens_results) = split.tokens_results.as_ref() {
+                    tokens_results.iter().for_each(|tokens_result| {
+                        if tokens_result.ids.is_some() {
+                            tokens.extend(tokens_result.ids.as_ref().unwrap().clone());
+                        }
+                    });
+                }
+                SplitResultLite {
+                    tokens,
+                    split_string: from_utf8(&data[split.data_span.unwrap().range()]).unwrap().to_string(),
+                }
+            }).collect()
     }
 
     pub fn get_node_splits(&self, max_tokens: Option<usize>) -> Vec<Split> {
         if self.children.is_empty() {
-            vec![Split {
-                pattern_id: self.pattern_id,
-                tokens_span: self.split_tokens_span.clone(),
-                data_span: Some(self.split_data_span.clone()),
-                pattern_node: self.pattern_node,
-            }]
+            let tokens_no = self.split_tokens_span.map(|span| span.len());
+            let tokens_results = self.split_encoding.as_ref().map(|encoding| vec![encoding.encoding.to_lite_results(self.split_tokens_span.unwrap())]);
+            vec![
+                Split {
+                    pattern_id: self.pattern_id,
+                    tokens_no,
+                    data_span: Some(self.split_data_span.clone()),
+                    pattern_node: self.pattern_node,
+                    tokens_results,
+                }]
         } else {
-            let children_all_leaves: bool = self.children.iter().all(|child| child.children.is_empty());
-            if children_all_leaves {
-                let children_splits: Vec<Split> = self.children.iter().map(|child| child.get_node_splits(max_tokens)).flatten().collect();
-                let merged_splits = merge_splits(&children_splits, max_tokens.unwrap());
-                merged_splits
+            if let Some(max_len) = max_tokens {
+                let children_all_leaves: bool = self.children.iter().all(|child| child.children.is_empty());
+                if children_all_leaves {
+                    let children_splits: Vec<Split> = self.children.iter().map(|child| child.get_node_splits(max_tokens)).flatten().collect();
+                    merge_splits(&children_splits, max_len)
+                } else {
+                    let children_splits: Vec<Vec<Split>> = self.children.iter().map(|child| child.get_node_splits(max_tokens)).collect();
+                    let merged_splits: Vec<Split> = Vec::new();
+                    children_splits.into_iter().fold(merged_splits, |mut acc, child_splits| {
+                        let merged_child_splits = merge_splits(&child_splits, max_len);
+                        add_splits(&mut acc, &merged_child_splits.clone(), max_len);
+                        acc
+                    })
+                }
             } else {
-                let children_splits: Vec<Vec<Split>> = self.children.iter().map(|child| child.get_node_splits(max_tokens)).collect();
-                let merged_splits: Vec<Split> = Vec::new();
-                children_splits.into_iter().fold(merged_splits, |mut acc, child_splits| {
-                    let merged_child_splits = merge_splits(&child_splits, max_tokens.unwrap());
-                    add_splits(&mut acc, &merged_child_splits, max_tokens.unwrap());
-                    acc
-                })
-            }
-        }
-    }
-
-    pub fn merge_enc_lite_result(
-        &self,
-        merge_level: usize,
-        max_len: Option<usize>,
-    ) -> Vec<TokensResultLite> {
-        let max_len_check = max_len.is_some();
-        let max_len_value = max_len.unwrap_or(0);
-
-        let mut split_results = Vec::new();
-        if self.pattern_id >= merge_level {
-            let splits = if max_len_check {
-                let leaves = self.all_leaves_split(max_len);
-                chunk_encoding_splits(&leaves, max_len_value)
-            } else {
-                self.all_leaves_split(max_len)
-            };
-
-            if let Some(encoding) = &self.split_encoding {
-                let split_res = encoding.encoding.to_lite_results(&splits);
-                split_results.extend(split_res);
-            } else {
-                //FIXME: This is a temporary fix, we need to adapt it to work with like for the HFEncoding nad WSEncoding
-                let split_res = splits.iter().map(|split| TokensResultLite {
-                    data_span: split.data_span.clone().unwrap(),
-                    ids: None,
-                    offsets: None,
-                });
-                split_results.extend(split_res);
-            }
-        } else {
-            for child in &self.children {
-                split_results.extend(child.merge_enc_lite_result(merge_level, max_len));
-            }
-        }
-        split_results
-    }
-
-    //FIXME: This needs more testing, and see if it can be combined with merge_splits
-    pub fn leaf_level(&self) -> Option<usize> {
-        if self.children.is_empty() {
-            Some(self.pattern_id)
-        } else {
-            let leaf_found = self.children.iter().find(|child| child.children.is_empty());
-            if let Some(leaf) = leaf_found {
-                Some(leaf.pattern_id)
-            } else {
-                self.children
-                    .iter()
-                    .find(|child| child.leaf_level().is_some())
-                    .map(|leaf| leaf.pattern_id)
-            }
-        }
-    }
-
-    pub fn all_leaves_split(&self, max_len: Option<usize>) -> Vec<Split> {
-        if self.children.is_empty() {
-            vec![Split {
-                pattern_id: self.pattern_id,
-                tokens_span: self.split_tokens_span.clone(),
-                data_span: Some(self.split_data_span.clone()),
-                pattern_node: self.pattern_node,
-            }]
-        } else {
-            let child_splits = self
-                .children
-                .iter()
-                .flat_map(|child| child.all_leaves_split(max_len))
-                .collect();
-            // handling of special case where split max_len is smaller than
-            // get_result max_len (when we merge the results back again)
-            if let Some(max_len) = max_len {
-                chunk_encoding_splits(&child_splits, max_len)
-            } else {
-                child_splits
+                self.children.iter().map(|child| child.get_node_splits(max_tokens)).flatten().collect()
             }
         }
     }

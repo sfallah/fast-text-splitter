@@ -1,18 +1,21 @@
 use aho_corasick::Span;
 use std::fmt;
+use crate::common::tokens_result_lite::TokensResultLite;
 
-#[derive(Clone, Copy, Eq, PartialEq)]
+
+#[derive(Clone)]
 pub struct Split {
     pub pattern_id: usize,
-    pub tokens_span: Option<Span>,
+    pub tokens_no: Option<usize>,
     pub data_span: Option<Span>,
     pub pattern_node: bool,
+    pub tokens_results: Option<Vec<TokensResultLite>>,
+
 }
 
 impl fmt::Debug for Split {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("Split")
-            .field("tokens_span", &format!("{:?}", &self.tokens_span))
             .field("no_tokens", &format!("{:?}", &self.no_tokens()))
             .field("data_span", &format!("{:?}", &self.data_span))
             .field(
@@ -25,8 +28,8 @@ impl fmt::Debug for Split {
 
 impl Split {
     pub fn no_tokens(&self) -> usize {
-        if let Some(tokens_span) = self.tokens_span {
-            tokens_span.len()
+        if let Some(tokens_no) = self.tokens_no {
+            tokens_no
         } else {
             // fall back to data span
             // this should only be the case for none-tokenizer (data len split)

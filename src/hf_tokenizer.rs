@@ -1,4 +1,4 @@
-use crate::common::split::Split;
+use aho_corasick::Span;
 use crate::common::tokens_result_lite::TokensResultLite;
 use tokenizers::normalizers::BertNormalizer;
 use tokenizers::{Encoding, PaddingStrategy, Tokenizer, TruncationStrategy};
@@ -80,25 +80,18 @@ impl HFEncoding {
         self.hf_encoding.is_empty()
     }
 
-    pub fn divide_encoding_lite(&self, splits: &[Split]) -> Vec<TokensResultLite> {
-        let mut results = Vec::new();
-        for split in splits {
+    pub fn divide_encoding_lite(&self, tokens_span: Span) -> TokensResultLite {
             let result = {
-                let tk_start = split.tokens_span.map_or(0, |span| span.start);
-                let tk_end = split.tokens_span.map_or(0, |span| span.end);
 
-                let ids = &self.hf_encoding.get_ids()[tk_start..tk_end];
-                let offsets = &self.hf_encoding.get_offsets()[tk_start..tk_end];
+                let ids = &self.hf_encoding.get_ids()[tokens_span.range()];
+                let offsets = &self.hf_encoding.get_offsets()[tokens_span.range()];
 
                 TokensResultLite {
-                    data_span: split.data_span.unwrap().clone(),
-                    ids: Some(ids),
-                    offsets: Some(offsets),
+                    ids: Some(ids.to_vec()),
+                    offsets: Some(offsets.to_vec()),
                 }
             };
-            results.push(result);
-        }
-        results
+            result
     }
 }
 

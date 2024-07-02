@@ -1,59 +1,10 @@
 use crate::common::span;
-use crate::common::tokens_result_lite::TokensResultLite;
-use std::str::from_utf8;
 use crate::common::split::Split;
 
 #[derive(Debug)]
 pub struct SplitResultLite {
     pub tokens: Vec<u32>,
     pub split_string: String,
-}
-
-pub fn merge_split_result_lite(
-    split_ruslts: &Vec<TokensResultLite>,
-    max_tokens: usize,
-    data: &[u8],
-) -> Vec<SplitResultLite> {
-    if split_ruslts.len() <= 1 {
-        return split_ruslts
-            .iter()
-            .map(|res| SplitResultLite {
-                tokens: res.ids.map_or_else(Vec::new, |ids| ids.to_vec()),
-                split_string: from_utf8(&data[res.data_span.range()]).unwrap().to_string(),
-            })
-            .collect();
-    }
-
-    let mut merged_results = Vec::new();
-    let first_sp_res = split_ruslts.first().unwrap();
-
-    let mut cur_data_span = first_sp_res.data_span.clone();
-    let mut cur_tokens = first_sp_res.ids.map_or_else(Vec::new, |ids| ids.to_vec());
-    let mut cur_no_tokens = first_sp_res.no_tokens();
-
-    for (i, split_res) in split_ruslts.iter().enumerate().skip(1) {
-        if cur_no_tokens + split_res.no_tokens() <= max_tokens {
-            cur_tokens.extend(split_res.ids.map_or_else(Vec::new, |ids| ids.to_vec()));
-            cur_data_span = span(cur_data_span.start, split_res.data_span.end);
-            cur_no_tokens += split_res.no_tokens();
-        } else {
-            merged_results.push(SplitResultLite {
-                tokens: cur_tokens.clone(),
-                split_string: from_utf8(&data[cur_data_span.range()]).unwrap().to_string(),
-            });
-            cur_tokens = split_res.ids.map_or_else(Vec::new, |ids| ids.to_vec());
-            cur_data_span = split_res.data_span.clone();
-            cur_no_tokens = split_res.no_tokens();
-        }
-
-        if i == split_ruslts.len() - 1 {
-            merged_results.push(SplitResultLite {
-                tokens: cur_tokens.clone(),
-                split_string: from_utf8(&data[cur_data_span.range()]).unwrap().to_string(),
-            });
-        }
-    }
-    merged_results
 }
 
 pub fn add_splits(merged: &mut Vec<Split>, to_merge: &Vec<Split>, max_tokens: usize) {
@@ -78,7 +29,7 @@ pub fn add_splits(merged: &mut Vec<Split>, to_merge: &Vec<Split>, max_tokens: us
             merged.extend(to_merge.clone());
         }
     } else {
-        merged.extend(to_merge)
+        merged.extend(to_merge.clone())
     }
 }
 
@@ -133,8 +84,9 @@ pub fn into_one_split(splits: &Vec<Split>) -> Split {
     } else {
         let first_split = splits.first().unwrap();
         let last_split = splits.last().unwrap();
-        let tokens_span = if let Some(tokens_span) = first_split.tokens_span {
-            Some(span(tokens_span.start, last_split.tokens_span.unwrap().end))
+        let tokens_no = if let Some(_) = first_split.tokens_no {
+            let sum_tokens_no: usize = splits.iter().map(|split| split.tokens_no.unwrap()).sum();
+            Some(sum_tokens_no)
         } else {
             None
         };
@@ -143,11 +95,23 @@ pub fn into_one_split(splits: &Vec<Split>) -> Split {
         } else {
             None
         };
+        let tokens_results = if let Some(_) = first_split.tokens_results.as_ref() {
+            let mut res = Vec::new();
+            for split in splits {
+                if let Some(tokens_results) = &split.tokens_results {
+                    res.extend(tokens_results.clone());
+                }
+            }
+            Some(res)
+        } else {
+            None
+        };
         Split {
             pattern_id: first_split.pattern_id,
-            tokens_span,
+            tokens_no,
             data_span,
             pattern_node: last_split.pattern_node,
+            tokens_results,
         }
     }
 }

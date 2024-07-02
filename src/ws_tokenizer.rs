@@ -1,4 +1,4 @@
-use crate::common::split::Split;
+use aho_corasick::Span;
 use crate::common::tokens_result_lite::TokensResultLite;
 use crate::encodings::{EncodingType, Tokenize};
 use unicode_categories::UnicodeCategories;
@@ -81,23 +81,16 @@ impl WSTokenizer {
 }
 
 impl WSEncoding {
-    pub fn divide_encoding_lite(&self, splits: &[Split]) -> Vec<TokensResultLite> {
-        let mut results = Vec::new();
-        for split in splits {
-            let result = {
-                let tk_start = split.tokens_span.map_or(0, |span| span.start);
-                let tk_end = split.tokens_span.map_or(0, |span| span.end);
-                let offsets = &self.offsets[tk_start..tk_end];
+    pub fn divide_encoding_lite(&self, tokens_span: Span) -> TokensResultLite {
+        let result = {
+            let offsets = &self.offsets[tokens_span.range()];
 
-                TokensResultLite {
-                    data_span: split.data_span.unwrap().clone(),
-                    ids: None,
-                    offsets: Some(offsets),
-                }
-            };
-            results.push(result);
-        }
-        results
+            TokensResultLite {
+                ids: None,
+                offsets: Some(offsets.to_vec()),
+            }
+        };
+        result
     }
 }
 
