@@ -33,10 +33,7 @@ pub fn add_splits(merged: &mut Vec<Split>, to_merge: &Vec<Split>, max_tokens: us
     }
 }
 
-pub fn merge_splits(
-    splits: &Vec<Split>,
-    max_tokens: usize,
-) -> Vec<Split> {
+pub fn merge_splits(splits: &Vec<Split>, max_tokens: usize) -> Vec<Split> {
     if splits.len() <= 1 {
         return splits.to_vec();
     }
@@ -45,7 +42,6 @@ pub fn merge_splits(
     let first_split = splits.first().unwrap();
     let mut cur_splits = vec![first_split.clone()];
     let mut cur_no_tokens = splits.first().unwrap().no_tokens();
-
 
     for (i, split_res) in splits.iter().enumerate().skip(1) {
         let mut cur_split = split_res.clone();
@@ -75,7 +71,10 @@ pub fn merge_splits(
             merged_splits.push(cur_splits.clone());
         }
     }
-    merged_splits.iter().map(|splits| into_one_split(splits)).collect()
+    merged_splits
+        .iter()
+        .map(|splits| into_one_split(splits))
+        .collect()
 }
 
 pub fn into_one_split(splits: &Vec<Split>) -> Split {

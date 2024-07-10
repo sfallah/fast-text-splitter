@@ -1,12 +1,12 @@
 #[cfg(test)]
 mod tests {
-    use std::str::from_utf8;
-    use std::{fs, io};
-    use std::io::Write;
     use aho_corasick::Span;
     use rand::seq::SliceRandom;
     use rand::thread_rng;
     use rayon::prelude::*;
+    use std::io::Write;
+    use std::str::from_utf8;
+    use std::{fs, io};
 
     use crate::config::SplitterLiteConfig;
     use crate::encodings::{NoneTokenizer, Tokenize};
@@ -433,7 +433,7 @@ mod tests {
 
         println!("Number of Split Results: {:?}", split_results.len());
         let total_len: usize = split_results.iter().map(|res| res.split_string.len()).sum();
-        assert_eq!(data.len(),total_len);
+        assert_eq!(data.len(), total_len);
 
         for res in split_results.iter() {
             println!("{:?}", res.split_string);
@@ -787,7 +787,6 @@ mod tests {
         Outperform everyone else.\n"
             .as_bytes();
 
-
         let patterns = vec![
             vec!["\n\n".to_string()],
             vec!["\n".to_string()],
@@ -803,7 +802,6 @@ mod tests {
             .iter()
             .map(|p| PatternSearcher::new(p.clone()))
             .collect();
-
 
         let max_len: Option<usize> = Some(56);
         let config = SplitterConfig::<NoneTokenizer> {
@@ -827,7 +825,8 @@ mod tests {
         println!("Number of Lite Results: {:?}", lite_results.len());
         for res in lite_results.iter() {
             let split_data_span = res.data_span.unwrap();
-            let split_string = from_utf8(&data[split_data_span.start..split_data_span.end]).unwrap();
+            let split_string =
+                from_utf8(&data[split_data_span.start..split_data_span.end]).unwrap();
             println!("{:?}", split_string);
             println!("{:?}", split_string.len());
         }
@@ -844,7 +843,6 @@ mod tests {
         A few big winners. \n\
         Outperform everyone else.\n"
             .as_bytes();
-
 
         let patterns = vec![
             vec!["\n\n".to_string()],
@@ -1005,7 +1003,8 @@ mod tests {
         println!("Number of Splits: {:?}", splits.len());
         for res in splits.iter() {
             let split_data_span = res.data_span.unwrap();
-            let split_string = from_utf8(&data[split_data_span.start..split_data_span.end]).unwrap();
+            let split_string =
+                from_utf8(&data[split_data_span.start..split_data_span.end]).unwrap();
             println!("{:?}", split_string);
             println!("{:?}", split_string.len());
             //println!("pattern: {:?}", res.pattern_id);
@@ -1016,10 +1015,11 @@ mod tests {
 
         match term_tree(tree, data) {
             Ok(tree) => {
-                let mut file = fs::File::create("output/debug/tree_len_mx_256_superlinear.txt").unwrap();
+                let mut file =
+                    fs::File::create("output/debug/tree_len_mx_256_superlinear.txt").unwrap();
                 file.write_all(format!("{}", tree).as_bytes()).unwrap();
                 //println!("{}", tree)
-            },
+            }
             Err(err) => println!("error: {}", err),
         }
 
@@ -1037,7 +1037,6 @@ mod tests {
         }
 
          */
-
     }
 
     #[test]
@@ -1067,18 +1066,21 @@ mod tests {
         assert_eq!(data.len(), total_len);
 
         let hf_tokenizer = init_tokenizer(None, Some(usize::MAX), false).unwrap();
-        let hf_encoding = hf_tokenizer.encode(from_utf8(data).unwrap(), false).unwrap();
+        let hf_encoding = hf_tokenizer
+            .encode(from_utf8(data).unwrap(), false)
+            .unwrap();
         let total_tokens: usize = splits.iter().map(|res| res.tokens.len()).sum();
         assert_eq!(hf_encoding.len(), total_tokens);
 
         for split in splits.iter() {
-            let hf_encoded = hf_tokenizer.encode(split.split_string.clone(), false).unwrap();
+            let hf_encoded = hf_tokenizer
+                .encode(split.split_string.clone(), false)
+                .unwrap();
             assert_eq!(hf_encoded.len(), split.tokens.len());
             assert!(!split.tokens.is_empty());
             assert!(split.tokens.len() <= 512);
             assert_eq!(hf_encoded.get_ids(), split.tokens);
         }
-
     }
 
     #[test]
@@ -1200,6 +1202,45 @@ mod tests {
             println!("File: {} \n Total Length: {}", file, total_len);
             println!("Number of Splits: {:?}", results.len());
         });
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_domcura() -> tokenizers::Result<()> {
+        let data_path = "tests/test_data/vertragsgrundlagen_efh_wohn.txt";
+        let binding = fs::read(data_path).unwrap();
+        let data = binding.as_slice();
+
+        let patterns = vec![
+            vec!["\n\n".to_string()],
+            vec!["\n".to_string()],
+            vec![".".to_string(), "!".to_string(), "?".to_string()],
+        ];
+
+        let splitter_config = SplitterLiteConfig::new_hf(
+            patterns,
+            512,
+            0,
+            true,
+            Some("sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2".to_string()),
+        );
+        let splits = splitter_config.hf_splits(data);
+        println!("{:?}", splits.len());
+        let total_len: usize = splits.iter().map(|res| res.split_string.len()).sum();
+        assert_eq!(data.len(), total_len);
+
+        for res in splits.iter() {
+            println!("{:?}", res.split_string);
+            println!("{:?}", res.tokens.len());
+        }
+
+        // write splits to output/debug/vertragsgrundlagen_efh_wohn_splits.txt
+        let mut file =
+            fs::File::create("output/debug/vertragsgrundlagen_efh_wohn_splits.txt").unwrap();
+        for res in splits.iter() {
+            file.write_all(res.split_string.as_bytes()).unwrap();
+        }
 
         Ok(())
     }

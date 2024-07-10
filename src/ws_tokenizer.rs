@@ -1,6 +1,6 @@
-use aho_corasick::Span;
 use crate::common::tokens_result_lite::TokensResultLite;
 use crate::encodings::{EncodingType, Tokenize};
+use aho_corasick::Span;
 use unicode_categories::UnicodeCategories;
 
 pub struct WSTokenizer {

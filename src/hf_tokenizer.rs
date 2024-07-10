@@ -1,5 +1,5 @@
-use aho_corasick::Span;
 use crate::common::tokens_result_lite::TokensResultLite;
+use aho_corasick::Span;
 use tokenizers::normalizers::BertNormalizer;
 use tokenizers::{Encoding, PaddingStrategy, Tokenizer, TruncationStrategy};
 use tokenizers::{PaddingParams, TruncationParams};
@@ -81,17 +81,16 @@ impl HFEncoding {
     }
 
     pub fn divide_encoding_lite(&self, tokens_span: Span) -> TokensResultLite {
-            let result = {
+        let result = {
+            let ids = &self.hf_encoding.get_ids()[tokens_span.range()];
+            let offsets = &self.hf_encoding.get_offsets()[tokens_span.range()];
 
-                let ids = &self.hf_encoding.get_ids()[tokens_span.range()];
-                let offsets = &self.hf_encoding.get_offsets()[tokens_span.range()];
-
-                TokensResultLite {
-                    ids: Some(ids.to_vec()),
-                    offsets: Some(offsets.to_vec()),
-                }
-            };
-            result
+            TokensResultLite {
+                ids: Some(ids.to_vec()),
+                offsets: Some(offsets.to_vec()),
+            }
+        };
+        result
     }
 }
 

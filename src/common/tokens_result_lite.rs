@@ -31,7 +31,9 @@ impl fmt::Debug for TokensResultLite {
             f,
             "TokensResultLite {{ ids: {:?}, offsets: {:?} }}",
             self.no_tokens(),
-            self.offsets.as_ref().map_or_else(|| 0, |offsets| offsets.len())
+            self.offsets
+                .as_ref()
+                .map_or_else(|| 0, |offsets| offsets.len())
         )
     }
 }
