@@ -80,8 +80,8 @@ impl HFEncoding {
         self.hf_encoding.is_empty()
     }
 
-    pub fn divide_encoding_lite(&self, tokens_span: Span) -> TokensResultLite {
-        let result = {
+    pub fn divide_encoding_lite(&self, tokens_span: Option<Span>) -> TokensResultLite {
+        if let Some(tokens_span) = tokens_span {
             let ids = &self.hf_encoding.get_ids()[tokens_span.range()];
             let offsets = &self.hf_encoding.get_offsets()[tokens_span.range()];
 
@@ -89,8 +89,12 @@ impl HFEncoding {
                 ids: Some(ids.to_vec()),
                 offsets: Some(offsets.to_vec()),
             }
-        };
-        result
+        } else {
+            TokensResultLite {
+                ids: None,
+                offsets: None,
+            }
+        }
     }
 }
 

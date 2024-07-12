@@ -1,5 +1,5 @@
 use aho_corasick::Span;
-
+use crate::common::split::Split;
 use crate::encodings::{NoneTokenizer, Tokenize};
 
 use crate::hf_tokenizer::{init_tokenizer, HFTokenizer};
@@ -146,5 +146,22 @@ impl SplitterLiteConfig<HFTokenizer> {
         let splitter = Splitter::new(&config, span, 0, span, self.parallel, None, None);
         let tree = splitter.split();
         tree.get_results_lite(self.max_tokens, data)
+    }
+
+    pub fn hf_splits_raw(&self, data: &[u8]) -> Vec<Split> {
+        let span = Span {
+            start: 0,
+            end: data.len(),
+        };
+        let config = crate::splitter::splitter_config::SplitterConfig::<HFTokenizer> {
+            data,
+            searchers: &self.searchers,
+            max_len: self.max_tokens,
+            tokenizer: Some(&self.tokenizer),
+            patterns_len: self.patterns_len,
+        };
+        let splitter = Splitter::new(&config, span, 0, span, self.parallel, None, None);
+        let tree = splitter.split();
+        tree.get_node_splits(self.max_tokens)
     }
 }

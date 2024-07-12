@@ -15,7 +15,8 @@ pub fn span(start: usize, end: usize) -> Span {
     Span { start, end }
 }
 
-pub fn span_ge_offset(span: Span, offset: usize) -> Span {
+// negative offset the span
+pub fn span_ne_offset(span: &Span, offset: usize) -> Span {
     let start = span.start - offset;
     let end = span.end - offset;
     Span { start, end }

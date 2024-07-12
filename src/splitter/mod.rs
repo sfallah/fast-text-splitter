@@ -1,5 +1,5 @@
 use std::sync::Arc;
-
+use aho_corasick::Anchored::No;
 use aho_corasick::Span;
 use rayon::prelude::*;
 
@@ -172,10 +172,11 @@ impl<'a, T: Tokenize + Sync> Splitter<'a, T> {
                         let split_tokens_spans = split_encoding
                             .split_encoding_tokens_spans(&splits_data_full_spans, tokens_offset);
 
+
                         search_result
                             .splits
                             .iter()
-                            .zip(split_tokens_spans.iter())
+                            .zip(split_tokens_spans.unwrap().iter())
                             .flat_map(|(search_split, tokens_span)| {
                                 let sub_splitter = self.to_sub_splitter(
                                     search_split,
@@ -276,7 +277,7 @@ impl<'a, T: Tokenize + Sync> Splitter<'a, T> {
         // split the tokens if needed
         // in two, one for the data and one for the pattern
         let sub_split_tokens_spans = if let Some(split_encoding) = self.split_encoding.clone() {
-            let data_spans: Vec<Span> = if search_split.stride > 0 {
+            let data_spans: Vec<Span> = if search_split.stride > 0 && !search_split.is_pattern_whitespace {
                 let pattern_data_span = span(
                     search_split.span.end,
                     search_split.span.end + search_split.pattern_len(),
@@ -286,17 +287,13 @@ impl<'a, T: Tokenize + Sync> Splitter<'a, T> {
                 vec![search_split.span]
             };
             let tokens_offset = self.split_tokens_span.clone().unwrap().start;
-            let split_tokens_spans =
-                split_encoding.split_encoding_tokens_spans(&data_spans, tokens_offset);
-            Some(split_tokens_spans)
+            split_encoding.split_encoding_tokens_spans(&data_spans, tokens_offset)
         } else {
             None
         };
 
         let mut child_nodes = if !search_split.span.is_empty() {
-            let tokens_span = sub_split_tokens_spans
-                .clone()
-                .map(|x| x.first().unwrap().clone());
+            let tokens_span = sub_split_tokens_spans.as_ref().and_then(|x| x.first().cloned());
 
             if self.pattern_id + 1 < self.config.patterns_len() {
                 let splitter = self.to_next_splitter();
@@ -353,15 +350,12 @@ impl<'a, T: Tokenize + Sync> Splitter<'a, T> {
                 search_split.span.end,
                 search_split.span.end + search_split.pattern_len(),
             );
-            let pattern_tokens_span = sub_tokens_spans.clone().map(|x| {
-                if let Some(pt_tokens_span) = x.last() {
-                    pt_tokens_span.clone()
+
+            let pattern_tokens_span = sub_tokens_spans.as_ref().and_then(|tokens_spans| {
+                if search_split.is_pattern_whitespace {
+                    None
                 } else {
-                    let tokens_span = self.split_tokens_span.clone().unwrap();
-                    Span {
-                        start: tokens_span.end,
-                        end: tokens_span.end,
-                    }
+                    Some(tokens_spans[1].clone())
                 }
             });
             let child_node = SplitNode::new(
@@ -402,7 +396,7 @@ impl<'a, T: Tokenize + Sync> Splitter<'a, T> {
                 .clone()
                 .unwrap()
                 .encoding
-                .to_data_offsets_new(split_spans.clone(), encoding_offset, data_span);
+                .to_data_offsets(split_spans.clone(), encoding_offset, data_span);
 
             split_spans
                 .iter()

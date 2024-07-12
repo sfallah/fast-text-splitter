@@ -8,6 +8,7 @@ pub mod search_match;
 pub mod search_result;
 pub mod search_split;
 mod tests;
+mod search_pattern;
 
 pub fn span_within_bounds(span: Span, data_len: usize) -> bool {
     // the span is valid

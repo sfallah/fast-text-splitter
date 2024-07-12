@@ -123,6 +123,7 @@ mod tests {
         assert_eq!(result1.splits[0].stride, 1);
         assert_eq!(result1.splits[0].data(), "".to_string());
         assert_eq!(result1.splits[0].reconstruct(), "\n\n".to_string());
+        assert!(result1.splits[0].is_pattern_whitespace);
 
         assert_eq!(result1.splits[1].span.len(), data1.len() - 2);
         assert_eq!(result1.splits[1].stride, 0);
@@ -134,6 +135,8 @@ mod tests {
             result1.splits[1].reconstruct(),
             "Hello, you all! How are you?".to_string()
         );
+        assert!(result1.splits[1].is_pattern_whitespace);
+
 
         let data2 = "Hello, you all! How are you?\n\n".as_bytes();
         let result2 = searcher.find_pattern(data2, span(0, data2.len()));
@@ -148,6 +151,46 @@ mod tests {
             result2.splits[0].reconstruct(),
             "Hello, you all! How are you?\n\n".to_string()
         );
+
+        Ok(())
+    }
+
+    #[test]
+    fn sentence_test() -> anyhow::Result<()> {
+        let pattern = vec![".".to_string(), "!".to_string(), "?".to_string()];
+        let searcher = PatternSearcher::new(pattern);
+        let data1 = "Hello, you all! How are you".as_bytes();
+        let result1 = searcher.find_pattern(data1, span(0, data1.len()));
+
+        assert_eq!(result1.splits.len(), 2);
+        assert_eq!(result1.splits[0].span, Span { start: 0, end: 14 });
+        assert_eq!(result1.splits[0].stride, 1);
+        assert_eq!(result1.splits[0].data(), "Hello, you all".to_string());
+        assert_eq!(result1.splits[0].reconstruct(), "Hello, you all!".to_string());
+        assert!(!result1.splits[0].is_pattern_whitespace);
+
+        assert_eq!(result1.splits[1].span, Span { start: 15, end: 27 });
+        assert_eq!(result1.splits[1].stride, 0);
+        assert_eq!(result1.splits[1].data(), " How are you".to_string());
+        assert_eq!(result1.splits[1].reconstruct(), " How are you".to_string());
+        assert!(!result1.splits[1].is_pattern_whitespace);
+
+        Ok(())
+    }
+
+    #[test]
+    fn sentence_test2() -> anyhow::Result<()> {
+        let pattern = vec![".".to_string(), "!".to_string(), "?".to_string()];
+        let searcher = PatternSearcher::new(pattern);
+        let data1 = "Hello, you all".as_bytes();
+        let result1 = searcher.find_pattern(data1, span(0, data1.len()));
+
+        assert_eq!(result1.splits.len(), 1);
+        assert_eq!(result1.splits[0].span, Span { start: 0, end: 14 });
+        assert_eq!(result1.splits[0].stride, 0);
+        assert_eq!(result1.splits[0].data(), "Hello, you all".to_string());
+        assert_eq!(result1.splits[0].reconstruct(), "Hello, you all".to_string());
+        assert!(!result1.splits[0].is_pattern_whitespace);
 
         Ok(())
     }

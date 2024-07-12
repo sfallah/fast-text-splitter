@@ -9,16 +9,13 @@ pub struct WSTokenizer {
 
 pub struct WSEncoding {
     pub offsets: Vec<(usize, usize)>,
-    pub word_ids: Vec<Option<u32>>,
 }
 
 impl Tokenize for WSTokenizer {
     fn encode(&self, data: &str) -> anyhow::Result<EncodingType> {
         let tokens_offsets = self.whitespace_punctuation_tokenize(data);
-        let word_ids: Vec<_> = (0..tokens_offsets.len()).map(|x| Some(x as u32)).collect();
         Ok(EncodingType::WSEncoding(WSEncoding {
             offsets: tokens_offsets,
-            word_ids,
         }))
     }
 }
@@ -81,16 +78,20 @@ impl WSTokenizer {
 }
 
 impl WSEncoding {
-    pub fn divide_encoding_lite(&self, tokens_span: Span) -> TokensResultLite {
-        let result = {
+    pub fn divide_encoding_lite(&self, tokens_span: Option<Span>) -> TokensResultLite {
+        if let Some(tokens_span) = tokens_span {
             let offsets = &self.offsets[tokens_span.range()];
 
             TokensResultLite {
                 ids: None,
                 offsets: Some(offsets.to_vec()),
             }
-        };
-        result
+        } else {
+            TokensResultLite {
+                ids: None,
+                offsets: None,
+            }
+        }
     }
 }
 

@@ -7,6 +7,7 @@ pub struct SearchSplit<'a> {
     pub stride: usize,
     pub span: Span,
     pub pattern_len: usize,
+    pub is_pattern_whitespace: bool,
 }
 
 impl std::fmt::Debug for SearchSplit<'_> {
@@ -20,12 +21,13 @@ impl std::fmt::Debug for SearchSplit<'_> {
 }
 
 impl<'a> SearchSplit<'a> {
-    pub fn new(span: Span, data: &'a [u8], pattern_len: usize, stride: usize) -> Self {
+    pub fn new(span: Span, data: &'a [u8], pattern_len: usize, is_pattern_whitespace:bool, stride: usize) -> Self {
         Self {
             data,
             stride,
             span,
             pattern_len,
+            is_pattern_whitespace,
         }
     }
     pub fn data(&self) -> String {

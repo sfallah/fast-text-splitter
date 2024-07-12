@@ -7,7 +7,6 @@ use crate::ws_tokenizer::WSEncoding;
 
 pub trait Tokenize {
     fn encode(&self, data: &str) -> anyhow::Result<EncodingType>;
-    //fn divide_encoding(&self, splits: &[Split]) -> Vec<TokensResults>;
 }
 
 pub struct NoneTokenizer;
@@ -25,19 +24,19 @@ pub enum EncodingType {
 }
 
 impl EncodingType {
-    pub fn get_offsets(&self) -> &[(usize, usize)] {
+    pub fn get_offsets(&self) -> Option<&[(usize, usize)]> {
         match self {
-            EncodingType::HFEncoding(enc) => enc.get_offsets(),
-            EncodingType::WSEncoding(enc) => &*enc.offsets,
-            EncodingType::NoneEncoding => &[],
+            EncodingType::HFEncoding(enc) => Some(enc.get_offsets()),
+            EncodingType::WSEncoding(enc) => Some(&*enc.offsets),
+            EncodingType::NoneEncoding => None,
         }
     }
 
-    pub fn get_word_ids(&self) -> &[Option<u32>] {
+    pub fn get_word_ids(&self) -> Option<&[Option<u32>]> {
         match self {
-            EncodingType::HFEncoding(enc) => enc.get_word_ids(),
-            EncodingType::WSEncoding(enc) => &*enc.word_ids,
-            EncodingType::NoneEncoding => &[],
+            EncodingType::HFEncoding(enc) => Some(enc.get_word_ids()),
+            EncodingType::WSEncoding(_) => None,
+            EncodingType::NoneEncoding => None,
         }
     }
 
@@ -57,31 +56,7 @@ impl EncodingType {
         }
     }
 
-    pub fn to_data_offsets(&self, tokens_spans: Vec<Span>, data_span: Span) -> Vec<Span> {
-        let mut res = Vec::new();
-        let mut start = data_span.start;
-
-        if tokens_spans.len() <= 1 {
-            res.push(data_span.clone());
-            return res;
-        }
-
-        tokens_spans.iter().skip(1).for_each(|tokens_span| {
-            let next_end = self.get_offsets().get(tokens_span.start).unwrap().0;
-            let end = data_span.start + next_end;
-            res.push(span(start, end));
-            start = end;
-        });
-
-        res.push(Span {
-            start,
-            end: data_span.end,
-        });
-
-        res
-    }
-
-    pub fn to_data_offsets_new(
+    pub fn to_data_offsets(
         &self,
         tokens_spans: Vec<Span>,
         offset: usize,
@@ -101,7 +76,7 @@ impl EncodingType {
             .enumerate()
             .for_each(|(i, tokens_span)| {
                 let end = if i < tokens_spans.len() - 1 {
-                    let next_end = self.get_offsets().get(tokens_span.end).unwrap().0;
+                    let next_end = self.get_offsets().unwrap().get(tokens_span.end).unwrap().0;
                     next_end + offset
                 } else {
                     data_span.end
@@ -113,7 +88,7 @@ impl EncodingType {
         res
     }
 
-    pub fn to_lite_results(&self, tokens_span: Span) -> TokensResultLite {
+    pub fn to_lite_results(&self, tokens_span: Option<Span>) -> TokensResultLite {
         match self {
             EncodingType::HFEncoding(hf_encoding) => hf_encoding.divide_encoding_lite(tokens_span),
             EncodingType::WSEncoding(ws_encoding) => ws_encoding.divide_encoding_lite(tokens_span),

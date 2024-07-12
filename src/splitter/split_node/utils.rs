@@ -41,7 +41,7 @@ pub fn merge_splits(splits: &Vec<Split>, max_tokens: usize) -> Vec<Split> {
     let mut merged_splits = Vec::new();
     let first_split = splits.first().unwrap();
     let mut cur_splits = vec![first_split.clone()];
-    let mut cur_no_tokens = splits.first().unwrap().no_tokens();
+    let mut cur_no_tokens = first_split.no_tokens();
 
     for (i, split_res) in splits.iter().enumerate().skip(1) {
         let mut cur_split = split_res.clone();
@@ -83,34 +83,36 @@ pub fn into_one_split(splits: &Vec<Split>) -> Split {
     } else {
         let first_split = splits.first().unwrap();
         let last_split = splits.last().unwrap();
-        let tokens_no = if let Some(_) = first_split.tokens_no {
-            let sum_tokens_no: usize = splits.iter().map(|split| split.tokens_no.unwrap()).sum();
-            Some(sum_tokens_no)
-        } else {
-            None
-        };
+        // sum tokens_no
+        let sum_tokens_no: usize = splits.iter().map(|split| split.tokens_no.unwrap_or(0)).sum();
+        let tokens_no = if sum_tokens_no > 0 { Some(sum_tokens_no) } else { None };
+
         let data_span = if let Some(data_span) = first_split.data_span {
             Some(span(data_span.start, last_split.data_span.unwrap().end))
         } else {
             None
         };
-        let tokens_results = if let Some(_) = first_split.tokens_results.as_ref() {
-            let mut res = Vec::new();
-            for split in splits {
-                if let Some(tokens_results) = &split.tokens_results {
-                    res.extend(tokens_results.clone());
-                }
+
+        let merged_tokens_results = splits.iter().fold(Vec::new(), |mut acc, split| {
+            if let Some(spl_tokens_results) = split.tokens_results.as_ref() {
+                acc.extend(spl_tokens_results.clone());
             }
-            Some(res)
+            acc
+        });
+
+        let tokens_results = if !merged_tokens_results.is_empty() {
+            Some(merged_tokens_results)
         } else {
             None
         };
+
         Split {
             pattern_id: first_split.pattern_id,
             tokens_no,
             data_span,
             pattern_node: last_split.pattern_node,
             tokens_results,
+            tokenized: last_split.tokenized,
         }
     }
 }

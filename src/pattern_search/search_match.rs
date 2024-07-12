@@ -3,6 +3,7 @@ use aho_corasick::Span;
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct SearchMatch {
     pub pattern_len: usize,
+    pub is_pattern_whitespace: bool,
     pub span: Span,
 }
 

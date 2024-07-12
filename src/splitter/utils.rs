@@ -42,7 +42,7 @@ pub fn split_data_len<'a>(
 }
 
 pub fn chunk_tokens_len(
-    tokens_words: &[Option<u32>],
+    tokens_words: Option<&[Option<u32>]>,
     in_tokens_span: Span,
     max_tokens: usize,
 ) -> Vec<Span> {
@@ -63,22 +63,28 @@ pub fn chunk_tokens_len(
                 break;
             }
 
-            let split_end_word = tokens_words.get(split_end - 1).unwrap();
-            let next_split_start_word = tokens_words.get(split_end).unwrap();
+            if let Some(tokens_words) = tokens_words {
+                let split_end_word = tokens_words.get(split_end - 1).unwrap();
+                let next_split_start_word = tokens_words.get(split_end).unwrap();
 
-            if split_end_word == next_split_start_word {
-                let split_end_pos_opt = tokens_words
-                    .iter()
-                    .skip(split_start)
-                    .take(split_end - split_start)
-                    .rev()
-                    .position(|&x| x != *split_end_word);
+                if split_end_word == next_split_start_word {
+                    let split_end_pos_opt = tokens_words
+                        .iter()
+                        .skip(split_start)
+                        .take(split_end - split_start)
+                        .rev()
+                        .position(|&x| x != *split_end_word);
 
-                if let Some(split_end_pos) = split_end_pos_opt {
-                    let nw_split_end = split_end - split_end_pos;
-                    splits.push(span(split_start, nw_split_end));
-                    split_start = nw_split_end;
-                    split_end = split_start + max_tokens;
+                    if let Some(split_end_pos) = split_end_pos_opt {
+                        let nw_split_end = split_end - split_end_pos;
+                        splits.push(span(split_start, nw_split_end));
+                        split_start = nw_split_end;
+                        split_end = split_start + max_tokens;
+                    } else {
+                        splits.push(span(split_start, split_end));
+                        split_start = split_end;
+                        split_end = split_start + max_tokens;
+                    }
                 } else {
                     splits.push(span(split_start, split_end));
                     split_start = split_end;

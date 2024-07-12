@@ -9,6 +9,7 @@ pub struct Split {
     pub data_span: Option<Span>,
     pub pattern_node: bool,
     pub tokens_results: Option<Vec<TokensResultLite>>,
+    pub tokenized: bool,
 }
 
 impl fmt::Debug for Split {
@@ -29,13 +30,15 @@ impl Split {
         if let Some(tokens_no) = self.tokens_no {
             tokens_no
         } else {
-            // fall back to data span
-            // this should only be the case for none-tokenizer (data len split)
-            if let Some(data_span) = self.data_span {
-                data_span.len()
-            } else {
-                0
-            }
+            if !self.tokenized {
+                // fall back to data span
+                // this should only be the case for none-tokenizer (data len split)
+                if let Some(data_span) = self.data_span {
+                    data_span.len()
+                } else {
+                    0
+                }
+            } else { 0 }
         }
     }
 }

@@ -5,20 +5,23 @@ use memchr::{memchr2_iter, memchr3_iter};
 use crate::common::span;
 use crate::pattern_search::get_aho_corasick;
 use crate::pattern_search::search_match::SearchMatch;
+use crate::pattern_search::search_pattern::SearchPattern;
 use crate::pattern_search::search_result::SearchResult;
 use crate::pattern_search::search_split::SearchSplit;
 
+
 pub struct PatternSearcher {
-    pub patterns: Vec<String>,
+    pub patterns: Vec<SearchPattern>,
     pub aho_corasick: Option<AhoCorasick>,
     pub memchr_finder: Option<Finder<'static>>,
 }
 
 impl PatternSearcher {
-    pub fn new(patterns: Vec<String>) -> Self {
+    pub fn new(str_patterns: Vec<String>) -> Self {
+        let patterns: Vec<_> = str_patterns.clone().into_iter().map(SearchPattern::new).collect();
         if patterns.len() > 1 {
             if patterns.len() > 3 {
-                let aho_corasick = Some(get_aho_corasick(patterns.clone()));
+                let aho_corasick = Some(get_aho_corasick(str_patterns.clone()));
                 Self {
                     patterns,
                     aho_corasick,
@@ -26,15 +29,15 @@ impl PatternSearcher {
                 }
             } else {
                 // patterns.len() <= 3
-                let all_single_char = patterns.iter().all(|p| p.len() == 1);
-                if all_single_char {
+                let all_single_byte = patterns.iter().all(|p| p.is_single_byte());
+                if all_single_byte {
                     Self {
                         patterns,
                         aho_corasick: None,
                         memchr_finder: None,
                     }
                 } else {
-                    let aho_corasick = Some(get_aho_corasick(patterns.clone()));
+                    let aho_corasick = Some(get_aho_corasick(str_patterns.clone()));
                     Self {
                         patterns,
                         aho_corasick,
@@ -43,7 +46,7 @@ impl PatternSearcher {
                 }
             }
         } else {
-            if patterns[0].as_bytes().len() > 1 {
+            if patterns[0].len() > 1 {
                 let memchr_finder = Some(Finder::new(patterns[0].as_bytes()).into_owned());
                 Self {
                     patterns,
@@ -59,36 +62,40 @@ impl PatternSearcher {
             }
         }
     }
-
     pub fn search_patterns(&self, data: &[u8], data_span: Span) -> Vec<SearchMatch> {
         if self.patterns.is_empty() || data_span.is_empty() || data.is_empty() {
             return Vec::new();
         }
         if self.patterns.len() == 1 {
             let pattern = self.patterns.first().unwrap();
-            let pattern_len = pattern.len();
             if let Some(finder) = self.memchr_finder.as_ref() {
                 finder
-                    .find_iter(&data[data_span.start..data_span.end])
+                    .find_iter(&data[data_span.range()])
                     .map(|start| SearchMatch {
-                        pattern_len,
-                        span: span(start, start + pattern_len),
+                        pattern_len: pattern.len(),
+                        is_pattern_whitespace: pattern.is_whitespace,
+                        span: span(start, start + pattern.len()),
                     })
                     .collect()
             } else {
-                find_iter(&data[data_span.start..data_span.end], pattern.as_bytes())
+                find_iter(&data[data_span.range()], pattern.as_bytes())
                     .map(|start| SearchMatch {
-                        pattern_len,
-                        span: span(start, start + pattern_len),
+                        pattern_len: pattern.len(),
+                        is_pattern_whitespace: pattern.is_whitespace,
+                        span: span(start, start + pattern.len()),
                     })
                     .collect()
             }
         } else {
             if let Some(ac) = self.aho_corasick.as_ref() {
-                ac.find_iter(&data[data_span.start..data_span.end])
-                    .map(|mt| SearchMatch {
-                        pattern_len: self.patterns[mt.pattern().as_usize()].len(),
-                        span: mt.span().into(),
+                ac.find_iter(&data[data_span.range()])
+                    .map(|mt| {
+                        let pattern = self.patterns.get(mt.pattern().as_usize()).unwrap();
+                        SearchMatch {
+                            pattern_len: pattern.len(),
+                            is_pattern_whitespace: pattern.is_whitespace,
+                            span: mt.span().into(),
+                        }
                     })
                     .collect()
             } else {
@@ -96,25 +103,33 @@ impl PatternSearcher {
                     memchr2_iter(
                         self.patterns[0].as_bytes()[0],
                         self.patterns[1].as_bytes()[0],
-                        &data[data_span.start..data_span.end],
+                        &data[data_span.range()],
                     )
-                    .map(|start| SearchMatch {
-                        pattern_len: 1,
-                        span: span(start, start + 1),
-                    })
-                    .collect()
+                        .map(|start| {
+                            let is_pattern_whitespace = (data[start] as char).is_whitespace();
+                            SearchMatch {
+                                pattern_len: 1,
+                                is_pattern_whitespace,
+                                span: span(start, start + 1),
+                            }
+                        })
+                        .collect()
                 } else {
                     memchr3_iter(
                         self.patterns[0].as_bytes()[0],
                         self.patterns[1].as_bytes()[0],
                         self.patterns[2].as_bytes()[0],
-                        &data[data_span.start..data_span.end],
+                        &data[data_span.range()],
                     )
-                    .map(|start| SearchMatch {
-                        pattern_len: 1,
-                        span: span(start, start + 1),
-                    })
-                    .collect()
+                        .map(|start| {
+                            let is_pattern_whitespace = (data[start] as char).is_whitespace();
+                            SearchMatch {
+                                pattern_len: 1,
+                                is_pattern_whitespace,
+                                span: span(start, start + 1),
+                            }
+                        })
+                        .collect()
                 }
             }
         }
@@ -127,7 +142,7 @@ impl PatternSearcher {
             return SearchResult {
                 data,
                 offset: data_span.start,
-                splits: vec![SearchSplit::new(Span::from(data_span), data, 0, 0)],
+                splits: vec![SearchSplit::new(Span::from(data_span), data, 0, false, 0)],
                 matched: false,
             };
         }
@@ -142,6 +157,7 @@ impl PatternSearcher {
                 span(data_span.start, data_span.start + cur_match.start()),
                 data,
                 cur_match.pattern_len,
+                cur_match.is_pattern_whitespace,
                 1,
             );
             pattern_splits.push(split);
@@ -151,6 +167,7 @@ impl PatternSearcher {
                 span(data_span.start, data_span.start),
                 data,
                 cur_match.pattern_len,
+                cur_match.is_pattern_whitespace,
                 1,
             );
 
@@ -165,6 +182,7 @@ impl PatternSearcher {
                     span(data_span.start + cur_match.end(), data_span.end),
                     data,
                     cur_match.pattern_len,
+                    cur_match.is_pattern_whitespace,
                     0,
                 );
 
@@ -186,6 +204,7 @@ impl PatternSearcher {
                 ),
                 data,
                 cur_match.pattern_len,
+                cur_match.is_pattern_whitespace,
                 1,
             );
             pattern_splits.push(split);
@@ -197,6 +216,7 @@ impl PatternSearcher {
                 span(data_span.start + cur_match.end(), data_span.end),
                 data,
                 cur_match.pattern_len,
+                cur_match.is_pattern_whitespace,
                 0,
             );
             pattern_splits.push(split);

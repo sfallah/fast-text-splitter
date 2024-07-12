@@ -163,7 +163,7 @@ impl SplitNode {
             let tokens_results = self.split_encoding.as_ref().map(|encoding| {
                 vec![encoding
                     .encoding
-                    .to_lite_results(self.split_tokens_span.unwrap())]
+                    .to_lite_results(self.split_tokens_span)]
             });
             vec![Split {
                 pattern_id: self.pattern_id,
@@ -171,6 +171,7 @@ impl SplitNode {
                 data_span: Some(self.split_data_span.clone()),
                 pattern_node: self.pattern_node,
                 tokens_results,
+                tokenized: self.split_encoding.is_some(),
             }]
         } else {
             if let Some(max_len) = max_tokens {
@@ -190,10 +191,9 @@ impl SplitNode {
                         .iter()
                         .map(|child| child.get_node_splits(max_tokens))
                         .collect();
-                    let merged_splits: Vec<Split> = Vec::new();
                     children_splits
                         .into_iter()
-                        .fold(merged_splits, |mut acc, child_splits| {
+                        .fold(Vec::new(), |mut acc, child_splits| {
                             let merged_child_splits = merge_splits(&child_splits, max_len);
                             add_splits(&mut acc, &merged_child_splits.clone(), max_len);
                             acc

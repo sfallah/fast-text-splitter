@@ -14,7 +14,7 @@ pub fn hf_merged_tree_lite_res_benchmark(c: &mut Criterion) {
     let patterns = vec![
         vec!["\n\n".to_string()],
         vec!["\n".to_string()],
-        vec![".".to_string(), "!".to_string(), "?".to_string()],
+        vec![". ".to_string(), "! ".to_string(), "? ".to_string()],
     ];
 
     let splitter_config = SplitterLiteConfig::new_hf(patterns, 512, 0, true, None);
@@ -36,7 +36,7 @@ pub fn ws_tree_split_lite_benchmark(c: &mut Criterion) {
     let patterns = vec![
         vec!["\n\n".to_string()],
         vec!["\n".to_string()],
-        vec![".".to_string(), "!".to_string(), "?".to_string()],
+        vec![". ".to_string(), "! ".to_string(), "? ".to_string()],
     ];
 
     let splitter_config = SplitterLiteConfig::new_ws(patterns, 384, 0, true, true);
@@ -57,7 +57,7 @@ pub fn none_tree_split_lite_benchmark(c: &mut Criterion) {
     let patterns = vec![
         vec!["\n\n".to_string()],
         vec!["\n".to_string()],
-        vec![".".to_string(), "!".to_string(), "?".to_string()],
+        vec![". ".to_string(), "! ".to_string(), "? ".to_string()],
     ];
 
     let splitter_config = SplitterLiteConfig::new_none(patterns, 512, 0, false);
