@@ -106,13 +106,15 @@ pub fn into_one_split(splits: &Vec<Split>) -> Split {
             None
         };
 
+        let tokenized = splits.iter().any(|split| split.tokenized);
+
         Split {
             pattern_id: first_split.pattern_id,
             tokens_no,
             data_span,
             pattern_node: last_split.pattern_node,
             tokens_results,
-            tokenized: last_split.tokenized,
+            tokenized,
         }
     }
 }

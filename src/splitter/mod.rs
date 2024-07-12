@@ -1,5 +1,5 @@
 use std::sync::Arc;
-use aho_corasick::Anchored::No;
+
 use aho_corasick::Span;
 use rayon::prelude::*;
 

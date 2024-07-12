@@ -1049,7 +1049,7 @@ mod tests {
         let patterns = vec![
             vec!["\n\n".to_string()],
             vec!["\n".to_string()],
-            vec![". ".to_string(), "! ".to_string(), "? ".to_string()],
+            vec![".".to_string(), "!".to_string(), "?".to_string()],
         ];
 
         let splitter_config = SplitterLiteConfig::new_hf(patterns, 512, 0, true, None);
@@ -1072,18 +1072,34 @@ mod tests {
         let total_tokens_raw: usize = raw_splits.iter().map(|res| res.tokens_no.unwrap_or(0)).sum();
 
 
-        //assert_eq!(hf_encoding.len(), total_tokens_raw);
-        //assert_eq!(hf_encoding.len(), total_tokens);
-
+        assert_eq!(hf_encoding.len(), total_tokens_raw);
+        assert_eq!(hf_encoding.len(), total_tokens);
 
 
         for split in splits.iter() {
-            println!("{:?}", split.split_string);
+            println!("{}", split.split_string);
+            println!("{:?}", split.tokens.len());
+            println!("{:?}", split.split_string.len());
             let hf_encoded = hf_tokenizer
                 .encode(split.split_string.clone(), false)
                 .unwrap();
             assert!(!split.tokens.is_empty());
             assert!(split.tokens.len() <= 512);
+            if split.tokens.len() != hf_encoded.len() {
+                // tokens in hf_encoded but not in split.tokens
+                let diff: Vec<u32> = hf_encoded
+                    .get_ids()
+                    .iter()
+                    .filter(|&x| !split.tokens.contains(x))
+                    .map(|&x| x)
+                    .collect();
+                println!("{:?}", diff.len());
+
+                for token in diff.iter() {
+                    println!("{:?}", hf_tokenizer.id_to_token(*token));
+                }
+                break;
+            }
             assert_eq!(hf_encoded.len(), split.tokens.len());
             assert_eq!(hf_encoded.get_ids(), split.tokens);
         }
@@ -1191,7 +1207,7 @@ mod tests {
         let patterns = vec![
             vec!["\n\n".to_string()],
             vec!["\n".to_string()],
-            vec![". ".to_string(), "! ".to_string(), "? ".to_string()],
+            vec![". ".to_string(), "!".to_string(), "?".to_string()],
         ];
         let searchers: Vec<_> = patterns
             .iter()

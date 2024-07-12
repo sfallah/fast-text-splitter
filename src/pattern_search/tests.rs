@@ -179,6 +179,23 @@ mod tests {
     }
 
     #[test]
+    fn wiki_us_error() -> anyhow::Result<()> {
+        let file_path = "tests/error_data/wiki_us_error.txt";
+        let binding = std::fs::read(file_path).unwrap();
+        let data = binding.as_slice();
+        let pattern = vec![".".to_string(), "!".to_string(), "?".to_string()];
+        let searcher = PatternSearcher::new(pattern);
+        let result = searcher.find_pattern(data, span(0, data.len()));
+        for split in result.splits.iter() {
+            println!("{:?}", split.data());
+            println!("{:?}", split.reconstruct());
+            println!("{:?}", split.is_pattern_whitespace);
+        }
+
+        Ok(())
+    }
+
+    #[test]
     fn sentence_test2() -> anyhow::Result<()> {
         let pattern = vec![".".to_string(), "!".to_string(), "?".to_string()];
         let searcher = PatternSearcher::new(pattern);
