@@ -106,7 +106,7 @@ impl PatternSearcher {
                         &data[data_span.range()],
                     )
                         .map(|start| {
-                            let is_pattern_whitespace = (data[start] as char).is_whitespace();
+                            let is_pattern_whitespace = data[start].is_ascii_whitespace();
                             SearchMatch {
                                 pattern_len: 1,
                                 is_pattern_whitespace,
@@ -122,7 +122,7 @@ impl PatternSearcher {
                         &data[data_span.range()],
                     )
                         .map(|start| {
-                            let is_pattern_whitespace = (data[start] as char).is_whitespace();
+                            let is_pattern_whitespace = data[start].is_ascii_whitespace();
                             SearchMatch {
                                 pattern_len: 1,
                                 is_pattern_whitespace,
