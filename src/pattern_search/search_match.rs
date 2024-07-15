@@ -8,9 +8,6 @@ pub struct SearchMatch {
 }
 
 impl SearchMatch {
-    pub fn len(&self) -> usize {
-        self.span.len()
-    }
     pub fn start(&self) -> usize {
         self.span.start
     }

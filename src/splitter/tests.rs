@@ -1043,8 +1043,9 @@ mod tests {
     fn nw_tree_hf_splits_superlinear() {
         //let data_path = "tests/test_data/superlinear.txt";
         //let data_path = "tests/error_data/superlinear_loose_pattern.txt";
-        let data_path = "data/dev/History_of_baseball_in_the_United_States.txt";
+        //let data_path = "data/dev/History_of_baseball_in_the_United_States.txt";
         //let data_path = "tests/error_data/wiki_us_snippet_error.txt";
+        let data_path = "data/dev/Belle_(Beauty_and_the_Beast).txt";
 
 
 
@@ -1184,13 +1185,14 @@ mod tests {
 
     #[test]
     fn pattern_split_superlinear_print() {
-        let data_path = "tests/test_data/superlinear.txt";
+        //let data_path = "tests/test_data/superlinear.txt";
         //let data_path = "data/train/List_of_Game_of_Thrones_characters.txt";
+        let data_path = "tests/test_data/Belle_(Beauty_and_the_Beast).txt";
 
         let patterns = vec![
             vec!["\n\n".to_string()],
             vec!["\n".to_string()],
-            vec![".".to_string(), "!".to_string(), "?".to_string()],
+            vec![". ".to_string(), "!".to_string(), "?".to_string()],
         ];
         let searchers: Vec<_> = patterns
             .iter()
@@ -1211,7 +1213,7 @@ mod tests {
 
         tokenizers::utils::parallelism::set_parallelism(true);
         //let files = list_text_files("data/dev/")?;
-        let files = list_text_files("data/dev/")?;
+        let files = list_text_files("data/train/")?;
 
         let patterns = vec![
             vec!["\n\n".to_string()],

@@ -18,7 +18,7 @@ pub struct PatternSearcher {
 
 impl PatternSearcher {
     pub fn new(str_patterns: Vec<String>) -> Self {
-        let patterns: Vec<_> = str_patterns.clone().into_iter().map(SearchPattern::new).collect();
+        let patterns: Vec<_> = str_patterns.clone().iter().map(|pt| SearchPattern::new(pt.clone())).collect();
         if patterns.len() > 1 {
             if patterns.len() > 3 {
                 let aho_corasick = Some(get_aho_corasick(str_patterns.clone()));
@@ -203,8 +203,8 @@ impl PatternSearcher {
                     data_span.start + end.start(),
                 ),
                 data,
-                cur_match.pattern_len,
-                cur_match.is_pattern_whitespace,
+                end.pattern_len,
+                end.is_pattern_whitespace,
                 1,
             );
             pattern_splits.push(split);
