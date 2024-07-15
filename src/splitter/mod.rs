@@ -273,6 +273,9 @@ impl<'a, T: Tokenize + Sync> Splitter<'a, T> {
     }
 
     fn sub_split(&self, search_split: &SearchSplit) -> Vec<SplitNode> {
+        println!("sub_split");
+        println!("search_split: {:?}", search_split.full_span());
+        println!("pattern_id: {:?}", self.pattern_id);
         // split the tokens if needed
         // in two, one for the data and one for the pattern
         let sub_split_tokens_spans = if let Some(split_encoding) = self.split_encoding.clone() {
