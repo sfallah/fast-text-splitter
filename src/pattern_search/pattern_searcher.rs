@@ -173,53 +173,33 @@ impl PatternSearcher {
 
             pattern_splits.push(split);
         }
-        //cur_match += pattern_len;
 
-        if matches.len() == 1 {
-            // If the pattern is not at the end of the data
-            if cur_match.end() < data_span.len() {
-                let split = SearchSplit::new(
-                    span(data_span.start + cur_match.end(), data_span.end),
-                    data,
-                    cur_match.pattern_len,
-                    cur_match.is_pattern_whitespace,
-                    0,
-                );
 
-                pattern_splits.push(split);
-            }
-            return SearchResult {
-                data,
-                offset: data_span.start,
-                splits: pattern_splits,
-                matched: true,
-            };
-        }
-
-        matches.iter().skip(1).for_each(|end| {
-            let split = SearchSplit::new(
+        matches.iter().skip(1).for_each(|next_match| {
+            let search_split = SearchSplit::new(
                 span(
                     data_span.start + cur_match.end(),
-                    data_span.start + end.start(),
+                    data_span.start + next_match.start(),
                 ),
                 data,
-                end.pattern_len,
-                end.is_pattern_whitespace,
+                next_match.pattern_len,
+                next_match.is_pattern_whitespace,
                 1,
             );
-            pattern_splits.push(split);
-            cur_match = end;
+            pattern_splits.push(search_split);
+            cur_match = next_match;
         });
 
+        // If the pattern is not at the end of the data
         if cur_match.end() < data_span.len() {
-            let split = SearchSplit::new(
+            let search_split = SearchSplit::new(
                 span(data_span.start + cur_match.end(), data_span.end),
                 data,
                 cur_match.pattern_len,
-                cur_match.is_pattern_whitespace,
+                false,
                 0,
             );
-            pattern_splits.push(split);
+            pattern_splits.push(search_split);
         }
 
         SearchResult {

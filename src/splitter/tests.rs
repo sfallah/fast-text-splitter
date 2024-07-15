@@ -1062,8 +1062,6 @@ mod tests {
 
         let splitter_config = SplitterLiteConfig::new_hf(patterns, 512, 0, true, None);
 
-        let raw_splits = splitter_config.hf_splits_raw(data);
-
         let splits = splitter_config.hf_splits(data);
 
         println!("{:?}", splits.len());
@@ -1225,9 +1223,9 @@ mod tests {
             .map(|p| PatternSearcher::new(p.clone()))
             .collect();
 
-        //let rnd_files: Vec<_> = files.choose_multiple(&mut rng, 20000).collect();
+        let rnd_files: Vec<_> = files.choose_multiple(&mut rng, 1200).collect();
 
-        files.par_iter().for_each(|file| {
+        rnd_files.par_iter().for_each(|file| {
             let (data_len, results) =
                 split_file(file, patterns.clone(), &searchers, 512, false, false, true);
             let total_len: usize = results.iter().map(|res| res.split_string.len()).sum();

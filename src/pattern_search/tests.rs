@@ -135,7 +135,7 @@ mod tests {
             result1.splits[1].reconstruct(),
             "Hello, you all! How are you?".to_string()
         );
-        assert!(result1.splits[1].is_pattern_whitespace);
+        assert!(!result1.splits[1].is_pattern_whitespace);
 
 
         let data2 = "Hello, you all! How are you?\n\n".as_bytes();
