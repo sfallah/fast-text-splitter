@@ -180,7 +180,7 @@ mod tests {
 
     #[test]
     fn wiki_us_error() -> anyhow::Result<()> {
-        let file_path = "tests/error_data/wiki_us_error.txt";
+        let file_path = "tests/error_data/wiki_us_snippet_error.txt";
         let binding = std::fs::read(file_path).unwrap();
         let data = binding.as_slice();
         let pattern = vec![".".to_string(), "!".to_string(), "?".to_string()];

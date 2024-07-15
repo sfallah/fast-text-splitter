@@ -1,3 +1,4 @@
+use std::str::from_utf8;
 use std::sync::Arc;
 
 use aho_corasick::Span;
@@ -277,7 +278,8 @@ impl<'a, T: Tokenize + Sync> Splitter<'a, T> {
         // split the tokens if needed
         // in two, one for the data and one for the pattern
         let sub_split_tokens_spans = if let Some(split_encoding) = self.split_encoding.clone() {
-            let data_spans: Vec<Span> = if search_split.stride > 0 && !search_split.is_pattern_whitespace {
+            let data_spans: Vec<Span> = if search_split.stride > 0 {
+                //&& !search_split.is_pattern_whitespace {
                 let pattern_data_span = span(
                     search_split.span.end,
                     search_split.span.end + search_split.pattern_len(),
@@ -353,7 +355,22 @@ impl<'a, T: Tokenize + Sync> Splitter<'a, T> {
 
             let pattern_tokens_span = sub_tokens_spans.as_ref().and_then(|tokens_spans| {
                 if search_split.is_pattern_whitespace {
-                    None
+                    if tokens_spans.len() < 2 {
+                        None
+                    } else {
+                        let pattern_tokens_span = tokens_spans[1].clone();
+                        if pattern_tokens_span.is_empty() {
+                            None
+                        } else {
+                            let str_data = from_utf8(&search_split.data[search_split.full_span().range()]).unwrap();
+                            println!("pattern_id: {:?}", self.pattern_id);
+                            println!("pattern_len: {:?}", search_split.pattern_len);
+                            println!("full_span: {:?}", search_split.full_span());
+                            println!("{:?}", str_data);
+                            Some(pattern_tokens_span)
+                        }
+                    }
+                    //None
                 } else {
                     Some(tokens_spans[1].clone())
                 }
