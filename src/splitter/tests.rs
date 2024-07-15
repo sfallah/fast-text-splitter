@@ -85,7 +85,7 @@ mod tests {
         }
 
         let total_text_len: usize = split_results.iter().map(|res| res.split_string.len()).sum();
-        assert_eq!(data.len(), total_text_len);
+        assert_eq!(data.len(), total_text_len, "File Path: {:?}", data_path);
 
         if check_splits {
             for res in split_results.iter() {
@@ -108,7 +108,7 @@ mod tests {
         println!("Total Tokens: {:?}", total_tokens);
 
         let encodings = hf_tokenizer.encode(from_utf8(data).unwrap()).unwrap();
-        assert_eq!(total_tokens, encodings.len());
+        assert_eq!(total_tokens, encodings.len(), "File Path: {:?}", data_path);
 
         (data.len(), split_results)
     }
@@ -1043,50 +1043,15 @@ mod tests {
     fn nw_tree_hf_splits_superlinear() {
         //let data_path = "tests/test_data/superlinear.txt";
         //let data_path = "tests/error_data/superlinear_loose_pattern.txt";
-        let data_path = "tests/test_data/United_States.txt";
-        let mut problem_data_spans = vec![Span {
-            start: 55136,
-            end: 55215,
-        }];
-        problem_data_spans.push(Span {
-            start: 1077,
-            end: 1087,
-        });
-        problem_data_spans.push(Span {
-            start: 1209,
-            end: 1333,
-        });
-        problem_data_spans.push(Span {
-            start: 1334,
-            end: 1346,
-        });
-        problem_data_spans.push(Span {
-            start: 1446,
-            end: 1475,
-        });
-        problem_data_spans.push(Span {
-            start: 1543,
-            end: 1561,
-        });
-        problem_data_spans.push(Span {
-            start: 2614,
-            end: 2690,
-        });
-        problem_data_spans.push(Span {
-            start: 2691,
-            end: 2720,
-        });
+        let data_path = "data/dev/History_of_baseball_in_the_United_States.txt";
+        //let data_path = "tests/error_data/wiki_us_snippet_error.txt";
+
+
 
 
 
         let binding = fs::read_to_string(data_path).unwrap();
         let data = binding.as_bytes();
-
-        for problem_span in problem_data_spans.iter() {
-            let data_slice = &data[problem_span.start..problem_span.end];
-            let str_data = from_utf8(data_slice).unwrap();
-            //println!("{:?}", str_data);
-        }
 
         let patterns = vec![
             vec!["\n\n".to_string()],
@@ -1111,11 +1076,8 @@ mod tests {
             .unwrap();
         let total_tokens: usize = splits.iter().map(|res| res.tokens.len()).sum();
 
-        let total_tokens_raw: usize = raw_splits.iter().map(|res| res.tokens_no.unwrap_or(0)).sum();
 
-
-        //assert_eq!(hf_encoding.len(), total_tokens_raw);
-        //assert_eq!(hf_encoding.len(), total_tokens);
+        assert_eq!(hf_encoding.len(), total_tokens);
 
         //write to file output/debug/hf_splits_concated.txt
         let result_concated: String = splits.iter().map(|split| split.split_string.clone()).collect();
@@ -1124,7 +1086,7 @@ mod tests {
 
 
         for split in splits.iter() {
-            println!("{}", split.split_string);
+            println!("{:?}", split.split_string);
             println!("{:?}", split.tokens.len());
             println!("{:?}", split.split_string.len());
             let hf_encoded = hf_tokenizer
@@ -1261,9 +1223,9 @@ mod tests {
             .map(|p| PatternSearcher::new(p.clone()))
             .collect();
 
-        let rnd_files: Vec<_> = files.choose_multiple(&mut rng, 1200).collect();
+        //let rnd_files: Vec<_> = files.choose_multiple(&mut rng, 20000).collect();
 
-        rnd_files.par_iter().for_each(|file| {
+        files.par_iter().for_each(|file| {
             let (data_len, results) =
                 split_file(file, patterns.clone(), &searchers, 512, false, false, true);
             let total_len: usize = results.iter().map(|res| res.split_string.len()).sum();

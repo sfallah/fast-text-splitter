@@ -187,8 +187,8 @@ mod tests {
         let searcher = PatternSearcher::new(pattern);
         let result = searcher.find_pattern(data, span(0, data.len()));
         for split in result.splits.iter() {
-            println!("{:?}", split.data());
-            println!("{:?}", split.reconstruct());
+            //println!("{:?}", split.data());
+            //println!("{:?}", split.reconstruct());
             println!("{:?}", split.is_pattern_whitespace);
         }
 
