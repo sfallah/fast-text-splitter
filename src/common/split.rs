@@ -1,6 +1,9 @@
-use crate::common::tokens_result_lite::TokensResultLite;
-use aho_corasick::Span;
 use std::fmt;
+use std::sync::Arc;
+
+use aho_corasick::Span;
+
+use crate::common::tokens_result_lite::TokensResultLite;
 
 #[derive(Clone)]
 pub struct Split {
@@ -8,7 +11,7 @@ pub struct Split {
     pub tokens_no: Option<usize>,
     pub data_span: Option<Span>,
     pub pattern_node: bool,
-    pub tokens_results: Option<Vec<TokensResultLite>>,
+    pub tokens_results: Option<Vec<Arc<TokensResultLite>>>,
     pub tokenized: bool,
 }
 

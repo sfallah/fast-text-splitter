@@ -161,9 +161,9 @@ impl SplitNode {
         if self.children.is_empty() {
             let tokens_no = self.split_tokens_span.map(|span| span.len());
             let tokens_results = self.split_encoding.as_ref().map(|encoding| {
-                vec![encoding
+                vec![Arc::new(encoding
                     .encoding
-                    .to_lite_results(self.split_tokens_span)]
+                    .to_lite_results(self.split_tokens_span))]
             });
             vec![Split {
                 pattern_id: self.pattern_id,
