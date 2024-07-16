@@ -363,7 +363,7 @@ mod tests {
         let searcher = PatternSearcher::new(patterns);
         let data = "Hello, you all!\n\n How are you? \n\n".as_bytes();
         let data_span = span(0, data.len());
-        let matches = searcher.search_patterns(data, data_span);
+        let matches = searcher.search_patterns(data, data_span).collect::<Vec<_>>();
         assert_eq!(matches.len(), 2);
         assert_eq!(matches[0].pattern_len, "\n\n".len());
         assert_eq!(matches[0].span, span(15, 17));
@@ -379,7 +379,7 @@ mod tests {
         let searcher = PatternSearcher::new(patterns);
         let data = "Hello, you all! How are you? Nice to be here.".as_bytes();
         let data_span = span(0, data.len());
-        let matches = searcher.search_patterns(data, data_span);
+        let matches = searcher.search_patterns(data, data_span).collect::<Vec<_>>();
         assert_eq!(matches.len(), 3);
         assert_eq!(matches[0].span, span(14, 15));
         assert_eq!(matches[1].span, span(27, 28));
@@ -388,7 +388,7 @@ mod tests {
         let data = "Hello, you all!\n\n How are you? \n\n".as_bytes();
         let patterns = vec!["\n\n".to_string(), "\n".to_string()];
         let searcher = PatternSearcher::new(patterns);
-        let matches = searcher.search_patterns(data, span(0, data.len()));
+        let matches = searcher.search_patterns(data, span(0, data.len())).collect::<Vec<_>>();
         assert_eq!(matches.len(), 2);
         assert_eq!(matches[0].span, span(15, 17));
         assert_eq!(matches[1].span, span(31, 33));
@@ -396,7 +396,7 @@ mod tests {
         let data = "Hello, you all!\n\n How are you? \n\n".as_bytes();
         let patterns = vec!["\n".to_string(), "\n\n".to_string()];
         let searcher = PatternSearcher::new(patterns);
-        let matches = searcher.search_patterns(data, span(0, data.len()));
+        let matches = searcher.search_patterns(data, span(0, data.len())).collect::<Vec<_>>();
         assert_eq!(matches.len(), 4);
         assert_eq!(matches[0].span, span(15, 16));
         assert_eq!(matches[1].span, span(16, 17));

@@ -62,83 +62,86 @@ impl PatternSearcher {
             }
         }
     }
-    pub fn search_patterns(&self, data: &[u8], data_span: Span) -> Vec<SearchMatch> {
+    pub fn search_patterns<'a>(&'a self, data: &'a [u8], data_span: Span) -> Box<dyn Iterator<Item = SearchMatch> + '_> {
         if self.patterns.is_empty() || data_span.is_empty() || data.is_empty() {
-            return Vec::new();
+            return Box::new(std::iter::empty());
         }
         if self.patterns.len() == 1 {
             let pattern = self.patterns.first().unwrap();
             if let Some(finder) = self.memchr_finder.as_ref() {
-                finder
+                Box::new(finder
                     .find_iter(&data[data_span.range()])
-                    .map(|start| SearchMatch {
+                    .map(move |start| SearchMatch {
                         pattern_len: pattern.len(),
                         is_pattern_whitespace: pattern.is_whitespace,
                         span: span(start, start + pattern.len()),
-                    })
-                    .collect()
+                    }))
+                    //.collect()
             } else {
-                find_iter(&data[data_span.range()], pattern.as_bytes())
-                    .map(|start| SearchMatch {
+                Box::new(find_iter(&data[data_span.range()], pattern.as_bytes())
+                    .map(move |start| SearchMatch {
                         pattern_len: pattern.len(),
                         is_pattern_whitespace: pattern.is_whitespace,
                         span: span(start, start + pattern.len()),
-                    })
-                    .collect()
+                    }))
+                    //.collect()
             }
         } else {
             if let Some(ac) = self.aho_corasick.as_ref() {
-                ac.find_iter(&data[data_span.range()])
-                    .map(|mt| {
+                Box::new(ac.find_iter(&data[data_span.range()])
+                    .map(move |mt| {
                         let pattern = self.patterns.get(mt.pattern().as_usize()).unwrap();
                         SearchMatch {
                             pattern_len: pattern.len(),
                             is_pattern_whitespace: pattern.is_whitespace,
                             span: mt.span().into(),
                         }
-                    })
-                    .collect()
+                    }))
+                    //.collect()
             } else {
                 if self.patterns.len() == 2 {
-                    memchr2_iter(
+                    Box::new(memchr2_iter(
                         self.patterns[0].as_bytes()[0],
                         self.patterns[1].as_bytes()[0],
                         &data[data_span.range()],
                     )
-                        .map(|start| {
+                        .map(move |start| {
                             let is_pattern_whitespace = (data[data_span.start + start] as char).is_whitespace();
                             SearchMatch {
                                 pattern_len: 1,
                                 is_pattern_whitespace,
                                 span: span(start, start + 1),
                             }
-                        })
-                        .collect()
+                        }))
+                        //.collect()
                 } else {
-                    memchr3_iter(
+                    Box::new(memchr3_iter(
                         self.patterns[0].as_bytes()[0],
                         self.patterns[1].as_bytes()[0],
                         self.patterns[2].as_bytes()[0],
                         &data[data_span.range()],
                     )
-                        .map(|start| {
+                        .map(move |start| {
                             let is_pattern_whitespace = (data[data_span.start + start] as char).is_whitespace();
                             SearchMatch {
                                 pattern_len: 1,
                                 is_pattern_whitespace,
                                 span: span(start, start + 1),
                             }
-                        })
-                        .collect()
+                        }))
+                        //.collect()
                 }
             }
         }
     }
 
     pub fn find_pattern<'a>(&'a self, data: &'a [u8], data_span: Span) -> SearchResult {
-        let matches: Vec<_> = self.search_patterns(data, data_span);
+        let mut matches = self.search_patterns(data, data_span);
 
-        if matches.is_empty() {
+        let first_match_opt = matches.next();
+
+
+        if first_match_opt.is_none() {
             return SearchResult {
                 data,
                 offset: data_span.start,
@@ -149,7 +152,7 @@ impl PatternSearcher {
 
         let mut pattern_splits: Vec<SearchSplit> = Vec::new();
 
-        let mut cur_match = matches.first().unwrap();
+        let mut cur_match = first_match_opt.unwrap();
 
         // If the first match is not at the beginning of the data
         if cur_match.start() > 0 {
@@ -175,7 +178,7 @@ impl PatternSearcher {
         }
 
 
-        matches.iter().skip(1).for_each(|next_match| {
+        matches.for_each(|next_match| {
             let search_split = SearchSplit::new(
                 span(
                     data_span.start + cur_match.end(),
