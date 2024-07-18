@@ -127,6 +127,7 @@ pub fn ws_punc_tokens(text: &str) -> Vec<String> {
 mod tests {
     use super::*;
     use std::str::from_utf8;
+    use crate::normalizer::TextNormalizer;
 
     #[test]
     fn alphanumeric_test() {
@@ -178,6 +179,17 @@ mod tests {
         let ja_tokens = ws_tokenizer.whitespace_punctuation_tokenize(ja_data);
         ja_tokens.iter().for_each(|(start, end)| {
             let token = get_token(ja_data, *start, *end);
+            println!("{}", token);
+        });
+
+        let zh_data = "历史地理学的起源至少可以追溯到我国最早的地理学著作《山海经》".to_string();
+        let normalizer = TextNormalizer::default();
+        let zh_data_str = normalizer.normalize(&zh_data).unwrap();
+        let zh_data = zh_data_str.as_str();
+
+        let zh_tokens = ws_tokenizer.whitespace_punctuation_tokenize(zh_data);
+        zh_tokens.iter().for_each(|(start, end)| {
+            let token = get_token(zh_data, *start, *end);
             println!("{}", token);
         });
 

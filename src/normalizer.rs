@@ -1,5 +1,6 @@
 extern crate unicode_normalization;
 
+use std::collections::VecDeque;
 use std::string::String;
 
 use serde::{Deserialize, Serialize};
@@ -114,6 +115,31 @@ impl TextNormalizer {
         normalized
     }
 
+    fn rev_handle_chinese_chars(&self, data: &String) -> String {
+        let to_remove: VecDeque<_> = data.chars().enumerate().flat_map(|(i, c)| {
+            if is_chinese_char(c) {
+                vec![i - 1, i + 1]
+            } else {
+                vec![]
+            }
+        }).collect();
+
+        let mut denormalized = String::new();
+        data.chars().enumerate().fold(to_remove, |mut to_remove, (i, c)| {
+            let first = to_remove.front();
+            if let Some(rm) = first {
+                if *rm == i {
+                    to_remove.pop_front();
+                } else {
+                    denormalized.push(c);
+                }
+            } else {
+                denormalized.push(c);
+            }
+            to_remove
+        });
+        denormalized
+    }
     fn do_strip_accents(&self, normalized: &String) -> String {
         normalized
             .to_owned()
@@ -147,6 +173,15 @@ impl TextNormalizer {
             normalized = self.do_lowercase(&normalized);
         }
 
+        Ok(normalized)
+    }
+
+    pub fn denormalize(&self, data: &String) -> anyhow::Result<String> {
+        let mut normalized = data.clone();
+
+        if self.handle_chinese_chars {
+            normalized = self.rev_handle_chinese_chars(&normalized);
+        }
         Ok(normalized)
     }
 }

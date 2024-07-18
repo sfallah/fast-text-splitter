@@ -11,6 +11,7 @@ mod tests {
     use crate::config::SplitterLiteConfig;
     use crate::encodings::{NoneTokenizer, Tokenize};
     use crate::hf_tokenizer::{init_tokenizer, HFTokenizer};
+    use crate::normalizer::TextNormalizer;
     use crate::pattern_search::pattern_searcher::PatternSearcher;
     use crate::splitter::split_node::utils::SplitResultLite;
     use crate::splitter::split_node::visualization::term_tree;
@@ -1206,12 +1207,108 @@ mod tests {
     }
 
     #[test]
+    fn chinese_hf_split_print() {
+        let data_path = "tests/test_data/chinese_example01.txt";
+        let data = fs::read(data_path).unwrap();
+
+        let patterns = vec![
+            vec!["\n\n".to_string()],
+            vec!["\n".to_string()],
+            vec![".".to_string(), ". ".to_string(), ",".to_string(), ", ".to_string(), "、".to_string(),  "。".to_string()],
+        ];
+        let splitter = SplitterLiteConfig::new_hf(patterns, 512, 0, true, Some("sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2".to_string()));
+
+        let splits = splitter.hf_splits(data.as_slice());
+
+        let total_len: usize = splits.iter().map(|res| res.split_string.len()).sum();
+        assert_eq!(data.len(), total_len);
+        println!("Total Leaves: {:?}", splits.len());
+        println!("Total Length: {:?}", total_len);
+
+        // get splitter tokenizer as HFTokenizer
+        for split in splits.iter() {
+            println!("{:?}", split.split_string);
+            println!("{:?}", split.tokens.len());
+        }
+    }
+
+    #[test]
+    fn chinese_ws_split_print() {
+        let data_path = "tests/test_data/chinese_example01.txt";
+        let orig_data_str = fs::read_to_string(data_path).unwrap();
+
+        let normalizer = TextNormalizer::default();
+        let data_str = normalizer.normalize(&orig_data_str).unwrap();
+        let data = data_str.as_str();
+
+        let patterns = vec![
+            vec!["\n\n".to_string()],
+            vec!["\n".to_string()],
+            vec![".".to_string(), ". ".to_string(), ",".to_string(), ", ".to_string(), "、".to_string(),  "。".to_string()],
+        ];
+        let splitter = SplitterLiteConfig::new_ws(patterns, 512, 0, true, false);
+
+        let splits = splitter.ws_splits(data.as_bytes());
+
+        let total_len: usize = splits.iter().map(|res| res.split_string.len()).sum();
+
+        assert_eq!(data.len(), total_len);
+        println!("Total Leaves: {:?}", splits.len());
+        println!("Total Length: {:?}", total_len);
+
+        // get splitter tokenizer as HFTokenizer
+        for split in splits.iter() {
+            println!("{:?}", split.split_string);
+            println!("{:?}", split.tokens.len());
+        }
+        let denormalized_split_strings: Vec<String> = splits.iter().map(|res| normalizer.denormalize(&res.split_string).unwrap()).collect();
+        for split in denormalized_split_strings.iter() {
+            println!("{:?}", split);
+        }
+
+        let denormalized_len: usize = denormalized_split_strings.iter().map(|res| res.len()).sum();
+        assert_eq!(orig_data_str.len(), denormalized_len);
+    }
+
+    #[test]
+    fn chinese_none_split_print() {
+        let data_path = "tests/test_data/chinese_example01.txt";
+        let data_str = fs::read_to_string(data_path).unwrap();
+        let data = data_str.as_str();
+
+        let patterns = vec![
+            vec!["\n\n".to_string()],
+            vec!["\n".to_string()],
+            vec![".".to_string(), ". ".to_string(), ",".to_string(), ", ".to_string(), "、".to_string(),  "。".to_string()],
+        ];
+        let splitter = SplitterLiteConfig::new_none(patterns, 512, 0, false);
+
+        let splits = splitter.len_splits(data.as_bytes());
+
+        let total_len: usize = splits.iter().map(|res| res.split_string.len()).sum();
+
+        assert_eq!(data.len(), total_len);
+        println!("Total Leaves: {:?}", splits.len());
+        println!("Total Length: {:?}", total_len);
+
+        // get splitter tokenizer as HFTokenizer
+        for split in splits.iter() {
+            println!("{:?}", split.split_string);
+            println!("{:?}", split.tokens.len());
+        }
+
+        assert_eq!(data.len(), total_len);
+
+    }
+
+    #[test]
     fn hf_nq_dataset_test() -> tokenizers::Result<()> {
         let mut rng = thread_rng();
 
         tokenizers::utils::parallelism::set_parallelism(true);
-        //let files = list_text_files("data/dev/")?;
-        let files = list_text_files("data/train/")?;
+        let dev_files = list_text_files("data/dev/")?;
+        let train_files = list_text_files("data/train/")?;
+        let files: Vec<_> = dev_files.iter().chain(train_files.iter()).collect();
 
         let patterns = vec![
             vec!["\n\n".to_string()],
@@ -1223,7 +1320,7 @@ mod tests {
             .map(|p| PatternSearcher::new(p.clone()))
             .collect();
 
-        let rnd_files: Vec<_> = files.choose_multiple(&mut rng, 1200).collect();
+        let rnd_files: Vec<_> = files.choose_multiple(&mut rng, 3000).collect();
 
         rnd_files.par_iter().for_each(|file| {
             let (data_len, results) =

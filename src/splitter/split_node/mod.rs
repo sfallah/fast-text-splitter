@@ -143,7 +143,7 @@ impl SplitNode {
                 if let Some(tokens_results) = split.tokens_results.as_ref() {
                     tokens_results.iter().for_each(|tokens_result| {
                         if tokens_result.ids.is_some() {
-                            tokens.extend(tokens_result.ids.as_ref().unwrap().clone());
+                            tokens.extend_from_slice(tokens_result.ids.as_ref().unwrap());
                         }
                     });
                 }

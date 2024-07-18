@@ -13,7 +13,7 @@ pub fn add_splits(merged: &mut Vec<Split>, to_merge: &Vec<Split>, max_tokens: us
     }
 
     if merged.is_empty() {
-        merged.extend(to_merge.clone());
+        merged.extend_from_slice(to_merge.as_slice());
         return;
     }
 
@@ -24,12 +24,12 @@ pub fn add_splits(merged: &mut Vec<Split>, to_merge: &Vec<Split>, max_tokens: us
             let to_merge_splits = vec![last_merged.clone(), to_merge_split.clone()];
             let merged_res = merge_splits(&to_merge_splits, max_tokens);
             merged.pop();
-            merged.extend(merged_res);
+            merged.extend_from_slice(merged_res.as_slice());
         } else {
-            merged.extend(to_merge.clone());
+            merged.extend_from_slice(to_merge.as_slice());
         }
     } else {
-        merged.extend(to_merge.clone())
+        merged.extend_from_slice(to_merge.as_slice());
     }
 }
 
@@ -95,7 +95,7 @@ pub fn into_one_split(splits: &Vec<Split>) -> Split {
 
         let merged_tokens_results = splits.iter().fold(Vec::new(), |mut acc, split| {
             if let Some(spl_tokens_results) = split.tokens_results.as_ref() {
-                acc.extend(spl_tokens_results.clone());
+                acc.extend_from_slice(spl_tokens_results.as_slice());
             }
             acc
         });
