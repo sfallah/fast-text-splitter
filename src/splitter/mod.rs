@@ -426,7 +426,7 @@ impl<'a, T: Tokenize + Sync> Splitter<'a, T> {
         split_tokens_span: Option<Span>,
     ) -> bool {
         if let Some(merge_level) = self.config.merge_level {
-            if self.pattern_id <= merge_level {
+            if self.pattern_id < merge_level {
                 return false;
             }
         }

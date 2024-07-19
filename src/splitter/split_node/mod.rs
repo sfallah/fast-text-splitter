@@ -8,9 +8,7 @@ use aho_corasick::Span;
 
 use crate::common::split::Split;
 use crate::splitter::split_encoding::SplitEncoding;
-use crate::splitter::split_node::utils::{
-    add_splits, attach_pattern_nodes, merge_splits, SplitResultLite,
-};
+use crate::splitter::split_node::utils::{add_splits, add_splits_no_merge, attach_pattern_nodes, merge_splits, SplitResultLite};
 
 #[derive(Clone)]
 pub struct SplitNode {
@@ -200,7 +198,7 @@ impl SplitNode {
                     // if self.pattern_id > merge_level
                     // attach pattern_nodes only
                     if let Some(merge_level) = merge_level {
-                        if self.pattern_id < merge_level {
+                        if self.pattern_id <= merge_level {
                             return attach_pattern_nodes(&children_splits, max_len);
                         }
                     }
@@ -220,7 +218,7 @@ impl SplitNode {
                         .fold(Vec::new(), |mut acc, child_splits| {
                             if let Some(merge_level) = merge_level {
                                 if self.pattern_id < merge_level {
-                                    add_splits(&mut acc, &child_splits.clone(), max_len);
+                                    add_splits_no_merge(&mut acc, &child_splits.clone(), max_len);
                                     return acc;
                                 }
                             }

@@ -33,6 +33,32 @@ pub fn add_splits(merged: &mut Vec<Split>, to_merge: &Vec<Split>, max_tokens: us
     }
 }
 
+pub fn add_splits_no_merge(merged: &mut Vec<Split>, to_merge: &Vec<Split>, max_tokens: usize) {
+    if to_merge.is_empty() {
+        return;
+    }
+
+    if merged.is_empty() {
+        merged.extend_from_slice(to_merge.as_slice());
+        return;
+    }
+
+    if to_merge.len() == 1 {
+        let last_merged = merged.last().unwrap().clone();
+        let to_merge_split = to_merge.first().unwrap();
+        if to_merge_split.pattern_node {
+            let to_merge_splits = vec![last_merged.clone(), to_merge_split.clone()];
+            let merged_res = merge_splits(&to_merge_splits, max_tokens);
+            merged.pop();
+            merged.extend_from_slice(merged_res.as_slice());
+        } else {
+            merged.extend_from_slice(to_merge.as_slice());
+        }
+    } else {
+        merged.extend_from_slice(to_merge.as_slice());
+    }
+}
+
 pub fn attach_pattern_nodes(splits: &Vec<Split>, max_tokens: usize) -> Vec<Split> {
     if splits.len() <= 1 {
         return splits.to_vec();

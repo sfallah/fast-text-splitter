@@ -1020,7 +1020,7 @@ mod tests {
             .collect();
 
         let max_len = Some(256);
-        let merge_level = Some(3);
+        let merge_level = Some(2);
         let config = SplitterConfig::<NoneTokenizer> {
             data,
             searchers: &searchers,
