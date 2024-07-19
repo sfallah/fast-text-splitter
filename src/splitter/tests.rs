@@ -1181,6 +1181,69 @@ mod tests {
     }
 
     #[test]
+    fn fast_two_hf_tree_splits() {
+        let data_path = "tests/test_data/superlinear.txt";
+        let binding = fs::read_to_string(data_path).unwrap();
+        let data = binding.as_bytes();
+
+        let patterns = vec![
+            vec!["\n\n".to_string()],
+            vec!["\n".to_string()],
+            vec![".".to_string(), "!".to_string(), "?".to_string()],
+        ];
+
+        let splitter_config = SplitterLiteConfig::new_hf2(patterns, Some(512), None, true, None);
+        let splits = splitter_config.hf_splits(data);
+
+        let chunk_lens: usize = splits.iter().map(|c| c.split_string.len()).sum();
+        assert_eq!(chunk_lens, data.len());
+
+        let hf_tokenizer = init_tokenizer(None, Some(usize::MAX), false).unwrap();
+        let hf_encoding = hf_tokenizer
+            .encode(from_utf8(data).unwrap(), false)
+            .unwrap();
+
+        let total_tokens: usize = splits.iter().map(|res| res.tokens.len()).sum();
+        assert_eq!(hf_encoding.len(), total_tokens);
+
+        println!("number of splits: {:?}", splits.len());
+        for split in splits.iter() {
+            println!("{:?}", split.split_string);
+            println!("{:?}", split.split_string.len());
+            println!("{:?}", split.tokens.len());
+            let hf_encoded = hf_tokenizer
+                .encode(split.split_string.clone(), false)
+                .unwrap();
+            assert_eq!(hf_encoded.len(), split.tokens.len());
+        }
+
+        println!("#### Sub Splits ####");
+        let sub_patterns = vec![
+            vec!["\n\n".to_string()],
+            vec!["\n".to_string()],
+            vec![".".to_string(), "!".to_string(), "?".to_string()],
+        ];
+
+        let sub_splitter_config = SplitterLiteConfig::new_hf2(sub_patterns, None, Some(3), true, None);
+        for split in splits.iter() {
+            println!("{:?}", split.split_string);
+            println!("{:?}", split.split_string.len());
+            let sub_splits = sub_splitter_config.hf_splits(split.split_string.as_bytes());
+            for sub_split in sub_splits.iter() {
+                println!("{:?}", sub_split.split_string);
+                println!("{:?}", sub_split.split_string.len());
+                println!("{:?}", sub_split.tokens.len());
+                let hf_encoded = hf_tokenizer
+                    .encode(sub_split.split_string.clone(), false)
+                    .unwrap();
+                assert_eq!(hf_encoded.len(), sub_split.tokens.len());
+            }
+            let total_len: usize = sub_splits.iter().map(|res| res.split_string.len()).sum();
+            assert_eq!(split.split_string.len(), total_len);
+        }
+    }
+
+    #[test]
     fn first_pattern_no_match_split() {
         let data = "\n\
         In fact, the correlation. Between superlinear.\n\

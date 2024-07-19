@@ -168,7 +168,7 @@ pub fn into_one_split(splits: &Vec<Split>) -> Split {
             pattern_id: first_split.pattern_id,
             tokens_no,
             data_span,
-            pattern_node: last_split.pattern_node,
+            pattern_node: false,
             tokens_results,
             tokenized,
         }

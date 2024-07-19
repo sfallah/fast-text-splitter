@@ -228,11 +228,13 @@ impl SplitNode {
                         })
                 }
             } else {
-                self.children
+                let child_splits = self.children
                     .iter()
                     .map(|child| child.get_node_splits(max_tokens, merge_level))
                     .flatten()
-                    .collect()
+                    .collect();
+                let res = attach_pattern_nodes(&child_splits, usize::MAX);
+                res
             }
         }
     }
