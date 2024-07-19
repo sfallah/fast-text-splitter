@@ -1,9 +1,7 @@
 #[cfg(test)]
 mod tests {
     use crate::common::{span, span_ne_offset};
-    use crate::splitter::split_encoding::{
-        data_to_token_offsets, splits_tokens_spans,
-    };
+    use crate::splitter::split_encoding::{data_to_token_offsets, splits_tokens_spans};
 
     #[test]
     fn test_zero_offset() {
@@ -29,7 +27,10 @@ mod tests {
         let data_spans = vec![span(4, 6), span(6, 8), span(8, 9)];
         let data_offset = 4;
 
-        let data_spans = data_spans.iter().map(|sp| span_ne_offset(sp,data_offset)).collect();
+        let data_spans = data_spans
+            .iter()
+            .map(|sp| span_ne_offset(sp, data_offset))
+            .collect();
 
         let res = data_to_token_offsets(&offsets, &data_spans);
         assert_eq!(res, vec![span(0, 2), span(2, 4), span(4, 5)]);

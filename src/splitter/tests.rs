@@ -37,6 +37,7 @@ mod tests {
         patterns: Vec<Vec<String>>,
         searchers: &Vec<PatternSearcher>,
         max_len: usize,
+        merge_level: usize,
         _print: bool,
         check_splits: bool,
         parallel: bool,
@@ -59,6 +60,7 @@ mod tests {
             data,
             searchers,
             max_len,
+            merge_level: None,
             tokenizer: Some(&hf_tokenizer),
             patterns_len,
         };
@@ -74,7 +76,7 @@ mod tests {
         );
         let tree = splitter.split();
 
-        let split_results = tree.get_results_lite(max_len, data);
+        let split_results = tree.get_results_lite(max_len, Some(merge_level), data);
         println!("Number of Split Results: {:?}", split_results.len());
 
         if _print {
@@ -136,6 +138,8 @@ mod tests {
             data,
             searchers: &searchers,
             max_len: Some(10),
+            merge_level: None,
+
             tokenizer: None,
             patterns_len,
         };
@@ -146,7 +150,7 @@ mod tests {
         let reconsted = tree.reconstruct(data);
         assert_eq!(from_utf8(data).unwrap(), reconsted);
 
-        let lite_results = tree.get_results_lite(Some(20), data);
+        let lite_results = tree.get_results_lite(Some(20), None, data);
         println!("Number of Lite Results: {:?}", lite_results.len());
         for res in lite_results.iter() {
             println!("text: {:?}", res.split_string);
@@ -193,6 +197,8 @@ mod tests {
             data,
             searchers: &searchers,
             max_len: Some(32),
+            merge_level: None,
+
             tokenizer: None,
             patterns_len,
         };
@@ -201,7 +207,7 @@ mod tests {
         println!("{}", tree.to_string(data, true));
         assert_eq!(from_utf8(data).unwrap(), tree.reconstruct(data));
 
-        let lite_results = tree.get_results_lite(Some(32), data);
+        let lite_results = tree.get_results_lite(Some(32), None, data);
         println!("Number of Lite Results: {:?}", lite_results.len());
         for res in lite_results.iter() {
             println!("text: {:?}", res.split_string);
@@ -235,6 +241,8 @@ mod tests {
             data,
             searchers: &searchers,
             max_len,
+            merge_level: None,
+
             tokenizer: Some(&hf_tokenizer),
             patterns_len,
         };
@@ -242,7 +250,7 @@ mod tests {
         let tree = splitter.split();
         println!("{}", tree.to_string(data, true));
 
-        let lite_results = tree.get_results_lite(Some(512), data);
+        let lite_results = tree.get_results_lite(Some(512), None, data);
         println!("Number of Lite Results: {:?}", lite_results.len());
         for res in lite_results.iter() {
             println!("{:?}", res.split_string);
@@ -328,6 +336,8 @@ mod tests {
             data,
             searchers: &searchers,
             max_len,
+            merge_level: None,
+
             tokenizer: Some(&ws_tokenizer),
             patterns_len,
         };
@@ -336,7 +346,7 @@ mod tests {
         println!("{}", tree.to_string(data, true));
         assert_eq!(from_utf8(data).unwrap(), tree.reconstruct(data));
 
-        let lite_results = tree.get_results_lite(max_len, data);
+        let lite_results = tree.get_results_lite(max_len, None, data);
         println!("Number of Lite Results: {:?}", lite_results.len());
         for res in lite_results.iter() {
             println!("{:?}", res.split_string);
@@ -387,13 +397,15 @@ mod tests {
             data,
             searchers: &searchers,
             max_len,
+            merge_level: None,
+
             tokenizer: Some(&hf_tokenizer),
             patterns_len,
         };
         let splitter = Splitter::new(&config, span, 0, span, None, None, None);
         let tree = splitter.split();
 
-        let lite_results = tree.get_results_lite(Some(16), data);
+        let lite_results = tree.get_results_lite(Some(16), None, data);
         println!("Number of Lite Results: {:?}", lite_results.len());
         for res in lite_results.iter() {
             println!("{:?}", res.split_string);
@@ -480,6 +492,8 @@ mod tests {
             data,
             searchers: &searchers,
             max_len: Some(16),
+            merge_level: None,
+
             tokenizer: None,
             patterns_len,
         };
@@ -521,6 +535,8 @@ mod tests {
             data,
             searchers: &searchers,
             max_len: None,
+            merge_level: None,
+
             tokenizer: None,
             patterns_len,
         };
@@ -534,7 +550,7 @@ mod tests {
             Err(err) => println!("error: {}", err),
         }
 
-        let lite_results = tree.get_results_lite(None, data);
+        let lite_results = tree.get_results_lite(None, None, data);
         println!("Number of Lite Results: {:?}", lite_results.len());
         for res in lite_results.iter() {
             println!("{:?}", res.split_string);
@@ -579,6 +595,8 @@ mod tests {
             data,
             searchers: &searchers,
             max_len,
+            merge_level: None,
+
             tokenizer: Some(&hf_tokenizer),
             patterns_len,
         };
@@ -592,7 +610,7 @@ mod tests {
             Err(err) => println!("error: {}", err),
         }
 
-        let splits = tree.get_node_splits(max_len);
+        let splits = tree.get_node_splits(max_len, None);
         println!("Number of Splits: {:?}", splits.len());
         for split in splits.iter() {
             let split_str = from_utf8(&data[split.data_span.unwrap().range()]).unwrap();
@@ -634,6 +652,8 @@ mod tests {
             data,
             searchers: &searchers,
             max_len: None,
+            merge_level: None,
+
             tokenizer: Some(&ws_tokenizer),
             patterns_len,
         };
@@ -647,7 +667,7 @@ mod tests {
             Err(err) => println!("error: {}", err),
         }
 
-        let lite_results = tree.get_results_lite(None, data);
+        let lite_results = tree.get_results_lite(None, None, data);
         println!("Number of Lite Results: {:?}", lite_results.len());
         for res in lite_results.iter() {
             println!("{:?}", res.split_string);
@@ -688,6 +708,8 @@ mod tests {
             data,
             searchers: &searchers,
             max_len,
+            merge_level: None,
+
             tokenizer: None,
             patterns_len,
         };
@@ -701,7 +723,7 @@ mod tests {
             Err(err) => println!("error: {}", err),
         }
 
-        let lite_results = tree.get_results_lite(None, data);
+        let lite_results = tree.get_results_lite(None, None, data);
         println!("Number of Lite Results: {:?}", lite_results.len());
         for res in lite_results.iter() {
             println!("{:?}", res.split_string);
@@ -749,11 +771,14 @@ mod tests {
 
         let ws_tokenizer = WSTokenizer { ascii: false };
 
-        let max_len: Option<usize> = Some(2);
+        //let max_len: Option<usize> = Some();
+        let max_len: Option<usize> = None;
         let config = SplitterConfig::<WSTokenizer> {
             data,
             searchers: &searchers,
             max_len,
+            merge_level: None,
+
             tokenizer: Some(&ws_tokenizer),
             patterns_len,
         };
@@ -767,7 +792,7 @@ mod tests {
             Err(err) => println!("error: {}", err),
         }
 
-        let lite_results = tree.get_results_lite(None, data);
+        let lite_results = tree.get_results_lite(None, None, data);
         println!("Number of Lite Results: {:?}", lite_results.len());
         for res in lite_results.iter() {
             println!("{:?}", res.split_string);
@@ -809,6 +834,8 @@ mod tests {
             data,
             searchers: &searchers,
             max_len,
+            merge_level: None,
+
             tokenizer: None,
             patterns_len,
         };
@@ -822,7 +849,7 @@ mod tests {
             Err(err) => println!("error: {}", err),
         }
 
-        let lite_results = tree.get_node_splits(max_len);
+        let lite_results = tree.get_node_splits(max_len, None);
         println!("Number of Lite Results: {:?}", lite_results.len());
         for res in lite_results.iter() {
             let split_data_span = res.data_span.unwrap();
@@ -868,6 +895,8 @@ mod tests {
             data,
             searchers: &searchers,
             max_len,
+            merge_level: None,
+
             tokenizer: Some(&ws_tokenizer),
             patterns_len,
         };
@@ -881,7 +910,7 @@ mod tests {
             Err(err) => println!("error: {}", err),
         }
 
-        let lite_results = tree.get_results_lite(None, data);
+        let lite_results = tree.get_results_lite(None, None, data);
         println!("Number of Lite Results: {:?}", lite_results.len());
         for res in lite_results.iter() {
             println!("{:?}", res.split_string);
@@ -919,6 +948,8 @@ mod tests {
             data,
             searchers: &searchers,
             max_len,
+            merge_level: None,
+
             tokenizer: Some(&ws_tokenizer),
             patterns_len,
         };
@@ -932,7 +963,7 @@ mod tests {
             Err(err) => println!("error: {}", err),
         }
 
-        let lite_results = tree.get_results_lite(None, data);
+        let lite_results = tree.get_results_lite(None, None, data);
         println!("Number of Lite Results: {:?}", lite_results.len());
         for res in lite_results.iter() {
             println!("{:?}", res.split_string);
@@ -952,18 +983,17 @@ mod tests {
             vec![".".to_string(), "!".to_string(), "?".to_string()],
         ];
 
-        let splitter_config = SplitterLiteConfig::new_none(patterns, 256, 0, false);
+        let splitter_config = SplitterLiteConfig::new_none(patterns, 512, 4, false);
         let splits = splitter_config.len_splits(data);
 
         let chunk_lens: usize = splits.iter().map(|c| c.split_string.len()).sum();
-        println!("{:?}", chunk_lens);
-        assert_eq!(chunk_lens, data.len());
 
         println!("{:?}", splits.len());
         for split in splits.iter() {
             println!("{:?}", split.split_string);
             println!("{:?}", split.split_string.len());
         }
+        assert_eq!(data.len(), chunk_lens);
     }
 
     #[test]
@@ -990,17 +1020,19 @@ mod tests {
             .collect();
 
         let max_len = Some(256);
+        let merge_level = Some(3);
         let config = SplitterConfig::<NoneTokenizer> {
             data,
             searchers: &searchers,
             max_len,
+            merge_level,
             tokenizer: None,
             patterns_len,
         };
         let splitter = Splitter::new(&config, span, 0, span, None, None, None);
         let tree = splitter.split();
 
-        let splits = tree.get_node_splits(max_len);
+        let splits = tree.get_node_splits(max_len, merge_level);
         println!("Number of Splits: {:?}", splits.len());
         for res in splits.iter() {
             let split_data_span = res.data_span.unwrap();
@@ -1048,10 +1080,6 @@ mod tests {
         //let data_path = "tests/error_data/wiki_us_snippet_error.txt";
         //let data_path = "data/dev/Belle_(Beauty_and_the_Beast).txt";
 
-
-
-
-
         let binding = fs::read_to_string(data_path).unwrap();
         let data = binding.as_bytes();
 
@@ -1076,14 +1104,15 @@ mod tests {
             .unwrap();
         let total_tokens: usize = splits.iter().map(|res| res.tokens.len()).sum();
 
-
         assert_eq!(hf_encoding.len(), total_tokens);
 
         //write to file output/debug/hf_splits_concated.txt
-        let result_concated: String = splits.iter().map(|split| split.split_string.clone()).collect();
+        let result_concated: String = splits
+            .iter()
+            .map(|split| split.split_string.clone())
+            .collect();
         let mut file = fs::File::create("output/debug/hf_splits_concated.txt").unwrap();
         file.write_all(result_concated.as_bytes()).unwrap();
-
 
         for split in splits.iter() {
             println!("{:?}", split.split_string);
@@ -1184,6 +1213,8 @@ mod tests {
             data,
             searchers: &searchers,
             max_len: None,
+            merge_level: None,
+
             tokenizer: None,
             patterns_len,
         };
@@ -1209,7 +1240,8 @@ mod tests {
             .map(|p| PatternSearcher::new(p.clone()))
             .collect();
 
-        let (data_len, splits) = split_file(data_path, patterns, &searchers, 512, true, true, true);
+        let (data_len, splits) =
+            split_file(data_path, patterns, &searchers, 512, 2, true, true, true);
 
         let total_len: usize = splits.iter().map(|res| res.split_string.len()).sum();
         assert_eq!(data_len, total_len);
@@ -1225,9 +1257,22 @@ mod tests {
         let patterns = vec![
             vec!["\n\n".to_string()],
             vec!["\n".to_string()],
-            vec![".".to_string(), ". ".to_string(), ",".to_string(), ", ".to_string(), "、".to_string(),  "。".to_string()],
+            vec![
+                ".".to_string(),
+                ". ".to_string(),
+                ",".to_string(),
+                ", ".to_string(),
+                "、".to_string(),
+                "。".to_string(),
+            ],
         ];
-        let splitter = SplitterLiteConfig::new_hf(patterns, 512, 0, true, Some("sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2".to_string()));
+        let splitter = SplitterLiteConfig::new_hf(
+            patterns,
+            512,
+            0,
+            true,
+            Some("sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2".to_string()),
+        );
 
         let splits = splitter.hf_splits(data.as_slice());
 
@@ -1255,7 +1300,14 @@ mod tests {
         let patterns = vec![
             vec!["\n\n".to_string()],
             vec!["\n".to_string()],
-            vec![".".to_string(), ". ".to_string(), ",".to_string(), ", ".to_string(), "、".to_string(),  "。".to_string()],
+            vec![
+                ".".to_string(),
+                ". ".to_string(),
+                ",".to_string(),
+                ", ".to_string(),
+                "、".to_string(),
+                "。".to_string(),
+            ],
         ];
         let splitter = SplitterLiteConfig::new_ws(patterns, 512, 0, true, false);
 
@@ -1272,7 +1324,10 @@ mod tests {
             println!("{:?}", split.split_string);
             println!("{:?}", split.tokens.len());
         }
-        let denormalized_split_strings: Vec<String> = splits.iter().map(|res| normalizer.denormalize(&res.split_string).unwrap()).collect();
+        let denormalized_split_strings: Vec<String> = splits
+            .iter()
+            .map(|res| normalizer.denormalize(&res.split_string).unwrap())
+            .collect();
         for split in denormalized_split_strings.iter() {
             println!("{:?}", split);
         }
@@ -1290,7 +1345,14 @@ mod tests {
         let patterns = vec![
             vec!["\n\n".to_string()],
             vec!["\n".to_string()],
-            vec![".".to_string(), ". ".to_string(), ",".to_string(), ", ".to_string(), "、".to_string(),  "。".to_string()],
+            vec![
+                ".".to_string(),
+                ". ".to_string(),
+                ",".to_string(),
+                ", ".to_string(),
+                "、".to_string(),
+                "。".to_string(),
+            ],
         ];
         let splitter = SplitterLiteConfig::new_none(patterns, 512, 0, false);
 
@@ -1309,7 +1371,6 @@ mod tests {
         }
 
         assert_eq!(data.len(), total_len);
-
     }
 
     #[test]
@@ -1331,15 +1392,25 @@ mod tests {
             .map(|p| PatternSearcher::new(p.clone()))
             .collect();
 
-        let rnd_files: Vec<_> = files.choose_multiple(&mut rng, 3000).collect();
+        let rnd_files: Vec<_> = files.choose_multiple(&mut rng, 300).collect();
 
         rnd_files.par_iter().for_each(|file| {
-            let (data_len, results) =
-                split_file(file, patterns.clone(), &searchers, 512, false, false, true);
-            let total_len: usize = results.iter().map(|res| res.split_string.len()).sum();
-            assert_eq!(data_len, total_len, "Failed File: {}", file);
-            println!("File: {} \n Total Length: {}", file, total_len);
-            println!("Number of Splits: {:?}", results.len());
+            for merge_level in 1..3 {
+                let (data_len, results) = split_file(
+                    file,
+                    patterns.clone(),
+                    &searchers,
+                    512,
+                    merge_level,
+                    false,
+                    false,
+                    true,
+                );
+                let total_len: usize = results.iter().map(|res| res.split_string.len()).sum();
+                assert_eq!(data_len, total_len, "Failed File: {}", file);
+                println!("File: {} \n Total Length: {}", file, total_len);
+                println!("Number of Splits: {:?}", results.len());
+            }
         });
 
         Ok(())

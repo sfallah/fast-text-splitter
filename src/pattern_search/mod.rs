@@ -5,10 +5,10 @@ use aho_corasick::{AhoCorasick, MatchKind, Span};
 pub mod pattern_searcher;
 
 pub mod search_match;
+mod search_pattern;
 pub mod search_result;
 pub mod search_split;
 mod tests;
-mod search_pattern;
 
 pub fn span_within_bounds(span: Span, data_len: usize) -> bool {
     // the span is valid

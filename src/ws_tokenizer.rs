@@ -126,8 +126,8 @@ pub fn ws_punc_tokens(text: &str) -> Vec<String> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::str::from_utf8;
     use crate::normalizer::TextNormalizer;
+    use std::str::from_utf8;
 
     #[test]
     fn alphanumeric_test() {

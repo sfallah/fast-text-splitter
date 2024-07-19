@@ -1,6 +1,6 @@
-use aho_corasick::Span;
 use crate::common::{span, span_ne_offset};
 use crate::encodings::EncodingType;
+use aho_corasick::Span;
 
 mod tests;
 
@@ -32,7 +32,10 @@ pub fn splits_tokens_spans(
     }
     // negative offset the data span according to the encoding data offset
     // encoding data offset start is the start of split that was encoded
-    let data_spans = data_spans.iter().map(|sp| span_ne_offset(sp, data_offset)).collect();
+    let data_spans = data_spans
+        .iter()
+        .map(|sp| span_ne_offset(sp, data_offset))
+        .collect();
     let res_spans = data_to_token_offsets(&tokens_offsets.unwrap()[tokens_offset..], &data_spans);
     let res: Vec<_> = res_spans
         .iter()

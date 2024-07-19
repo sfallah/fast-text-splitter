@@ -172,7 +172,6 @@ impl<'a, T: Tokenize + Sync> Splitter<'a, T> {
                         let split_tokens_spans = split_encoding
                             .split_encoding_tokens_spans(&splits_data_full_spans, tokens_offset);
 
-
                         search_result
                             .splits
                             .iter()
@@ -277,15 +276,16 @@ impl<'a, T: Tokenize + Sync> Splitter<'a, T> {
         // split the tokens if needed
         // in two, one for the data and one for the pattern
         let sub_split_tokens_spans = if let Some(split_encoding) = self.split_encoding.clone() {
-            let data_spans: Vec<Span> = if search_split.stride > 0 && !search_split.is_pattern_whitespace {
-                let pattern_data_span = span(
-                    search_split.span.end,
-                    search_split.span.end + search_split.pattern_len(),
-                );
-                vec![search_split.span, pattern_data_span]
-            } else {
-                vec![search_split.span]
-            };
+            let data_spans: Vec<Span> =
+                if search_split.stride > 0 && !search_split.is_pattern_whitespace {
+                    let pattern_data_span = span(
+                        search_split.span.end,
+                        search_split.span.end + search_split.pattern_len(),
+                    );
+                    vec![search_split.span, pattern_data_span]
+                } else {
+                    vec![search_split.span]
+                };
             let tokens_offset = self.split_tokens_span.clone().unwrap().start;
             split_encoding.split_encoding_tokens_spans(&data_spans, tokens_offset)
         } else {
@@ -293,7 +293,9 @@ impl<'a, T: Tokenize + Sync> Splitter<'a, T> {
         };
 
         let mut child_nodes = if !search_split.span.is_empty() {
-            let tokens_span = sub_split_tokens_spans.as_ref().and_then(|x| x.first().cloned());
+            let tokens_span = sub_split_tokens_spans
+                .as_ref()
+                .and_then(|x| x.first().cloned());
 
             if self.pattern_id + 1 < self.config.patterns_len() {
                 let splitter = self.to_next_splitter();
@@ -392,11 +394,11 @@ impl<'a, T: Tokenize + Sync> Splitter<'a, T> {
 
             let encoding_offset = split_encoding.as_ref().unwrap().encoding_data_span.start;
 
-            let tokens_offsets = split_encoding
-                .clone()
-                .unwrap()
-                .encoding
-                .to_data_offsets(split_spans.clone(), encoding_offset, data_span);
+            let tokens_offsets = split_encoding.clone().unwrap().encoding.to_data_offsets(
+                split_spans.clone(),
+                encoding_offset,
+                data_span,
+            );
 
             split_spans
                 .iter()
@@ -423,6 +425,12 @@ impl<'a, T: Tokenize + Sync> Splitter<'a, T> {
         split_encoding: Option<Arc<SplitEncoding>>,
         split_tokens_span: Option<Span>,
     ) -> bool {
+        if let Some(merge_level) = self.config.merge_level {
+            if self.pattern_id <= merge_level {
+                return false;
+            }
+        }
+
         let check_max_len = self.config.max_len.is_some();
 
         if check_max_len {

@@ -8,7 +8,9 @@ use aho_corasick::Span;
 
 use crate::common::split::Split;
 use crate::splitter::split_encoding::SplitEncoding;
-use crate::splitter::split_node::utils::{add_splits, merge_splits, SplitResultLite};
+use crate::splitter::split_node::utils::{
+    add_splits, attach_pattern_nodes, merge_splits, SplitResultLite,
+};
 
 #[derive(Clone)]
 pub struct SplitNode {
@@ -134,8 +136,13 @@ impl SplitNode {
             .to_string()
     }
 
-    pub fn get_results_lite(&self, max_len: Option<usize>, data: &[u8]) -> Vec<SplitResultLite> {
-        let splits = self.get_node_splits(max_len);
+    pub fn get_results_lite(
+        &self,
+        max_len: Option<usize>,
+        merge_level: Option<usize>,
+        data: &[u8],
+    ) -> Vec<SplitResultLite> {
+        let splits = self.get_node_splits(max_len, merge_level);
         splits
             .iter()
             .map(|split| {
@@ -157,13 +164,17 @@ impl SplitNode {
             .collect()
     }
 
-    pub fn get_node_splits(&self, max_tokens: Option<usize>) -> Vec<Split> {
+    pub fn get_node_splits(
+        &self,
+        max_tokens: Option<usize>,
+        merge_level: Option<usize>,
+    ) -> Vec<Split> {
         if self.children.is_empty() {
             let tokens_no = self.split_tokens_span.map(|span| span.len());
             let tokens_results = self.split_encoding.as_ref().map(|encoding| {
-                vec![Arc::new(encoding
-                    .encoding
-                    .to_lite_results(self.split_tokens_span))]
+                vec![Arc::new(
+                    encoding.encoding.to_lite_results(self.split_tokens_span),
+                )]
             });
             vec![Split {
                 pattern_id: self.pattern_id,
@@ -175,35 +186,53 @@ impl SplitNode {
             }]
         } else {
             if let Some(max_len) = max_tokens {
+                // add current pattern_id to all splits
+                //??? if self.pattern_id <= merge_level
                 let children_all_leaves: bool =
                     self.children.iter().all(|child| child.children.is_empty());
                 if children_all_leaves {
                     let children_splits: Vec<Split> = self
                         .children
                         .iter()
-                        .map(|child| child.get_node_splits(max_tokens))
+                        .map(|child| child.get_node_splits(max_tokens, merge_level))
                         .flatten()
                         .collect();
+                    // if self.pattern_id > merge_level
+                    // attach pattern_nodes only
+                    if let Some(merge_level) = merge_level {
+                        if self.pattern_id < merge_level {
+                            return attach_pattern_nodes(&children_splits, max_len);
+                        }
+                    }
                     merge_splits(&children_splits, max_len)
                 } else {
+                    // add current pattern_id to all splits
+                    //??? if self.pattern_id <= merge_level
                     let children_splits: Vec<Vec<Split>> = self
                         .children
                         .iter()
-                        .map(|child| child.get_node_splits(max_tokens))
+                        .map(|child| child.get_node_splits(max_tokens, merge_level))
                         .collect();
+                    // if self.pattern_id > merge_level don't merge
+                    // attach pattern_nodes to the last split
                     children_splits
                         .into_iter()
                         .fold(Vec::new(), |mut acc, child_splits| {
-                            //let merged_child_splits = merge_splits(&child_splits, max_len);
-                            //add_splits(&mut acc, &merged_child_splits.clone(), max_len);
-                            add_splits(&mut acc, &child_splits.clone(), max_len);
+                            if let Some(merge_level) = merge_level {
+                                if self.pattern_id < merge_level {
+                                    add_splits(&mut acc, &child_splits.clone(), max_len);
+                                    return acc;
+                                }
+                            }
+                            let merged_child_splits = merge_splits(&child_splits, max_len);
+                            add_splits(&mut acc, &merged_child_splits.clone(), max_len);
                             acc
                         })
                 }
             } else {
                 self.children
                     .iter()
-                    .map(|child| child.get_node_splits(max_tokens))
+                    .map(|child| child.get_node_splits(max_tokens, merge_level))
                     .flatten()
                     .collect()
             }

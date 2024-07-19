@@ -33,6 +33,29 @@ pub fn add_splits(merged: &mut Vec<Split>, to_merge: &Vec<Split>, max_tokens: us
     }
 }
 
+pub fn attach_pattern_nodes(splits: &Vec<Split>, max_tokens: usize) -> Vec<Split> {
+    if splits.len() <= 1 {
+        return splits.to_vec();
+    }
+    let mut attached_splits = Vec::new();
+    let mut prev_split = splits.first().unwrap().clone();
+    attached_splits.push(prev_split.clone());
+    for cur_split in splits.iter().skip(1) {
+        if cur_split.pattern_node {
+            if prev_split.no_tokens() + cur_split.no_tokens() <= max_tokens {
+                let merged_split = into_one_split(&vec![prev_split.clone(), cur_split.clone()]);
+                attached_splits.pop();
+                attached_splits.push(merged_split.clone());
+                prev_split = merged_split.clone();
+                continue;
+            }
+        }
+        attached_splits.push(cur_split.clone());
+        prev_split = cur_split.clone();
+    }
+    attached_splits
+}
+
 pub fn merge_splits(splits: &Vec<Split>, max_tokens: usize) -> Vec<Split> {
     if splits.len() <= 1 {
         return splits.to_vec();
@@ -84,8 +107,15 @@ pub fn into_one_split(splits: &Vec<Split>) -> Split {
         let first_split = splits.first().unwrap();
         let last_split = splits.last().unwrap();
         // sum tokens_no
-        let sum_tokens_no: usize = splits.iter().map(|split| split.tokens_no.unwrap_or(0)).sum();
-        let tokens_no = if sum_tokens_no > 0 { Some(sum_tokens_no) } else { None };
+        let sum_tokens_no: usize = splits
+            .iter()
+            .map(|split| split.tokens_no.unwrap_or(0))
+            .sum();
+        let tokens_no = if sum_tokens_no > 0 {
+            Some(sum_tokens_no)
+        } else {
+            None
+        };
 
         let data_span = if let Some(data_span) = first_split.data_span {
             Some(span(data_span.start, last_split.data_span.unwrap().end))

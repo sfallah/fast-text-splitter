@@ -14,6 +14,7 @@ pub struct SplitterConfig<'a, T: Tokenize + Sync> {
     pub searchers: &'a Vec<PatternSearcher>,
     pub tokenizer: Option<&'a T>,
     pub max_len: Option<usize>,
+    pub merge_level: Option<usize>,
     pub patterns_len: usize,
 }
 

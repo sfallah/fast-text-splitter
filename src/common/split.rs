@@ -41,7 +41,9 @@ impl Split {
                 } else {
                     0
                 }
-            } else { 0 }
+            } else {
+                0
+            }
         }
     }
 }
