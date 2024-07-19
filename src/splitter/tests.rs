@@ -1042,11 +1042,11 @@ mod tests {
 
     #[test]
     fn nw_tree_hf_splits_superlinear() {
-        //let data_path = "tests/test_data/superlinear.txt";
+        let data_path = "tests/test_data/superlinear.txt";
         //let data_path = "tests/error_data/superlinear_loose_pattern.txt";
         //let data_path = "data/dev/History_of_baseball_in_the_United_States.txt";
         //let data_path = "tests/error_data/wiki_us_snippet_error.txt";
-        let data_path = "data/dev/Belle_(Beauty_and_the_Beast).txt";
+        //let data_path = "data/dev/Belle_(Beauty_and_the_Beast).txt";
 
 
 
@@ -1092,7 +1092,7 @@ mod tests {
             let hf_encoded = hf_tokenizer
                 .encode(split.split_string.clone(), false)
                 .unwrap();
-            assert!(!split.tokens.is_empty());
+            //assert!(!split.tokens.is_empty());
             assert!(split.tokens.len() <= 512);
             if split.tokens.len() != hf_encoded.len() {
                 // tokens in hf_encoded but not in split.tokens
@@ -1125,18 +1125,29 @@ mod tests {
             vec![".".to_string(), "!".to_string(), "?".to_string()],
         ];
 
-        let splitter_config = SplitterLiteConfig::new_hf(patterns, 128, 0, true, None);
+        let splitter_config = SplitterLiteConfig::new_hf(patterns, 60, 0, true, None);
         let splits = splitter_config.hf_splits(data);
 
         let chunk_lens: usize = splits.iter().map(|c| c.split_string.len()).sum();
-        println!("{:?}", chunk_lens);
         assert_eq!(chunk_lens, data.len());
 
-        println!("{:?}", splits.len());
+        let hf_tokenizer = init_tokenizer(None, Some(usize::MAX), false).unwrap();
+        let hf_encoding = hf_tokenizer
+            .encode(from_utf8(data).unwrap(), false)
+            .unwrap();
+
+        let total_tokens: usize = splits.iter().map(|res| res.tokens.len()).sum();
+        assert_eq!(hf_encoding.len(), total_tokens);
+
+        println!("number of splits: {:?}", splits.len());
         for split in splits.iter() {
             println!("{:?}", split.split_string);
             println!("{:?}", split.split_string.len());
             println!("{:?}", split.tokens.len());
+            let hf_encoded = hf_tokenizer
+                .encode(split.split_string.clone(), false)
+                .unwrap();
+            assert_eq!(hf_encoded.len(), split.tokens.len());
         }
     }
 

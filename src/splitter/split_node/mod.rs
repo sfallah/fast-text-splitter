@@ -194,8 +194,9 @@ impl SplitNode {
                     children_splits
                         .into_iter()
                         .fold(Vec::new(), |mut acc, child_splits| {
-                            let merged_child_splits = merge_splits(&child_splits, max_len);
-                            add_splits(&mut acc, &merged_child_splits.clone(), max_len);
+                            //let merged_child_splits = merge_splits(&child_splits, max_len);
+                            //add_splits(&mut acc, &merged_child_splits.clone(), max_len);
+                            add_splits(&mut acc, &child_splits.clone(), max_len);
                             acc
                         })
                 }
