@@ -29,7 +29,12 @@ impl PyNoneSplitterConfig {
         parallel: bool,
     ) -> Self {
         PyNoneSplitterConfig {
-            inner: SplitterLiteConfig::new_none(patterns, max_tokens, merge_level, parallel),
+            inner: SplitterLiteConfig::new_none(
+                patterns,
+                Some(max_tokens),
+                Some(merge_level),
+                parallel,
+            ),
         }
     }
 
@@ -62,7 +67,13 @@ impl PyWSSplitterConfig {
         ascii: bool,
     ) -> Self {
         PyWSSplitterConfig {
-            inner: SplitterLiteConfig::new_ws(patterns, max_tokens, merge_level, parallel, ascii),
+            inner: SplitterLiteConfig::new_ws(
+                patterns,
+                Some(max_tokens),
+                Some(merge_level),
+                parallel,
+                ascii,
+            ),
         }
     }
 
@@ -94,7 +105,13 @@ impl PyHFSplitterConfig {
         parallel: bool,
     ) -> Self {
         PyHFSplitterConfig {
-            inner: SplitterLiteConfig::new_hf(patterns, max_tokens, merge_level, parallel, None),
+            inner: SplitterLiteConfig::new_hf(
+                patterns,
+                Some(max_tokens),
+                Some(merge_level),
+                parallel,
+                None,
+            ),
         }
     }
 

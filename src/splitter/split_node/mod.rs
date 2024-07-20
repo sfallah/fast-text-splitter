@@ -8,7 +8,9 @@ use aho_corasick::Span;
 
 use crate::common::split::Split;
 use crate::splitter::split_encoding::SplitEncoding;
-use crate::splitter::split_node::utils::{add_splits, add_splits_no_merge, attach_pattern_nodes, merge_splits, SplitResultLite};
+use crate::splitter::split_node::utils::{
+    add_splits, add_splits_no_merge, attach_pattern_nodes, merge_splits, SplitResultLite,
+};
 
 #[derive(Clone)]
 pub struct SplitNode {
@@ -228,7 +230,8 @@ impl SplitNode {
                         })
                 }
             } else {
-                let child_splits = self.children
+                let child_splits = self
+                    .children
                     .iter()
                     .map(|child| child.get_node_splits(max_tokens, merge_level))
                     .flatten()

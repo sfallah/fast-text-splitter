@@ -41,6 +41,7 @@ mod tests {
         _print: bool,
         check_splits: bool,
         parallel: bool,
+        sub_splits: bool,
     ) -> (usize, Vec<SplitResultLite>) {
         let binding = fs::read_to_string(data_path).unwrap();
         let data = binding.as_bytes();
@@ -112,6 +113,24 @@ mod tests {
 
         let encodings = hf_tokenizer.encode(from_utf8(data).unwrap()).unwrap();
         assert_eq!(total_tokens, encodings.len(), "File Path: {:?}", data_path);
+
+        if sub_splits {
+            let sub_splitter_config =
+                SplitterLiteConfig::new_hf(patterns, None, Some(3), true, None);
+            split_results.par_iter().for_each(|split| {
+                let sub_splits = sub_splitter_config.hf_splits(split.split_string.as_bytes());
+                let sub_total_len: usize = sub_splits
+                    .iter()
+                    .map(|sub_split| sub_split.split_string.len())
+                    .sum();
+                assert_eq!(split.split_string.len(), sub_total_len);
+                let sub_total_tokens: usize = sub_splits
+                    .iter()
+                    .map(|sub_split| sub_split.tokens.len())
+                    .sum();
+                assert_eq!(split.tokens.len(), sub_total_tokens);
+            })
+        }
 
         (data.len(), split_results)
     }
@@ -270,8 +289,8 @@ mod tests {
             vec!["\n".to_string()],
             vec![".".to_string(), "!".to_string(), "?".to_string()],
         ];
-        let max_len = 128;
-        let splitter_config = SplitterLiteConfig::new_hf(patterns, max_len, 0, true, None);
+        let max_len = Some(128);
+        let splitter_config = SplitterLiteConfig::new_hf(patterns, max_len, None, true, None);
         let splits = splitter_config.hf_splits(data);
 
         let hf_tokenizer = init_tokenizer(None, None, false).unwrap();
@@ -291,7 +310,7 @@ mod tests {
             let hf_encoded = hf_tokenizer.encode(split.split_string.clone(), false)?;
             assert_eq!(hf_encoded.len(), split.tokens.len());
             assert!(!split.tokens.is_empty());
-            assert!(split.tokens.len() <= max_len);
+            assert!(split.tokens.len() <= max_len.unwrap());
             assert_eq!(hf_encoded.get_ids(), split.tokens);
         }
         Ok(())
@@ -436,7 +455,7 @@ mod tests {
             vec!["\n".to_string()],
             vec![".".to_string(), "!".to_string(), "?".to_string()],
         ];
-        let splitter_config = SplitterLiteConfig::new_none(patterns, 512, 0, false);
+        let splitter_config = SplitterLiteConfig::new_none(patterns, Some(512), None, false);
 
         let split_results = splitter_config.len_splits(data.as_slice());
 
@@ -983,7 +1002,7 @@ mod tests {
             vec![".".to_string(), "!".to_string(), "?".to_string()],
         ];
 
-        let splitter_config = SplitterLiteConfig::new_none(patterns, 512, 4, false);
+        let splitter_config = SplitterLiteConfig::new_none(patterns, Some(512), Some(4), false);
         let splits = splitter_config.len_splits(data);
 
         let chunk_lens: usize = splits.iter().map(|c| c.split_string.len()).sum();
@@ -1020,7 +1039,8 @@ mod tests {
             .collect();
 
         let max_len = Some(256);
-        let merge_level = Some(2);
+        //let merge_level = Some(2);
+        let merge_level = None;
         let config = SplitterConfig::<NoneTokenizer> {
             data,
             searchers: &searchers,
@@ -1089,7 +1109,7 @@ mod tests {
             vec![".".to_string(), "!".to_string(), "?".to_string()],
         ];
 
-        let splitter_config = SplitterLiteConfig::new_hf(patterns, 512, 0, true, None);
+        let splitter_config = SplitterLiteConfig::new_hf(patterns, Some(512), None, true, None);
 
         let splits = splitter_config.hf_splits(data);
 
@@ -1154,7 +1174,7 @@ mod tests {
             vec![".".to_string(), "!".to_string(), "?".to_string()],
         ];
 
-        let splitter_config = SplitterLiteConfig::new_hf(patterns, 60, 0, true, None);
+        let splitter_config = SplitterLiteConfig::new_hf(patterns, Some(60), None, true, None);
         let splits = splitter_config.hf_splits(data);
 
         let chunk_lens: usize = splits.iter().map(|c| c.split_string.len()).sum();
@@ -1192,7 +1212,7 @@ mod tests {
             vec![".".to_string(), "!".to_string(), "?".to_string()],
         ];
 
-        let splitter_config = SplitterLiteConfig::new_hf2(patterns, Some(512), None, true, None);
+        let splitter_config = SplitterLiteConfig::new_hf(patterns, Some(512), None, true, None);
         let splits = splitter_config.hf_splits(data);
 
         let chunk_lens: usize = splits.iter().map(|c| c.split_string.len()).sum();
@@ -1224,7 +1244,8 @@ mod tests {
             vec![".".to_string(), "!".to_string(), "?".to_string()],
         ];
 
-        let sub_splitter_config = SplitterLiteConfig::new_hf2(sub_patterns, None, Some(3), true, None);
+        let sub_splitter_config =
+            SplitterLiteConfig::new_hf(sub_patterns, Some(512), Some(3), true, None);
         for split in splits.iter() {
             println!("{:?}", split.split_string);
             println!("{:?}", split.split_string.len());
@@ -1303,8 +1324,9 @@ mod tests {
             .map(|p| PatternSearcher::new(p.clone()))
             .collect();
 
-        let (data_len, splits) =
-            split_file(data_path, patterns, &searchers, 512, 2, true, true, true);
+        let (data_len, splits) = split_file(
+            data_path, patterns, &searchers, 512, 2, true, true, true, true,
+        );
 
         let total_len: usize = splits.iter().map(|res| res.split_string.len()).sum();
         assert_eq!(data_len, total_len);
@@ -1331,8 +1353,8 @@ mod tests {
         ];
         let splitter = SplitterLiteConfig::new_hf(
             patterns,
-            512,
-            0,
+            Some(512),
+            None,
             true,
             Some("sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2".to_string()),
         );
@@ -1372,7 +1394,7 @@ mod tests {
                 "。".to_string(),
             ],
         ];
-        let splitter = SplitterLiteConfig::new_ws(patterns, 512, 0, true, false);
+        let splitter = SplitterLiteConfig::new_ws(patterns, Some(512), None, true, false);
 
         let splits = splitter.ws_splits(data.as_bytes());
 
@@ -1417,7 +1439,7 @@ mod tests {
                 "。".to_string(),
             ],
         ];
-        let splitter = SplitterLiteConfig::new_none(patterns, 512, 0, false);
+        let splitter = SplitterLiteConfig::new_none(patterns, Some(512), None, false);
 
         let splits = splitter.len_splits(data.as_bytes());
 
@@ -1455,7 +1477,7 @@ mod tests {
             .map(|p| PatternSearcher::new(p.clone()))
             .collect();
 
-        let rnd_files: Vec<_> = files.choose_multiple(&mut rng, 300).collect();
+        let rnd_files: Vec<_> = files.choose_multiple(&mut rng, 3000).collect();
 
         rnd_files.par_iter().for_each(|file| {
             for merge_level in 1..3 {
@@ -1467,6 +1489,7 @@ mod tests {
                     merge_level,
                     false,
                     false,
+                    true,
                     true,
                 );
                 let total_len: usize = results.iter().map(|res| res.split_string.len()).sum();
@@ -1493,8 +1516,8 @@ mod tests {
 
         let splitter_config = SplitterLiteConfig::new_hf(
             patterns,
-            512,
-            0,
+            Some(512),
+            None,
             true,
             Some("sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2".to_string()),
         );
