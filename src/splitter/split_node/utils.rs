@@ -1,3 +1,4 @@
+use aho_corasick::Span;
 use crate::common::span;
 use crate::common::split::Split;
 
@@ -5,6 +6,7 @@ use crate::common::split::Split;
 pub struct SplitResultLite {
     pub tokens: Vec<u32>,
     pub split_string: String,
+    pub data_offset: Span
 }
 
 pub fn add_splits(merged: &mut Vec<Split>, to_merge: &Vec<Split>, max_tokens: usize) {

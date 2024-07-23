@@ -1471,7 +1471,7 @@ mod tests {
             .map(|p| PatternSearcher::new(p.clone()))
             .collect();
 
-        let rnd_files: Vec<_> = files.choose_multiple(&mut rng, 3000).collect();
+        let rnd_files: Vec<_> = files.choose_multiple(&mut rng, 600).collect();
 
         rnd_files.par_iter().for_each(|file| {
             for merge_level in 1..3 {

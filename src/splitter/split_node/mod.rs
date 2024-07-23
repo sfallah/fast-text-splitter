@@ -159,6 +159,7 @@ impl SplitNode {
                     split_string: from_utf8(&data[split.data_span.unwrap().range()])
                         .unwrap()
                         .to_string(),
+                    data_offset: split.data_span.unwrap(),
                 }
             })
             .collect()
