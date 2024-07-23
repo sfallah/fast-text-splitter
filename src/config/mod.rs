@@ -4,6 +4,7 @@ use aho_corasick::Span;
 
 use crate::hf_tokenizer::{init_tokenizer, HFTokenizer};
 use crate::pattern_search::pattern_searcher::PatternSearcher;
+use crate::splitter::split_node::SplitNode;
 use crate::splitter::split_node::utils::SplitResultLite;
 use crate::splitter::Splitter;
 use crate::ws_tokenizer::WSTokenizer;
@@ -12,7 +13,7 @@ pub struct SplitterLiteConfig<T: Tokenize + Sync> {
     pub searchers: Vec<PatternSearcher>,
     pub tokenizer: T,
     pub max_tokens: Option<usize>,
-    pub merge_level: Option<usize>,
+    pub min_split_level: Option<usize>,
     pub parallel: Option<bool>,
     pub patterns_len: usize,
 }
@@ -34,7 +35,7 @@ impl SplitterLiteConfig<NoneTokenizer> {
             searchers,
             tokenizer: NoneTokenizer {},
             max_tokens,
-            merge_level,
+            min_split_level: merge_level,
             parallel: Some(parallel),
             patterns_len,
         }
@@ -50,7 +51,7 @@ impl SplitterLiteConfig<NoneTokenizer> {
             data,
             searchers: &self.searchers,
             max_len: self.max_tokens,
-            merge_level: self.merge_level,
+            merge_level: self.min_split_level,
             //max_len: None,
             tokenizer: None,
             patterns_len: self.patterns_len,
@@ -58,7 +59,7 @@ impl SplitterLiteConfig<NoneTokenizer> {
         //FIXME: parallel is not used id fixed to true
         let splitter = Splitter::new(&config, span, 0, span, self.parallel, None, None);
         let tree = splitter.split();
-        tree.get_results_lite(self.max_tokens, self.merge_level, data)
+        tree.get_results_lite(self.max_tokens, self.min_split_level, data)
         //tree.get_results_lite(None, data)
     }
 }
@@ -81,7 +82,7 @@ impl SplitterLiteConfig<WSTokenizer> {
             searchers,
             tokenizer: WSTokenizer { ascii },
             max_tokens,
-            merge_level,
+            min_split_level: merge_level,
             parallel: Some(parallel),
             patterns_len,
         }
@@ -96,13 +97,13 @@ impl SplitterLiteConfig<WSTokenizer> {
             data,
             searchers: &self.searchers,
             max_len: self.max_tokens,
-            merge_level: self.merge_level,
+            merge_level: self.min_split_level,
             tokenizer: Some(&self.tokenizer),
             patterns_len: self.patterns_len,
         };
         let splitter = Splitter::new(&config, span, 0, span, self.parallel, None, None);
         let tree = splitter.split();
-        tree.get_results_lite(self.max_tokens, self.merge_level, data)
+        tree.get_results_lite(self.max_tokens, self.min_split_level, data)
     }
 }
 
@@ -110,7 +111,7 @@ impl SplitterLiteConfig<HFTokenizer> {
     pub fn new_hf(
         patterns: Vec<Vec<String>>,
         max_tokens: Option<usize>,
-        merge_level: Option<usize>,
+        min_split_level: Option<usize>,
         parallel: bool,
         model: Option<String>,
     ) -> Self {
@@ -121,7 +122,7 @@ impl SplitterLiteConfig<HFTokenizer> {
             .map(|p| PatternSearcher::new(p.clone()))
             .collect();
         // make sure merge_level is not greater than patterns_len ()
-        let merge_level = merge_level.map(|ml| if ml > patterns_len { patterns_len } else { ml });
+        let min_split_level = min_split_level.map(|ml| if ml > patterns_len { patterns_len } else { ml });
 
         let hf_tokenizer = HFTokenizer {
             tokenizer: init_tokenizer(model, Some(usize::MAX), false).unwrap(),
@@ -130,10 +131,27 @@ impl SplitterLiteConfig<HFTokenizer> {
             searchers,
             tokenizer: hf_tokenizer,
             max_tokens,
-            merge_level,
+            min_split_level,
             parallel: Some(parallel),
             patterns_len,
         }
+    }
+
+    pub fn hf_tree(&self, data: &[u8]) -> SplitNode {
+        let span = Span {
+            start: 0,
+            end: data.len(),
+        };
+        let config = crate::splitter::splitter_config::SplitterConfig::<HFTokenizer> {
+            data,
+            searchers: &self.searchers,
+            max_len: self.max_tokens,
+            merge_level: self.min_split_level,
+            tokenizer: Some(&self.tokenizer),
+            patterns_len: self.patterns_len,
+        };
+        let splitter = Splitter::new(&config, span, 0, span, self.parallel, None, None);
+        splitter.split()
     }
 
     pub fn hf_splits(&self, data: &[u8]) -> Vec<SplitResultLite> {
@@ -145,13 +163,13 @@ impl SplitterLiteConfig<HFTokenizer> {
             data,
             searchers: &self.searchers,
             max_len: self.max_tokens,
-            merge_level: self.merge_level,
+            merge_level: self.min_split_level,
             tokenizer: Some(&self.tokenizer),
             patterns_len: self.patterns_len,
         };
         let splitter = Splitter::new(&config, span, 0, span, self.parallel, None, None);
         let tree = splitter.split();
-        tree.get_results_lite(self.max_tokens, self.merge_level, data)
+        tree.get_results_lite(self.max_tokens, self.min_split_level, data)
     }
 
     pub fn hf_splits_raw(&self, data: &[u8]) -> Vec<Split> {
@@ -163,12 +181,12 @@ impl SplitterLiteConfig<HFTokenizer> {
             data,
             searchers: &self.searchers,
             max_len: self.max_tokens,
-            merge_level: self.merge_level,
+            merge_level: self.min_split_level,
             tokenizer: Some(&self.tokenizer),
             patterns_len: self.patterns_len,
         };
         let splitter = Splitter::new(&config, span, 0, span, self.parallel, None, None);
         let tree = splitter.split();
-        tree.get_node_splits(self.max_tokens, self.merge_level)
+        tree.get_node_splits(self.max_tokens, self.min_split_level)
     }
 }

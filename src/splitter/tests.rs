@@ -1212,8 +1212,9 @@ mod tests {
             vec![".".to_string(), "!".to_string(), "?".to_string()],
         ];
 
-        let splitter_config = SplitterLiteConfig::new_hf(patterns, Some(512), None, true, None);
-        let splits = splitter_config.hf_splits(data);
+        let splitter_config = SplitterLiteConfig::new_hf(patterns, Some(512), Some(3), true, None);
+        let hf_tree = splitter_config.hf_tree(data);
+        let splits = hf_tree.as_ref().get_results_lite(splitter_config.max_tokens, None, data);
 
         let chunk_lens: usize = splits.iter().map(|c| c.split_string.len()).sum();
         assert_eq!(chunk_lens, data.len());
@@ -1238,30 +1239,23 @@ mod tests {
         }
 
         println!("#### Sub Splits ####");
-        let sub_patterns = vec![
-            vec!["\n\n".to_string()],
-            vec!["\n".to_string()],
-            vec![".".to_string(), "!".to_string(), "?".to_string()],
-        ];
+        let sentence_splits = hf_tree.get_results_lite(splitter_config.max_tokens, splitter_config.min_split_level, data);
+        let total_sentence_len: usize = sentence_splits.iter().map(|res| res.split_string.len()).sum();
+        assert_eq!(data.len(), total_sentence_len);
+        let total_sentence_tokens: usize = sentence_splits.iter().map(|res| res.tokens.len()).sum();
+        assert_eq!(hf_encoding.len(), total_sentence_tokens);
 
-        let sub_splitter_config =
-            SplitterLiteConfig::new_hf(sub_patterns, Some(512), Some(3), true, None);
-        for split in splits.iter() {
-            println!("{:?}", split.split_string);
-            println!("{:?}", split.split_string.len());
-            let sub_splits = sub_splitter_config.hf_splits(split.split_string.as_bytes());
-            for sub_split in sub_splits.iter() {
-                println!("{:?}", sub_split.split_string);
-                println!("{:?}", sub_split.split_string.len());
-                println!("{:?}", sub_split.tokens.len());
-                let hf_encoded = hf_tokenizer
-                    .encode(sub_split.split_string.clone(), false)
-                    .unwrap();
-                assert_eq!(hf_encoded.len(), sub_split.tokens.len());
-            }
-            let total_len: usize = sub_splits.iter().map(|res| res.split_string.len()).sum();
-            assert_eq!(split.split_string.len(), total_len);
+        println!("number of sentence splits: {:?}", sentence_splits.len());
+        for sentence_split in sentence_splits.iter() {
+            println!("{:?}", sentence_split.split_string);
+            println!("{:?}", sentence_split.split_string.len());
+            println!("{:?}", sentence_split.tokens.len());
+            let hf_encoded = hf_tokenizer
+                .encode(sentence_split.split_string.clone(), false)
+                .unwrap();
+            assert_eq!(hf_encoded.len(), sentence_split.tokens.len());
         }
+
     }
 
     #[test]
