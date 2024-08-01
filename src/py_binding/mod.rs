@@ -100,24 +100,23 @@ impl PyHFSplitterConfig {
     #[new]
     fn new(
         patterns: Vec<Vec<String>>,
-        max_tokens: usize,
-        merge_level: usize,
         parallel: bool,
+        max_tokens: Option<usize>,
+        merge_level: Option<usize>,
+        model: Option<String>,
     ) -> Self {
         PyHFSplitterConfig {
             inner: SplitterLiteConfig::new_hf(
                 patterns,
-                Some(max_tokens),
-                Some(merge_level),
+                max_tokens,
+                merge_level,
                 parallel,
-                None,
+                model,
             ),
         }
     }
 
     fn splits(&self, data: String) -> PyResult<Vec<PySplitLiteResult>> {
-        println!("ws_splits");
-        println!("data:{:?}", &data);
         Ok(self
             .inner
             .hf_splits(data.as_bytes())
@@ -154,11 +153,12 @@ fn create_ws_splitter(
 #[pyfunction]
 fn create_hf_splitter(
     patterns: Vec<Vec<String>>,
-    max_tokens: usize,
-    merge_level: usize,
     parallel: bool,
+    max_tokens: Option<usize>,
+    merge_level: Option<usize>,
+    model: Option<String>,
 ) -> PyHFSplitterConfig {
-    PyHFSplitterConfig::new(patterns, max_tokens, merge_level, parallel)
+    PyHFSplitterConfig::new(patterns, parallel, max_tokens, merge_level,model)
 }
 
 #[pymodule]
