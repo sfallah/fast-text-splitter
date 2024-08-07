@@ -106,13 +106,7 @@ impl PyHFSplitterConfig {
         model: Option<String>,
     ) -> Self {
         PyHFSplitterConfig {
-            inner: SplitterLiteConfig::new_hf(
-                patterns,
-                max_tokens,
-                merge_level,
-                parallel,
-                model,
-            ),
+            inner: SplitterLiteConfig::new_hf(patterns, max_tokens, merge_level, parallel, model),
         }
     }
 
@@ -158,7 +152,7 @@ fn create_hf_splitter(
     merge_level: Option<usize>,
     model: Option<String>,
 ) -> PyHFSplitterConfig {
-    PyHFSplitterConfig::new(patterns, parallel, max_tokens, merge_level,model)
+    PyHFSplitterConfig::new(patterns, parallel, max_tokens, merge_level, model)
 }
 
 #[pymodule]

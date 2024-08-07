@@ -681,7 +681,7 @@ mod tests {
 
         //println!("{}", tree.to_string(data, true));
         assert_eq!(from_utf8(data).unwrap(), tree.reconstruct(data));
-        match term_tree(tree.clone(), data,false) {
+        match term_tree(tree.clone(), data, false) {
             Ok(tree) => println!("{}", tree),
             Err(err) => println!("error: {}", err),
         }
@@ -737,7 +737,7 @@ mod tests {
 
         //println!("{}", tree.to_string(data, true));
         assert_eq!(from_utf8(data).unwrap(), tree.reconstruct(data));
-        match term_tree(tree.clone(), data,false) {
+        match term_tree(tree.clone(), data, false) {
             Ok(tree) => println!("{}", tree),
             Err(err) => println!("error: {}", err),
         }
@@ -1202,6 +1202,7 @@ mod tests {
 
     #[test]
     fn fast_two_hf_tree_splits() {
+        //let data_path = "tests/test_data/superlinear_modified.txt";
         let data_path = "tests/test_data/superlinear.txt";
         let binding = fs::read_to_string(data_path).unwrap();
         let data = binding.as_bytes();
@@ -1214,7 +1215,20 @@ mod tests {
 
         let splitter_config = SplitterLiteConfig::new_hf(patterns, Some(512), Some(3), true, None);
         let hf_tree = splitter_config.hf_tree(data);
-        let splits = hf_tree.as_ref().get_results_lite(splitter_config.max_tokens, None, data);
+
+        match term_tree(hf_tree.clone(), data, false) {
+            Ok(tree) => {
+                let mut file =
+                    fs::File::create("output/debug/tree_hf_tokens_512_superlinear.txt").unwrap();
+                file.write_all(format!("{}", tree).as_bytes()).unwrap();
+                //println!("{}", tree)
+            }
+            Err(err) => println!("error: {}", err),
+        }
+
+        let splits = hf_tree
+            .as_ref()
+            .get_results_lite(splitter_config.max_tokens, Some(1), data);
 
         let chunk_lens: usize = splits.iter().map(|c| c.split_string.len()).sum();
         assert_eq!(chunk_lens, data.len());
@@ -1232,8 +1246,8 @@ mod tests {
             println!("## split {:?} ##", i);
             println!("{:?}", split.split_string);
             println!("## split {:?} ##", i);
-            println!("{:?}", split.split_string.len());
-            println!("{:?}", split.tokens.len());
+            println!("len_bytes: {:?}", split.split_string.len());
+            println!("no_tokens: {:?}", split.tokens.len());
             let hf_encoded = hf_tokenizer
                 .encode(split.split_string.clone(), false)
                 .unwrap();
@@ -1241,8 +1255,15 @@ mod tests {
         }
 
         println!("#### Sub Splits ####");
-        let sentence_splits = hf_tree.get_results_lite(splitter_config.max_tokens, splitter_config.min_split_level, data);
-        let total_sentence_len: usize = sentence_splits.iter().map(|res| res.split_string.len()).sum();
+        let sentence_splits = hf_tree.get_results_lite(
+            splitter_config.max_tokens,
+            splitter_config.min_split_level,
+            data,
+        );
+        let total_sentence_len: usize = sentence_splits
+            .iter()
+            .map(|res| res.split_string.len())
+            .sum();
         assert_eq!(data.len(), total_sentence_len);
         let total_sentence_tokens: usize = sentence_splits.iter().map(|res| res.tokens.len()).sum();
         assert_eq!(hf_encoding.len(), total_sentence_tokens);
@@ -1257,7 +1278,6 @@ mod tests {
                 .unwrap();
             assert_eq!(hf_encoded.len(), sentence_split.tokens.len());
         }
-
     }
 
     #[test]
@@ -1276,25 +1296,43 @@ mod tests {
         let splitter_config = SplitterLiteConfig::new_hf(patterns, Some(512), Some(3), true, None);
         let hf_tree = splitter_config.hf_tree(data);
 
-
         match term_tree(hf_tree.clone(), data, false) {
             Ok(tree) => println!("{}", tree),
             Err(err) => println!("error: {}", err),
         }
+
+        println!("#### Raw Splits ####");
+        let raw_splits =
+            hf_tree.get_node_splits(splitter_config.max_tokens, splitter_config.min_split_level);
+        for raw_split in raw_splits.iter() {
+            println!("{:?}", raw_split);
+        }
+        println!("#### Raw Splits ####");
 
         let hf_tokenizer = init_tokenizer(None, Some(usize::MAX), false).unwrap();
         let hf_encoding = hf_tokenizer
             .encode(from_utf8(data).unwrap(), false)
             .unwrap();
 
-
         println!("#### Sub Splits ####");
-        let sentence_splits = hf_tree.get_results_lite(splitter_config.max_tokens, splitter_config.min_split_level, data);
+        let sentence_splits = hf_tree.get_results_lite(
+            splitter_config.max_tokens,
+            splitter_config.min_split_level,
+            data,
+        );
 
-        let total_sentence_len: usize = sentence_splits.iter().map(|res| res.split_string.len()).sum();
+        let total_sentence_len: usize = sentence_splits
+            .iter()
+            .map(|res| res.split_string.len())
+            .sum();
         assert_eq!(data.len(), total_sentence_len);
         let total_sentence_tokens: usize = sentence_splits.iter().map(|res| res.tokens.len()).sum();
         assert_eq!(hf_encoding.len(), total_sentence_tokens);
+
+        let sentence_splits: Vec<_> = sentence_splits
+            .into_iter()
+            .filter(|res| res.tokens.len() > 0)
+            .collect();
 
         println!("number of sentence splits: {:?}", sentence_splits.len());
         for sentence_split in sentence_splits.iter() {
@@ -1306,7 +1344,6 @@ mod tests {
                 .unwrap();
             assert_eq!(hf_encoded.len(), sentence_split.tokens.len());
         }
-
     }
 
     #[test]

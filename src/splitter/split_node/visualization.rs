@@ -9,7 +9,11 @@ fn text_label<N: AsRef<SplitNode>>(node: N, data: &[u8]) -> String {
     format!("Text: {:?}", node.as_ref().reconstruct(data).to_owned())
 }
 
-pub fn term_tree<N: AsRef<SplitNode>>(node: N, data: &[u8], node_text: bool) -> io::Result<Tree<String>> {
+pub fn term_tree<N: AsRef<SplitNode>>(
+    node: N,
+    data: &[u8],
+    node_text: bool,
+) -> io::Result<Tree<String>> {
     let result =
         node.as_ref()
             .children

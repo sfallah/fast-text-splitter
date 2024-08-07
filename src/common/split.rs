@@ -18,6 +18,7 @@ pub struct Split {
 impl fmt::Debug for Split {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("Split")
+            .field("pattern_id", &format!("{:?}", &self.pattern_id))
             .field("no_tokens", &format!("{:?}", &self.no_tokens()))
             .field("data_span", &format!("{:?}", &self.data_span))
             .field(

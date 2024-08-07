@@ -79,15 +79,18 @@ impl<'a, T: Tokenize + Sync> Splitter<'a, T> {
     }
 
     pub fn split(&self) -> SplitNode {
+        let go_on = self
+            .config
+            .merge_level
+            .map_or(false, |merge_level| self.pattern_id < merge_level);
 
-        let go_on = self.config.merge_level.map_or(false, |merge_level| self.pattern_id < merge_level);
-
-
-        if !go_on && self.lt_max_len(
-            self.split_data_span,
-            self.split_encoding.clone(),
-            self.split_tokens_span.clone(),
-        ) {
+        if !go_on
+            && self.lt_max_len(
+                self.split_data_span,
+                self.split_encoding.clone(),
+                self.split_tokens_span.clone(),
+            )
+        {
             let (new_split_encoding, new_split_tokens_span) = self.config.get_split_encoding(
                 &self.split_data_span,
                 &self.split_encoding,

@@ -1,6 +1,6 @@
-use aho_corasick::Span;
 use crate::common::span;
 use crate::common::split::Split;
+use aho_corasick::Span;
 
 #[derive(Debug)]
 pub struct SplitResultLite {

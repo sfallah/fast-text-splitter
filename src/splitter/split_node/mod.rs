@@ -1,10 +1,9 @@
 pub mod utils;
 pub mod visualization;
 
+use aho_corasick::Span;
 use std::str::from_utf8;
 use std::sync::Arc;
-
-use aho_corasick::Span;
 
 use crate::common::split::Split;
 use crate::splitter::split_encoding::SplitEncoding;
@@ -142,6 +141,8 @@ impl SplitNode {
         merge_level: Option<usize>,
         data: &[u8],
     ) -> Vec<SplitResultLite> {
+        let merge_level = merge_level.map_or(None, |level| if level == 0 { None } else { Some(level) });
+
         let splits = self.get_node_splits(max_len, merge_level);
         splits
             .iter()
@@ -201,7 +202,7 @@ impl SplitNode {
                     // if self.pattern_id > merge_level
                     // attach pattern_nodes only
                     if let Some(merge_level) = merge_level {
-                        return if self.pattern_id + 1 < merge_level {
+                        return if self.pattern_id + 1  < merge_level {
                             children_splits
                         } else {
                             attach_pattern_nodes(&children_splits, max_len)
@@ -223,10 +224,13 @@ impl SplitNode {
                         .into_iter()
                         .fold(Vec::new(), |mut acc, child_splits| {
                             if let Some(merge_level) = merge_level {
-                                if self.pattern_id + 1 < merge_level {
+                               if self.pattern_id + 1  < merge_level {
                                     acc.extend_from_slice(child_splits.as_slice());
-                                    return acc;
-                                }
+                                } else {
+                                    let merged_child_splits = merge_splits(&child_splits, max_len);
+                                   acc.extend_from_slice(attach_pattern_nodes(&merged_child_splits, max_len).as_slice());
+                                };
+                                return acc;
                             }
                             let merged_child_splits = merge_splits(&child_splits, max_len);
                             add_splits(&mut acc, &merged_child_splits.clone(), max_len);

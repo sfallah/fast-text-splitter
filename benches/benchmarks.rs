@@ -41,14 +41,19 @@ pub fn hf_merged_tree_lite_sub_res_benchmark(c: &mut Criterion) {
         vec![".".to_string(), "!".to_string(), "?".to_string()],
     ];
 
-    let splitter_config = SplitterLiteConfig::new_hf(patterns.clone(), Some(512), Some(3), true, None);
+    let splitter_config =
+        SplitterLiteConfig::new_hf(patterns.clone(), Some(512), Some(3), true, None);
 
     c.bench_function("hf_merged_tree_lite_sub_res_benchmark", |b| {
         b.iter(|| {
             let hf_tree = splitter_config.hf_tree(data);
-            let emd_splits = hf_tree.as_ref().get_results_lite(splitter_config.max_tokens, None, data);
+            let emd_splits =
+                hf_tree
+                    .as_ref()
+                    .get_results_lite(splitter_config.max_tokens, None, data);
             black_box(emd_splits);
-            let sentence_splits = hf_tree.get_results_lite(splitter_config.max_tokens, Some(3), data);
+            let sentence_splits =
+                hf_tree.get_results_lite(splitter_config.max_tokens, Some(3), data);
             black_box(sentence_splits);
         })
     });

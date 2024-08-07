@@ -4,8 +4,8 @@ use aho_corasick::Span;
 
 use crate::hf_tokenizer::{init_tokenizer, HFTokenizer};
 use crate::pattern_search::pattern_searcher::PatternSearcher;
-use crate::splitter::split_node::SplitNode;
 use crate::splitter::split_node::utils::SplitResultLite;
+use crate::splitter::split_node::SplitNode;
 use crate::splitter::Splitter;
 use crate::ws_tokenizer::WSTokenizer;
 
@@ -122,7 +122,8 @@ impl SplitterLiteConfig<HFTokenizer> {
             .map(|p| PatternSearcher::new(p.clone()))
             .collect();
         // make sure merge_level is not greater than patterns_len ()
-        let min_split_level = min_split_level.map(|ml| if ml > patterns_len { patterns_len } else { ml });
+        let min_split_level =
+            min_split_level.map(|ml| if ml > patterns_len { patterns_len } else { ml });
 
         let hf_tokenizer = HFTokenizer {
             tokenizer: init_tokenizer(model, Some(usize::MAX), false).unwrap(),
