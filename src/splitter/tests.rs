@@ -564,7 +564,7 @@ mod tests {
 
         //println!("{}", tree.to_string(data, true));
         assert_eq!(from_utf8(data).unwrap(), tree.reconstruct(data));
-        match term_tree(tree.clone(), data) {
+        match term_tree(tree.clone(), data, false) {
             Ok(tree) => println!("{}", tree),
             Err(err) => println!("error: {}", err),
         }
@@ -624,7 +624,7 @@ mod tests {
 
         //println!("{}", tree.to_string(data, true));
         assert_eq!(from_utf8(data).unwrap(), tree.reconstruct(data));
-        match term_tree(tree.clone(), data) {
+        match term_tree(tree.clone(), data, false) {
             Ok(tree) => println!("{}", tree),
             Err(err) => println!("error: {}", err),
         }
@@ -681,7 +681,7 @@ mod tests {
 
         //println!("{}", tree.to_string(data, true));
         assert_eq!(from_utf8(data).unwrap(), tree.reconstruct(data));
-        match term_tree(tree.clone(), data) {
+        match term_tree(tree.clone(), data,false) {
             Ok(tree) => println!("{}", tree),
             Err(err) => println!("error: {}", err),
         }
@@ -737,7 +737,7 @@ mod tests {
 
         //println!("{}", tree.to_string(data, true));
         assert_eq!(from_utf8(data).unwrap(), tree.reconstruct(data));
-        match term_tree(tree.clone(), data) {
+        match term_tree(tree.clone(), data,false) {
             Ok(tree) => println!("{}", tree),
             Err(err) => println!("error: {}", err),
         }
@@ -806,7 +806,7 @@ mod tests {
 
         //println!("{}", tree.to_string(data, true));
         assert_eq!(from_utf8(data).unwrap(), tree.reconstruct(data));
-        match term_tree(tree.clone(), data) {
+        match term_tree(tree.clone(), data, false) {
             Ok(tree) => println!("{}", tree),
             Err(err) => println!("error: {}", err),
         }
@@ -863,7 +863,7 @@ mod tests {
 
         //println!("{}", tree.to_string(data, true));
         assert_eq!(from_utf8(data).unwrap(), tree.reconstruct(data));
-        match term_tree(tree.clone(), data) {
+        match term_tree(tree.clone(), data, false) {
             Ok(tree) => println!("{}", tree),
             Err(err) => println!("error: {}", err),
         }
@@ -924,7 +924,7 @@ mod tests {
 
         //println!("{}", tree.to_string(data, true));
         assert_eq!(from_utf8(data).unwrap(), tree.reconstruct(data));
-        match term_tree(tree.clone(), data) {
+        match term_tree(tree.clone(), data, false) {
             Ok(tree) => println!("{}", tree),
             Err(err) => println!("error: {}", err),
         }
@@ -977,7 +977,7 @@ mod tests {
 
         //println!("{}", tree.to_string(data, true));
         assert_eq!(from_utf8(data).unwrap(), tree.reconstruct(data));
-        match term_tree(tree.clone(), data) {
+        match term_tree(tree.clone(), data, false) {
             Ok(tree) => println!("{}", tree),
             Err(err) => println!("error: {}", err),
         }
@@ -1066,7 +1066,7 @@ mod tests {
         let total_len: usize = splits.iter().map(|res| res.no_tokens()).sum();
         assert_eq!(data.len(), total_len);
 
-        match term_tree(tree, data) {
+        match term_tree(tree, data, false) {
             Ok(tree) => {
                 let mut file =
                     fs::File::create("output/debug/tree_len_mx_256_superlinear.txt").unwrap();
@@ -1228,8 +1228,10 @@ mod tests {
         assert_eq!(hf_encoding.len(), total_tokens);
 
         println!("number of splits: {:?}", splits.len());
-        for split in splits.iter() {
+        for (i, split) in splits.iter().enumerate() {
+            println!("## split {:?} ##", i);
             println!("{:?}", split.split_string);
+            println!("## split {:?} ##", i);
             println!("{:?}", split.split_string.len());
             println!("{:?}", split.tokens.len());
             let hf_encoded = hf_tokenizer
@@ -1240,6 +1242,55 @@ mod tests {
 
         println!("#### Sub Splits ####");
         let sentence_splits = hf_tree.get_results_lite(splitter_config.max_tokens, splitter_config.min_split_level, data);
+        let total_sentence_len: usize = sentence_splits.iter().map(|res| res.split_string.len()).sum();
+        assert_eq!(data.len(), total_sentence_len);
+        let total_sentence_tokens: usize = sentence_splits.iter().map(|res| res.tokens.len()).sum();
+        assert_eq!(hf_encoding.len(), total_sentence_tokens);
+
+        println!("number of sentence splits: {:?}", sentence_splits.len());
+        for sentence_split in sentence_splits.iter() {
+            println!("{:?}", sentence_split.split_string);
+            println!("{:?}", sentence_split.split_string.len());
+            println!("{:?}", sentence_split.tokens.len());
+            let hf_encoded = hf_tokenizer
+                .encode(sentence_split.split_string.clone(), false)
+                .unwrap();
+            assert_eq!(hf_encoded.len(), sentence_split.tokens.len());
+        }
+
+    }
+
+    #[test]
+    fn sentences_hf_tree_splits() {
+        //let data_path = "tests/test_data/superlinear_first_split_512_tokens.txt";
+        let data_path = "tests/test_data/superlinear_multi_sentence_split.txt";
+        let binding = fs::read_to_string(data_path).unwrap();
+        let data = binding.as_bytes();
+
+        let patterns = vec![
+            vec!["\n\n".to_string()],
+            vec!["\n".to_string()],
+            vec![".".to_string(), "!".to_string(), "?".to_string()],
+        ];
+
+        let splitter_config = SplitterLiteConfig::new_hf(patterns, Some(512), Some(3), true, None);
+        let hf_tree = splitter_config.hf_tree(data);
+
+
+        match term_tree(hf_tree.clone(), data, false) {
+            Ok(tree) => println!("{}", tree),
+            Err(err) => println!("error: {}", err),
+        }
+
+        let hf_tokenizer = init_tokenizer(None, Some(usize::MAX), false).unwrap();
+        let hf_encoding = hf_tokenizer
+            .encode(from_utf8(data).unwrap(), false)
+            .unwrap();
+
+
+        println!("#### Sub Splits ####");
+        let sentence_splits = hf_tree.get_results_lite(splitter_config.max_tokens, splitter_config.min_split_level, data);
+
         let total_sentence_len: usize = sentence_splits.iter().map(|res| res.split_string.len()).sum();
         assert_eq!(data.len(), total_sentence_len);
         let total_sentence_tokens: usize = sentence_splits.iter().map(|res| res.tokens.len()).sum();

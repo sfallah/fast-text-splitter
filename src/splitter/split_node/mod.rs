@@ -9,7 +9,7 @@ use aho_corasick::Span;
 use crate::common::split::Split;
 use crate::splitter::split_encoding::SplitEncoding;
 use crate::splitter::split_node::utils::{
-    add_splits, add_splits_no_merge, attach_pattern_nodes, merge_splits, SplitResultLite,
+    add_splits, attach_pattern_nodes, merge_splits, SplitResultLite,
 };
 
 #[derive(Clone)]
@@ -201,10 +201,13 @@ impl SplitNode {
                     // if self.pattern_id > merge_level
                     // attach pattern_nodes only
                     if let Some(merge_level) = merge_level {
-                        if self.pattern_id <= merge_level {
-                            return attach_pattern_nodes(&children_splits, max_len);
-                        }
-                    }
+                        return if self.pattern_id + 1 < merge_level {
+                            children_splits
+                        } else {
+                            attach_pattern_nodes(&children_splits, max_len)
+                        };
+                    } // if merge_level is None
+                    attach_pattern_nodes(&children_splits, max_len);
                     merge_splits(&children_splits, max_len)
                 } else {
                     // add current pattern_id to all splits
@@ -220,8 +223,8 @@ impl SplitNode {
                         .into_iter()
                         .fold(Vec::new(), |mut acc, child_splits| {
                             if let Some(merge_level) = merge_level {
-                                if self.pattern_id < merge_level {
-                                    add_splits_no_merge(&mut acc, &child_splits.clone(), max_len);
+                                if self.pattern_id + 1 < merge_level {
+                                    acc.extend_from_slice(child_splits.as_slice());
                                     return acc;
                                 }
                             }

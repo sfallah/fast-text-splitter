@@ -6,7 +6,7 @@ use crate::common::split::Split;
 pub struct SplitResultLite {
     pub tokens: Vec<u32>,
     pub split_string: String,
-    pub data_offset: Span
+    pub data_offset: Span,
 }
 
 pub fn add_splits(merged: &mut Vec<Split>, to_merge: &Vec<Split>, max_tokens: usize) {
@@ -23,32 +23,6 @@ pub fn add_splits(merged: &mut Vec<Split>, to_merge: &Vec<Split>, max_tokens: us
         let last_merged = merged.last().unwrap().clone();
         let to_merge_split = to_merge.first().unwrap();
         if last_merged.pattern_id <= to_merge_split.pattern_id || to_merge_split.pattern_node {
-            let to_merge_splits = vec![last_merged.clone(), to_merge_split.clone()];
-            let merged_res = merge_splits(&to_merge_splits, max_tokens);
-            merged.pop();
-            merged.extend_from_slice(merged_res.as_slice());
-        } else {
-            merged.extend_from_slice(to_merge.as_slice());
-        }
-    } else {
-        merged.extend_from_slice(to_merge.as_slice());
-    }
-}
-
-pub fn add_splits_no_merge(merged: &mut Vec<Split>, to_merge: &Vec<Split>, max_tokens: usize) {
-    if to_merge.is_empty() {
-        return;
-    }
-
-    if merged.is_empty() {
-        merged.extend_from_slice(to_merge.as_slice());
-        return;
-    }
-
-    if to_merge.len() == 1 {
-        let last_merged = merged.last().unwrap().clone();
-        let to_merge_split = to_merge.first().unwrap();
-        if to_merge_split.pattern_node {
             let to_merge_splits = vec![last_merged.clone(), to_merge_split.clone()];
             let merged_res = merge_splits(&to_merge_splits, max_tokens);
             merged.pop();
@@ -167,7 +141,7 @@ pub fn into_one_split(splits: &Vec<Split>) -> Split {
         let tokenized = splits.iter().any(|split| split.tokenized);
 
         Split {
-            pattern_id: first_split.pattern_id,
+            pattern_id: last_split.pattern_id,
             tokens_no,
             data_span,
             pattern_node: false,

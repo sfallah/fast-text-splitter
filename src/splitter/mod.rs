@@ -79,7 +79,11 @@ impl<'a, T: Tokenize + Sync> Splitter<'a, T> {
     }
 
     pub fn split(&self) -> SplitNode {
-        if self.lt_max_len(
+
+        let go_on = self.config.merge_level.map_or(false, |merge_level| self.pattern_id < merge_level);
+
+
+        if !go_on && self.lt_max_len(
             self.split_data_span,
             self.split_encoding.clone(),
             self.split_tokens_span.clone(),
@@ -425,11 +429,13 @@ impl<'a, T: Tokenize + Sync> Splitter<'a, T> {
         split_encoding: Option<Arc<SplitEncoding>>,
         split_tokens_span: Option<Span>,
     ) -> bool {
+        /*
         if let Some(merge_level) = self.config.merge_level {
             if self.pattern_id < merge_level {
                 return false;
             }
         }
+         */
 
         let check_max_len = self.config.max_len.is_some();
 
