@@ -32,7 +32,9 @@ def main():
 
             #embeddings = model.encode(sentences, prompt="Retrieve semantically similar text: ")
             embeddings = model.encode(sentences)
+            print("embeddings shape:", embeddings.shape)
             similarity_scores = model.similarity(embeddings, embeddings).numpy()
+
 
             # Compute the centrality for each sentence
             #centrality_scores = degree_centrality_scores(similarity_scores, threshold=0.7)
