@@ -1540,4 +1540,42 @@ mod tests {
 
         Ok(())
     }
+    #[test]
+    fn test_turkish() -> tokenizers::Result<()> {
+        let data_path = "tests/test_data/telekomturkishsample.txt";
+        let binding = fs::read(data_path).unwrap();
+        let data = binding.as_slice();
+
+        let patterns = vec![
+            vec!["\n\n".to_string()],
+            vec!["\n".to_string()],
+            vec![".".to_string(), "!".to_string(), "?".to_string()],
+        ];
+
+        let splitter_config = SplitterLiteConfig::new_hf(
+            patterns,
+            Some(512),
+            None,
+            true,
+            Some("sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2".to_string()),
+        );
+        let splits = splitter_config.hf_splits(data);
+        println!("{:?}", splits.len());
+        let total_len: usize = splits.iter().map(|res| res.split_string.len()).sum();
+        assert_eq!(data.len(), total_len);
+
+        for res in splits.iter() {
+            println!("{:?}", res.split_string);
+            println!("{:?}", res.tokens.len());
+        }
+
+        // write splits to output/debug/vertragsgrundlagen_efh_wohn_splits.txt
+        let mut file =
+            fs::File::create("output/debug/vertragsgrundlagen_efh_wohn_splits.txt").unwrap();
+        for res in splits.iter() {
+            file.write_all(res.split_string.as_bytes()).unwrap();
+        }
+
+        Ok(())
+    }
 }
