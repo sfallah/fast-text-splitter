@@ -33,7 +33,6 @@ default = []
 [dev-dependencies]
 criterion = "0.5.1"
 memchr = "2.7.2"
-tokenizers = "0.19.1"
 tempfile = "3.2.0"
 
 [[bench]]

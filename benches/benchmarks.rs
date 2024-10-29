@@ -38,16 +38,21 @@ pub fn hf_merged_tree_lite_sub_res_benchmark(c: &mut Criterion) {
     let patterns = vec![
         vec!["\n\n".to_string()],
         vec!["\n".to_string()],
-        vec![".".to_string(), "!".to_string(), "?".to_string()],
+        vec![
+            ".".to_string(),
+            "!".to_string(),
+            "?".to_string(),
+            ". ".to_string(),
+        ],
     ];
 
-    let splitter_config = SplitterLiteConfig::new_hf(patterns.clone(), Some(512), None, true, None);
+    let splitter_config = SplitterLiteConfig::new_hf(patterns.clone(), Some(512), None, false, None);
     let sub_splitter_config =
-        SplitterLiteConfig::new_hf(patterns.clone(), Some(512), Some(3), true, None);
+        SplitterLiteConfig::new_hf(patterns.clone(), Some(512), Some(patterns.len()), false, None);
 
     c.bench_function("hf_merged_tree_lite_sub_res_benchmark", |b| {
         b.iter(|| {
-            let sub_splits:Vec<_> = splitter_config
+            let sub_splits: Vec<_> = splitter_config
                 .hf_splits(data)
                 .par_iter()
                 .flat_map(|split| sub_splitter_config.hf_splits(split.split_string.as_bytes()))
