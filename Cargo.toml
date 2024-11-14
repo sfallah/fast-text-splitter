@@ -13,8 +13,8 @@ tokenizers = { version = "0.19.1", features = ["http", "onig", "esaxx_fast"] }
 aho-corasick = "=1.1.3"
 anyhow = "1.0.83"
 rayon = "1.10.0"
-pyo3 = { version = "0.21.2", features = ["extension-module"] }
-pyo3-macros-backend = "0.21.2"
+pyo3 = { version = "0.22.6", optional = true, features = ["extension-module"] }
+pyo3-macros-backend = { version = "0.22.6", optional = true }
 lazy_static = "1.4.0"
 once_cell = "1.9"
 dashmap = "5.0"
@@ -29,6 +29,7 @@ termtree = "0.4.1"
 
 [features]
 default = []
+py-binding = ["pyo3", "pyo3-macros-backend"]
 
 [dev-dependencies]
 criterion = "0.5.1"
