@@ -4,6 +4,7 @@ use aho_corasick::{AhoCorasick, MatchKind, Span};
 
 pub mod pattern_searcher;
 
+pub mod code_patterns;
 pub mod search_match;
 mod search_pattern;
 pub mod search_result;

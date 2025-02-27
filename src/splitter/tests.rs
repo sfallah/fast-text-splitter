@@ -1092,13 +1092,59 @@ mod tests {
          */
     }
 
+    use crate::pattern_search::code_patterns::Language;
+    use rand::distributions::{Alphanumeric, DistString};
+
+    #[test]
+    fn rand_string_test() {
+        let rnd_str = Alphanumeric.sample_string(&mut thread_rng(), 265);
+        let patterns = vec![
+            vec!["\n\n".to_string()],
+            vec!["\n".to_string()],
+            vec![".".to_string(), "!".to_string(), "?".to_string()],
+        ];
+        let data = rnd_str.as_bytes();
+        let splitter_config = SplitterLiteConfig::new_hf(patterns, Some(128), None, true, None);
+
+        let splits = splitter_config.hf_splits(data);
+
+        println!("{:?}", splits.len());
+    }
+
+    #[test]
+    fn code_split_python() {
+        let data_path = "tests/test_data_code/text_splitters.py";
+        let binding = fs::read_to_string(data_path).unwrap();
+        let data = binding.as_bytes();
+        let patterns = Language::PYTHON.get_separators();
+        let splitter_config = SplitterLiteConfig::new_hf(patterns, Some(128), None, false, None);
+        let splits = splitter_config.hf_splits(data);
+
+        println!("{:?}", splits.len());
+        let total_len: usize = splits.iter().map(|c| c.split_string.len()).sum();
+        assert_eq!(data.len(), total_len);
+
+        let hf_tokenizer = init_tokenizer(None, Some(usize::MAX), false).unwrap();
+        let hf_encoding = hf_tokenizer.encode(from_utf8(data).unwrap(), true).unwrap();
+        let total_tokens: usize = splits.iter().map(|res| res.tokens.len()).sum();
+        assert_eq!(hf_encoding.len(), total_tokens);
+
+        for (i, split) in splits.iter().enumerate() {
+            println!("Split {:?}, tokens: {:?}", i, split.tokens.len());
+            println!("------------------------------------\n\n");
+            println!("{}", split.split_string);
+            println!("\n\n------------------------------------");
+        }
+    }
+
     #[test]
     fn nw_tree_hf_splits_superlinear() {
-        let data_path = "tests/test_data/superlinear.txt";
+        //let data_path = "tests/test_data/superlinear.txt";
         //let data_path = "tests/error_data/superlinear_loose_pattern.txt";
         //let data_path = "data/dev/History_of_baseball_in_the_United_States.txt";
         //let data_path = "tests/error_data/wiki_us_snippet_error.txt";
         //let data_path = "data/dev/Belle_(Beauty_and_the_Beast).txt";
+        let data_path = "tests/test_data/newsroom_no_space.txt";
 
         let binding = fs::read_to_string(data_path).unwrap();
         let data = binding.as_bytes();
@@ -1109,7 +1155,7 @@ mod tests {
             vec![".".to_string(), "!".to_string(), "?".to_string()],
         ];
 
-        let splitter_config = SplitterLiteConfig::new_hf(patterns, Some(512), None, true, None);
+        let splitter_config = SplitterLiteConfig::new_hf(patterns, Some(64), None, true, None);
 
         let splits = splitter_config.hf_splits(data);
 

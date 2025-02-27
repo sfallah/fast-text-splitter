@@ -6,8 +6,11 @@ use fast_text_splitter::config::SplitterLiteConfig;
 use rayon::prelude::*;
 
 pub fn hf_merged_tree_lite_res_benchmark(c: &mut Criterion) {
-    let data_path = "tests/test_data/superlinear.txt";
+    //let data_path = "tests/test_data/superlinear.txt";
     //let data_path = "tests/test_data/United_States.txt";
+    //let data_path = "tests/test_data/bert_paper_complete.txt";
+    //let data_path = "tests/test_data/nltk_bert_sentences_marked.txt";
+    let data_path = "tests/test_data/nltk_superlinear_sentences_marked.txt";
 
     let binding = fs::read(data_path).unwrap();
     let data = binding.as_slice();
@@ -15,7 +18,12 @@ pub fn hf_merged_tree_lite_res_benchmark(c: &mut Criterion) {
     let patterns = vec![
         vec!["\n\n".to_string()],
         vec!["\n".to_string()],
-        vec![".".to_string(), "!".to_string(), "?".to_string()],
+        vec!["<SENT>".to_string()],
+        vec![
+            ". ".to_string(),
+            "! ".to_string(),
+            "? ".to_string(),
+        ],
     ];
 
     let splitter_config = SplitterLiteConfig::new_hf(patterns, Some(512), None, true, None);
@@ -29,21 +37,21 @@ pub fn hf_merged_tree_lite_res_benchmark(c: &mut Criterion) {
 }
 
 pub fn hf_merged_tree_lite_sub_res_benchmark(c: &mut Criterion) {
-    let data_path = "tests/test_data/superlinear.txt";
+    //let data_path = "tests/test_data/superlinear.txt";
     //let data_path = "tests/test_data/United_States.txt";
+    let data_path = "tests/test_data/bert_paper_complete.txt";
 
     let binding = fs::read(data_path).unwrap();
     let data = binding.as_slice();
 
     let patterns = vec![
         vec!["\n\n".to_string()],
-        vec!["\n".to_string()],
         vec![
-            ".".to_string(),
-            "!".to_string(),
-            "?".to_string(),
             ". ".to_string(),
+            "! ".to_string(),
+            "? ".to_string(),
         ],
+        vec!["\n".to_string()],
     ];
 
     let splitter_config =
@@ -69,15 +77,25 @@ pub fn hf_merged_tree_lite_sub_res_benchmark(c: &mut Criterion) {
 }
 
 pub fn ws_tree_split_lite_benchmark(c: &mut Criterion) {
-    let data_path = "tests/test_data/superlinear.txt";
+    //let data_path = "tests/test_data/superlinear.txt";
     //let data_path = "tests/test_data/United_States.txt";
+    //let data_path = "tests/test_data/bert_paper_complete.txt";
+    //let data_path = "tests/test_data/nltk_bert_sentences_marked.txt";
+    let data_path = "tests/test_data/nltk_superlinear_sentences_marked.txt";
+
+
 
     let binding = fs::read(data_path).unwrap();
     let data = binding.as_slice();
     let patterns = vec![
         vec!["\n\n".to_string()],
         vec!["\n".to_string()],
-        vec![".".to_string(), "!".to_string(), "?".to_string()],
+        vec!["<SENT>".to_string()],
+        vec![
+            ". ".to_string(),
+            "! ".to_string(),
+            "? ".to_string(),
+        ],
     ];
 
     let splitter_config = SplitterLiteConfig::new_ws(patterns, Some(384), None, true, true);
@@ -119,8 +137,8 @@ pub fn benches() {
 
     hf_merged_tree_lite_res_benchmark(&mut criterion);
     ws_tree_split_lite_benchmark(&mut criterion);
-    none_tree_split_lite_benchmark(&mut criterion);
-    hf_merged_tree_lite_sub_res_benchmark(&mut criterion);
+    //none_tree_split_lite_benchmark(&mut criterion);
+    //hf_merged_tree_lite_sub_res_benchmark(&mut criterion);
 }
 
 criterion_main!(benches);
