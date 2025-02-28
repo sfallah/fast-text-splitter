@@ -1384,7 +1384,7 @@ mod tests {
             tokenizer: None,
             patterns_len,
         };
-        let splitter = Splitter::new(&config, span, 0, span, None, None, None);
+        let splitter = Splitter::new(&config, span, 0, span, Some(true), None, None);
         let tree = splitter.split();
         println!("{}", tree.to_string(data, true));
         assert_eq!(from_utf8(data).unwrap(), tree.reconstruct(data));

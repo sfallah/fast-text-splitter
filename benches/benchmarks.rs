@@ -3,15 +3,8 @@ use std::fs;
 use criterion::{black_box, criterion_main, Criterion};
 
 use fast_text_splitter::config::SplitterLiteConfig;
-use rayon::prelude::*;
 
-pub fn hf_merged_tree_lite_res_benchmark(c: &mut Criterion) {
-    let data_path = "tests/test_data/superlinear.txt";
-    //let data_path = "tests/test_data/United_States.txt";
-
-    let binding = fs::read(data_path).unwrap();
-    let data = binding.as_slice();
-
+pub fn hf_merged_tree_lite_res_benchmark(c: &mut Criterion, data: &[u8]) {
     let patterns = vec![
         vec!["\n\n".to_string()],
         vec!["\n".to_string()],
@@ -28,13 +21,7 @@ pub fn hf_merged_tree_lite_res_benchmark(c: &mut Criterion) {
     });
 }
 
-pub fn hf_merged_tree_lite_sub_res_benchmark(c: &mut Criterion) {
-    let data_path = "tests/test_data/superlinear.txt";
-    //let data_path = "tests/test_data/United_States.txt";
-
-    let binding = fs::read(data_path).unwrap();
-    let data = binding.as_slice();
-
+pub fn hf_merged_tree_lite_sub_res_benchmark(c: &mut Criterion, data: &[u8]) {
     let patterns = vec![
         vec!["\n\n".to_string()],
         vec!["\n".to_string()],
@@ -59,12 +46,7 @@ pub fn hf_merged_tree_lite_sub_res_benchmark(c: &mut Criterion) {
     });
 }
 
-pub fn ws_tree_split_lite_benchmark(c: &mut Criterion) {
-    let data_path = "tests/test_data/superlinear.txt";
-    //let data_path = "tests/test_data/United_States.txt";
-
-    let binding = fs::read(data_path).unwrap();
-    let data = binding.as_slice();
+pub fn ws_tree_split_lite_benchmark(c: &mut Criterion, data: &[u8]) {
     let patterns = vec![
         vec!["\n\n".to_string()],
         vec!["\n".to_string()],
@@ -80,12 +62,7 @@ pub fn ws_tree_split_lite_benchmark(c: &mut Criterion) {
     });
 }
 
-pub fn none_tree_split_lite_benchmark(c: &mut Criterion) {
-    let data_path = "tests/test_data/superlinear.txt";
-    // data_path = "tests/test_data/United_States.txt";
-
-    let binding = fs::read(data_path).unwrap();
-    let data = binding.as_slice();
+pub fn none_tree_split_lite_benchmark(c: &mut Criterion, data: &[u8]) {
     let patterns = vec![
         vec!["\n\n".to_string()],
         vec!["\n".to_string()],
@@ -108,10 +85,16 @@ pub fn benches() {
         .measurement_time(std::time::Duration::from_secs(10))
         .configure_from_args();
 
-    hf_merged_tree_lite_res_benchmark(&mut criterion);
-    ws_tree_split_lite_benchmark(&mut criterion);
-    none_tree_split_lite_benchmark(&mut criterion);
-    hf_merged_tree_lite_sub_res_benchmark(&mut criterion);
+    let data_path = "tests/test_data/superlinear_orig.txt";
+    // data_path = "tests/test_data/United_States.txt";
+
+    let binding = fs::read(data_path).unwrap();
+    let data = binding.as_slice();
+
+    hf_merged_tree_lite_res_benchmark(&mut criterion, data);
+    ws_tree_split_lite_benchmark(&mut criterion, data);
+    none_tree_split_lite_benchmark(&mut criterion, data);
+    hf_merged_tree_lite_sub_res_benchmark(&mut criterion, data);
 }
 
 criterion_main!(benches);
