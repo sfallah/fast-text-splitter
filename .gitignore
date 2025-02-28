@@ -5,3 +5,6 @@ Cargo.lock
 .venv
 /data
 output
+
+# Python
+__pycache__/
