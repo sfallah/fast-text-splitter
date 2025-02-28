@@ -44,7 +44,7 @@ pub fn init_tokenizer(
     }
     if disable_normalizer {
         let normalizer = BertNormalizer::new(false, false, None, false);
-        tokenizer.with_normalizer(normalizer);
+        tokenizer.with_normalizer(Some(normalizer));
     }
     Ok(tokenizer)
 }

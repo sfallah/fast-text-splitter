@@ -1,13 +1,12 @@
 #[cfg(test)]
 mod tests {
     use aho_corasick::Span;
-    use rand::seq::SliceRandom;
-    use rand::thread_rng;
+    use rand::rng;
     use rayon::prelude::*;
     use std::io::Write;
     use std::str::from_utf8;
     use std::{fs, io};
-
+    use rand::prelude::IndexedRandom;
     use crate::config::SplitterLiteConfig;
     use crate::encodings::{NoneTokenizer, Tokenize};
     use crate::hf_tokenizer::{init_tokenizer, HFTokenizer};
@@ -1460,7 +1459,7 @@ mod tests {
 
     #[test]
     fn hf_nq_dataset_test() -> tokenizers::Result<()> {
-        let mut rng = thread_rng();
+        let mut rng = rng();
 
         tokenizers::utils::parallelism::set_parallelism(true);
         let dev_files = list_text_files("data/dev/")?;

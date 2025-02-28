@@ -69,7 +69,7 @@ impl PatternSearcher {
         &'a self,
         data: &'a [u8],
         data_span: Span,
-    ) -> Box<dyn Iterator<Item = SearchMatch> + '_> {
+    ) -> Box<dyn Iterator<Item = SearchMatch> + 'a> {
         if self.patterns.is_empty() || data_span.is_empty() || data.is_empty() {
             return Box::new(std::iter::empty());
         }
@@ -150,7 +150,7 @@ impl PatternSearcher {
         }
     }
 
-    pub fn find_pattern<'a>(&'a self, data: &'a [u8], data_span: Span) -> SearchResult {
+    pub fn find_pattern<'a>(&'a self, data: &'a [u8], data_span: Span) -> SearchResult<'a> {
         let mut matches = self.search_patterns(data, data_span);
 
         let first_match_opt = matches.next();
