@@ -46,9 +46,15 @@ pub fn hf_merged_tree_lite_sub_res_benchmark(c: &mut Criterion) {
         ],
     ];
 
-    let splitter_config = SplitterLiteConfig::new_hf(patterns.clone(), Some(512), None, false, None);
-    let sub_splitter_config =
-        SplitterLiteConfig::new_hf(patterns.clone(), Some(512), Some(patterns.len()), false, None);
+    let splitter_config =
+        SplitterLiteConfig::new_hf(patterns.clone(), Some(512), None, false, None);
+    let sub_splitter_config = SplitterLiteConfig::new_hf(
+        patterns.clone(),
+        Some(512),
+        Some(patterns.len()),
+        false,
+        None,
+    );
 
     c.bench_function("hf_merged_tree_lite_sub_res_benchmark", |b| {
         b.iter(|| {

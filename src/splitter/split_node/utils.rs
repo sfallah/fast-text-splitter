@@ -1,7 +1,7 @@
 use crate::common::span;
 use crate::common::split::Split;
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct SplitResultLite {
     pub tokens: Vec<u32>,
     pub split_string: String,
