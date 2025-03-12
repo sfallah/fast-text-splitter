@@ -1,18 +1,19 @@
-use aho_corasick::{AhoCorasick, Span};
-use memchr::memmem::{find_iter, Finder};
-use memchr::{memchr2_iter, memchr3_iter};
-
 use crate::common::span;
 use crate::pattern_search::get_aho_corasick;
 use crate::pattern_search::search_match::SearchMatch;
 use crate::pattern_search::search_pattern::SearchPattern;
 use crate::pattern_search::search_result::SearchResult;
 use crate::pattern_search::search_split::SearchSplit;
+use aho_corasick::{AhoCorasick, Span};
+use memchr::memmem::{find_iter, Finder};
+use memchr::{memchr2_iter, memchr3_iter};
+use punkt::sentence_tokenize;
 
 pub struct PatternSearcher {
     pub patterns: Vec<SearchPattern>,
     pub aho_corasick: Option<AhoCorasick>,
     pub memchr_finder: Option<Finder<'static>>,
+    pub sentence_tokenizer: Option<bool>,
 }
 
 impl PatternSearcher {
@@ -29,6 +30,7 @@ impl PatternSearcher {
                     patterns,
                     aho_corasick,
                     memchr_finder: None,
+                    sentence_tokenizer: None,
                 }
             } else {
                 // patterns.len() <= 3
@@ -38,6 +40,7 @@ impl PatternSearcher {
                         patterns,
                         aho_corasick: None,
                         memchr_finder: None,
+                        sentence_tokenizer: None,
                     }
                 } else {
                     let aho_corasick = Some(get_aho_corasick(str_patterns.clone()));
@@ -45,6 +48,7 @@ impl PatternSearcher {
                         patterns,
                         aho_corasick,
                         memchr_finder: None,
+                        sentence_tokenizer: None,
                     }
                 }
             }
@@ -55,12 +59,23 @@ impl PatternSearcher {
                     patterns,
                     aho_corasick: None,
                     memchr_finder,
+                    sentence_tokenizer: None,
                 }
             } else {
-                Self {
-                    patterns,
-                    aho_corasick: None,
-                    memchr_finder: None,
+                if patterns[0].is_sentence {
+                    Self {
+                        patterns,
+                        aho_corasick: None,
+                        memchr_finder: None,
+                        sentence_tokenizer: Some(true),
+                    }
+                } else {
+                    Self {
+                        patterns,
+                        aho_corasick: None,
+                        memchr_finder: None,
+                        sentence_tokenizer: None,
+                    }
                 }
             }
         }
@@ -69,32 +84,46 @@ impl PatternSearcher {
         &'a self,
         data: &'a [u8],
         data_span: Span,
-    ) -> Box<dyn Iterator<Item = SearchMatch> + '_> {
+    ) -> Box<dyn Iterator<Item = SearchMatch> + 'a> {
         if self.patterns.is_empty() || data_span.is_empty() || data.is_empty() {
             return Box::new(std::iter::empty());
         }
         if self.patterns.len() == 1 {
             let pattern = self.patterns.first().unwrap();
-            if let Some(finder) = self.memchr_finder.as_ref() {
+            if pattern.is_sentence {
+                let data_slice = std::str::from_utf8(&data[data_span.range()]).unwrap();
+                println!("data_slice: {:?}", data_slice);
                 Box::new(
-                    finder
-                        .find_iter(&data[data_span.range()])
-                        .map(move |start| SearchMatch {
+                    sentence_tokenize(data_slice)
+                        .unwrap()
+                        .tokens
+                        .into_iter()
+                        .map(move |st| SearchMatch {
+                            pattern_len: 0,
+                            is_pattern_whitespace: true,
+                            span: span(st.span.end, st.span.end),
+                        }),
+                )
+            } else {
+                if let Some(finder) = self.memchr_finder.as_ref() {
+                    Box::new(
+                        finder
+                            .find_iter(&data[data_span.range()])
+                            .map(move |start| SearchMatch {
+                                pattern_len: pattern.len(),
+                                is_pattern_whitespace: pattern.is_whitespace,
+                                span: span(start, start + pattern.len()),
+                            }),
+                    )
+                } else {
+                    Box::new(find_iter(&data[data_span.range()], pattern.as_bytes()).map(
+                        move |start| SearchMatch {
                             pattern_len: pattern.len(),
                             is_pattern_whitespace: pattern.is_whitespace,
                             span: span(start, start + pattern.len()),
-                        }),
-                )
-                //.collect()
-            } else {
-                Box::new(find_iter(&data[data_span.range()], pattern.as_bytes()).map(
-                    move |start| SearchMatch {
-                        pattern_len: pattern.len(),
-                        is_pattern_whitespace: pattern.is_whitespace,
-                        span: span(start, start + pattern.len()),
-                    },
-                ))
-                //.collect()
+                        },
+                    ))
+                }
             }
         } else {
             if let Some(ac) = self.aho_corasick.as_ref() {
@@ -106,7 +135,6 @@ impl PatternSearcher {
                         span: mt.span().into(),
                     }
                 }))
-                //.collect()
             } else {
                 if self.patterns.len() == 2 {
                     Box::new(
@@ -125,7 +153,6 @@ impl PatternSearcher {
                             }
                         }),
                     )
-                    //.collect()
                 } else {
                     Box::new(
                         memchr3_iter(
@@ -144,13 +171,12 @@ impl PatternSearcher {
                             }
                         }),
                     )
-                    //.collect()
                 }
             }
         }
     }
 
-    pub fn find_pattern<'a>(&'a self, data: &'a [u8], data_span: Span) -> SearchResult {
+    pub fn find_pattern<'a>(&'a self, data: &'a [u8], data_span: Span) -> SearchResult<'a> {
         let mut matches = self.search_patterns(data, data_span);
 
         let first_match_opt = matches.next();

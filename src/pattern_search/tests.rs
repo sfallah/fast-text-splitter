@@ -5,6 +5,7 @@ mod tests {
     use crate::pattern_search::span_to_string;
     use aho_corasick::Span;
     use std::str::from_utf8;
+    use punkt::sentence_tokenize;
 
     #[test]
     fn new_splitter_tree_error_test() -> anyhow::Result<()> {
@@ -505,6 +506,24 @@ mod tests {
         );
         assert_eq!(result4.splits[6].stride, 1);
         assert_eq!(result4.splits[6].data(), "".to_string());
+
+        Ok(())
+    }
+
+    #[test]
+    fn sentence_pattern_test() -> anyhow::Result<()> {
+        let pattern = vec!["<SENT>".to_string()];
+        let searcher = PatternSearcher::new(pattern);
+        assert_eq!(searcher.patterns.len(), 1);
+        assert_eq!(searcher.patterns[0].pattern, "<SENT>".to_string());
+        assert!(searcher.patterns[0].is_sentence);
+        let data = "Hello, you all! How are you?";
+        let sent_tokens = sentence_tokenize(data)?;
+        println!("{:?}", sent_tokens);
+        let result1 = searcher.find_pattern(data.as_bytes(), span(0, data.len()));
+
+        assert_eq!(result1.splits.len(), 2);
+        println!("{:?}", result1);
 
         Ok(())
     }

@@ -9,16 +9,42 @@ pub fn hf_merged_tree_lite_res_benchmark(c: &mut Criterion) {
     //let data_path = "tests/test_data/superlinear.txt";
     //let data_path = "tests/test_data/United_States.txt";
     //let data_path = "tests/test_data/bert_paper_complete.txt";
-    //let data_path = "tests/test_data/nltk_bert_sentences_marked.txt";
-    let data_path = "tests/test_data/nltk_superlinear_sentences_marked.txt";
+    //let data_path = "tests/test_data/nltk_bert_marked.txt";
+    let data_path = "tests/test_data/nltk_superlinear_marked.txt";
+
+    let binding = fs::read(data_path).unwrap();
+    let data = binding.as_slice();
+
+    let patterns = vec![
+        vec!["<SENT>".to_string()],
+        vec!["\n\n".to_string()],
+        vec!["\n".to_string()]
+    ];
+
+    let splitter_config = SplitterLiteConfig::new_hf(patterns, Some(512), None, true, None);
+
+    c.bench_function("hf_merged_tree_lite_splits_benchmark", |b| {
+        b.iter(|| {
+            let splits = splitter_config.hf_splits(data);
+            black_box(splits);
+        })
+    });
+}
+
+pub fn tokenize_sentences_benchmark(c: &mut Criterion) {
+    //let data_path = "tests/test_data/superlinear.txt";
+    //let data_path = "tests/test_data/United_States.txt";
+    //let data_path = "tests/test_data/bert_paper_complete.txt";
+    //let data_path = "tests/test_data/nltk_bert_marked.txt";
+    let data_path = "tests/test_data/nltk_superlinear_marked.txt";
 
     let binding = fs::read(data_path).unwrap();
     let data = binding.as_slice();
 
     let patterns = vec![
         vec!["\n\n".to_string()],
-        vec!["\n".to_string()],
         vec!["<SENT>".to_string()],
+        vec!["\n".to_string()],
         vec![
             ". ".to_string(),
             "! ".to_string(),
@@ -80,22 +106,17 @@ pub fn ws_tree_split_lite_benchmark(c: &mut Criterion) {
     //let data_path = "tests/test_data/superlinear.txt";
     //let data_path = "tests/test_data/United_States.txt";
     //let data_path = "tests/test_data/bert_paper_complete.txt";
-    //let data_path = "tests/test_data/nltk_bert_sentences_marked.txt";
-    let data_path = "tests/test_data/nltk_superlinear_sentences_marked.txt";
+    //let data_path = "tests/test_data/nltk_bert_marked.txt";
+    let data_path = "tests/test_data/nltk_superlinear_marked.txt";
 
 
 
     let binding = fs::read(data_path).unwrap();
     let data = binding.as_slice();
     let patterns = vec![
+        vec!["<SENT>".to_string()],
         vec!["\n\n".to_string()],
         vec!["\n".to_string()],
-        vec!["<SENT>".to_string()],
-        vec![
-            ". ".to_string(),
-            "! ".to_string(),
-            "? ".to_string(),
-        ],
     ];
 
     let splitter_config = SplitterLiteConfig::new_ws(patterns, Some(384), None, true, true);

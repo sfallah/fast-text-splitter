@@ -11,7 +11,7 @@ name = "fast_text_splitter"
 [dependencies]
 tokenizers = { version = "0.19.1", features = ["http", "onig", "esaxx_fast"] }
 aho-corasick = "=1.1.3"
-anyhow = "1.0.83"
+anyhow = "1.0.97"
 rayon = "1.10.0"
 pyo3 = { version = "0.22.6", optional = true, features = ["extension-module"] }
 pyo3-macros-backend = { version = "0.22.6", optional = true }
@@ -26,6 +26,7 @@ serde = { version = "1.0.197", features = ["derive"] }
 itertools = "0.13.0"
 rand = "0.8.5"
 termtree = "0.4.1"
+punkt = {git = "https://gitlab.com/qimiaio/qimia-ai-dev/rust-punkt.git" , branch = "feat/sentence_splitter"}
 
 [features]
 default = []

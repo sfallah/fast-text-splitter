@@ -3,6 +3,7 @@ pub struct SearchPattern {
     pub pattern: String,
     pub pattern_len: usize,
     pub is_whitespace: bool,
+    pub is_sentence: bool,
 }
 
 impl SearchPattern {
@@ -10,9 +11,10 @@ impl SearchPattern {
         let pattern_len = pattern.len();
         let is_whitespace = pattern.trim().is_empty();
         Self {
-            pattern,
+            pattern: pattern.clone(),
             pattern_len,
             is_whitespace,
+            is_sentence: pattern == "<SENT>",
         }
     }
 

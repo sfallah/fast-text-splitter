@@ -1247,6 +1247,62 @@ mod tests {
     }
 
     #[test]
+    fn sentences_splits() {
+        let data_path = "tests/test_data/nltk_superlinear_marked.txt";
+        //let data_path = "tests/test_data/nltk_bert_marked.txt";
+        let binding = fs::read_to_string(data_path).unwrap();
+
+        let sentences: Vec<&str> = binding.split("<SENT>").collect();
+        for (i, sentence) in sentences.iter().enumerate() {
+            if sentence.is_empty() {
+                continue;
+            }
+            println!("############# Sentence {} #############", i);
+            println!("{:?}", sentence);
+        }
+    }
+
+    #[test]
+    fn fast_hf_tree_sentences_splits() {
+        //let data_path = "tests/test_data/nltk_superlinear_marked.txt";
+        //let data_path = "tests/test_data/nltk_bert_marked.txt";
+        let data_path = "tests/test_data/superlinear.txt";
+        let binding = fs::read_to_string(data_path).unwrap();
+
+        //let orig_data = binding.replace("<SENT>", "");
+
+        let data = binding.as_bytes();
+        let patterns = vec![
+            vec!["<SENT>".to_string()],
+            vec!["\n\n".to_string()],
+            vec!["\n".to_string()]
+        ];
+
+        let splitter_config = SplitterLiteConfig::new_hf(patterns, Some(400), None, true, None);
+        let splits = splitter_config.hf_splits(data);
+
+        let chunk_lens: usize = splits.iter().map(|c| c.split_string.len()).sum();
+        assert_eq!(chunk_lens, data.len());
+
+        let hf_tokenizer = init_tokenizer(None, None, false).unwrap();
+        let hf_encoding = hf_tokenizer.encode(binding.clone(), false).unwrap();
+
+        let total_tokens: usize = splits.iter().map(|res| res.tokens.len()).sum();
+        println!("total_tokens: {:?}", total_tokens);
+        assert_eq!(hf_encoding.len(), total_tokens);
+
+        println!("number of splits: {:?}", splits.len());
+        for split in splits.iter() {
+            println!("{:?}", split.split_string);
+            println!("{:?}", split.split_string.len());
+            println!("{:?}", split.tokens.len());
+            let hf_encoded = hf_tokenizer
+                .encode(split.split_string.clone(), false)
+                .unwrap();
+            assert_eq!(hf_encoded.len(), split.tokens.len());
+        }
+    }
+    #[test]
     fn fast_two_hf_tree_splits() {
         let data_path = "tests/test_data/superlinear.txt";
         let binding = fs::read_to_string(data_path).unwrap();
