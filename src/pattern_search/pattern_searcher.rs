@@ -92,7 +92,6 @@ impl PatternSearcher {
             let pattern = self.patterns.first().unwrap();
             if pattern.is_sentence {
                 let data_slice = std::str::from_utf8(&data[data_span.range()]).unwrap();
-                println!("data_slice: {:?}", data_slice);
                 Box::new(
                     sentence_tokenize(data_slice)
                         .unwrap()

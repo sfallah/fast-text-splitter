@@ -116,8 +116,6 @@ impl PyHFSplitterConfig {
     }
 
     fn splits(&self, data: String) -> PyResult<Vec<PySplitLiteResult>> {
-        println!("ws_splits");
-        println!("data:{:?}", &data);
         Ok(self
             .inner
             .hf_splits(data.as_bytes())

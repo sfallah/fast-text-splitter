@@ -1379,11 +1379,14 @@ mod tests {
             .as_bytes();
 
         let patterns = vec![
+            vec!["<SENT>".to_string()],
             vec!["\n\n".to_string()],
             vec!["\n".to_string()],
-            vec![".".to_string(), "!".to_string(), "?".to_string()],
+            //vec![".".to_string(), "!".to_string(), "?".to_string()],
         ];
         let patterns_len = patterns.len();
+
+
 
         //let patterns = vec!["\n\n".to_string()];
         //let patterns = vec!["\n\n".to_string(), "\n".to_string()];
@@ -1582,6 +1585,92 @@ mod tests {
         let rnd_files: Vec<_> = files.choose_multiple(&mut rng, 3000).collect();
 
         rnd_files.par_iter().for_each(|file| {
+            for merge_level in 1..3 {
+                let (data_len, results) = split_file(
+                    file,
+                    patterns.clone(),
+                    &searchers,
+                    512,
+                    merge_level,
+                    false,
+                    false,
+                    true,
+                    true,
+                );
+                let total_len: usize = results.iter().map(|res| res.split_string.len()).sum();
+                assert_eq!(data_len, total_len, "Failed File: {}", file);
+                println!("File: {} \n Total Length: {}", file, total_len);
+                println!("Number of Splits: {:?}", results.len());
+            }
+        });
+
+        Ok(())
+    }
+
+    #[test]
+    fn hf_nq_dataset_sent_test() -> tokenizers::Result<()> {
+        let mut rng = thread_rng();
+
+        tokenizers::utils::parallelism::set_parallelism(true);
+        let dev_files = list_text_files("data/dev/")?;
+        let train_files = list_text_files("data/train/")?;
+        let files: Vec<_> = dev_files.iter().chain(train_files.iter()).collect();
+
+        let patterns = vec![
+            vec!["<SENT>".to_string()],
+            vec!["\n\n".to_string()],
+            vec!["\n".to_string()],
+        ];
+        let searchers: Vec<_> = patterns
+            .iter()
+            .map(|p| PatternSearcher::new(p.clone()))
+            .collect();
+
+        let rnd_files: Vec<_> = files.choose_multiple(&mut rng, 3000).collect();
+
+        rnd_files.par_iter().for_each(|file| {
+            for merge_level in 1..3 {
+                let (data_len, results) = split_file(
+                    file,
+                    patterns.clone(),
+                    &searchers,
+                    512,
+                    merge_level,
+                    false,
+                    false,
+                    true,
+                    true,
+                );
+                let total_len: usize = results.iter().map(|res| res.split_string.len()).sum();
+                assert_eq!(data_len, total_len, "Failed File: {}", file);
+                println!("File: {} \n Total Length: {}", file, total_len);
+                println!("Number of Splits: {:?}", results.len());
+            }
+        });
+
+        Ok(())
+    }
+
+    #[test]
+    fn hf_llm_papers_test() -> tokenizers::Result<()> {
+        let mut rng = thread_rng();
+
+        tokenizers::utils::parallelism::set_parallelism(true);
+        let files = list_text_files("tests/llm_papers_txt/")?;
+
+        let patterns = vec![
+            vec!["<SENT>".to_string()],
+            vec!["\n\n".to_string()],
+            vec!["\n".to_string()],
+        ];
+        let searchers: Vec<_> = patterns
+            .iter()
+            .map(|p| PatternSearcher::new(p.clone()))
+            .collect();
+
+        let rnd_files: Vec<_> = files.choose_multiple(&mut rng, 3000).collect();
+
+        rnd_files.iter().for_each(|file| {
             for merge_level in 1..3 {
                 let (data_len, results) = split_file(
                     file,

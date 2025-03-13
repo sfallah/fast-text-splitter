@@ -4,8 +4,8 @@ mod tests {
     use crate::pattern_search::pattern_searcher::PatternSearcher;
     use crate::pattern_search::span_to_string;
     use aho_corasick::Span;
-    use std::str::from_utf8;
     use punkt::sentence_tokenize;
+    use std::str::from_utf8;
 
     #[test]
     fn new_splitter_tree_error_test() -> anyhow::Result<()> {
@@ -525,6 +525,85 @@ mod tests {
         assert_eq!(result1.splits.len(), 2);
         println!("{:?}", result1);
 
+        Ok(())
+    }
+
+    #[test]
+    fn sentence_pattern_newlines_test() -> anyhow::Result<()> {
+        let data = "\n\
+        In fact, the correlation. Between superlinear.\n\
+        Returns and inequality is so strong that it yields.\n\
+        Another heuristic for.\n\
+        Finding work of this type.\n\
+        Look for fields where.\n\
+        A few big winners. \n\
+        Outperform everyone else.\n"
+            .as_bytes();
+        let pattern = vec!["<SENT>".to_string()];
+        let searcher = PatternSearcher::new(pattern);
+        let result = searcher.find_pattern(data, span(0, data.len()));
+        assert_eq!(result.splits.len(), 8);
+        for split in result.splits.iter() {
+            println!("{:?}", split.reconstruct());
+        }
+        Ok(())
+    }
+
+    #[test]
+    fn sentence_pattern_multiline_test() -> anyhow::Result<()> {
+        let data = "\n\
+        In fact, the correlation. Between superlinear.\n\
+        Returns and inequality is \n\n so strong that it yields.\n\
+        Outperform everyone else\n\n\
+        just like that\n"
+            .as_bytes();
+        let pattern = vec!["<SENT>".to_string()];
+        let searcher = PatternSearcher::new(pattern);
+        let result = searcher.find_pattern(data, span(0, data.len()));
+        assert_eq!(result.splits.len(), 4);
+        for split in result.splits.iter() {
+            println!("{:?}", split.reconstruct());
+        }
+        Ok(())
+    }
+
+    #[test]
+    fn sentence_pattern_empty_test() -> anyhow::Result<()> {
+        let data = "".as_bytes();
+        let pattern = vec!["<SENT>".to_string()];
+        let searcher = PatternSearcher::new(pattern);
+        let result = searcher.find_pattern(data, span(0, data.len()));
+        println!("{:?}", result);
+        assert_eq!(result.splits.len(), 1);
+        assert_eq!(result.splits[0].data(), "".to_string());
+        assert!(result.splits[0].span.is_empty());
+        Ok(())
+    }
+
+    #[test]
+    fn sentence_pattern_whitespace_test() -> anyhow::Result<()> {
+        let data = "\n\n".as_bytes();
+        let pattern = vec!["<SENT>".to_string()];
+        let searcher = PatternSearcher::new(pattern);
+        let result = searcher.find_pattern(data, span(0, data.len()));
+        println!("{:?}", result);
+        assert_eq!(result.splits.len(), 1);
+        assert_eq!(result.splits[0].data(), "\n\n".to_string());
+        Ok(())
+    }
+
+    #[test]
+    fn sentence_error_pdf_extract() -> anyhow::Result<()> {
+        let file_path = "tests/error_data/pdf_extract_error.txt";
+        let binding = std::fs::read(file_path).unwrap();
+        let data = binding.as_slice();
+        let pattern = vec!["<SENT>".to_string()];
+        let searcher = PatternSearcher::new(pattern);
+        let result = searcher.find_pattern(data, span(0, data.len()));
+        assert_eq!(result.splits.len(), 1);
+        for split in result.splits.iter() {
+            println!("{:?}", split.reconstruct());
+        }
         Ok(())
     }
 }
