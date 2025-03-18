@@ -6,9 +6,9 @@ use fast_text_splitter::config::SplitterLiteConfig;
 use rayon::prelude::*;
 
 pub fn hf_merged_tree_lite_res_benchmark(c: &mut Criterion) {
-    //let data_path = "tests/test_data/superlinear.txt";
+    let data_path = "tests/test_data/superlinear.txt";
     //let data_path = "tests/test_data/United_States.txt";
-    let data_path = "tests/test_data/bert_paper_complete.txt";
+    //let data_path = "tests/test_data/bert_paper_complete.txt";
     //let data_path = "tests/llm_papers_txt/2108.07258v3.txt";
 
     let binding = fs::read(data_path).unwrap();
@@ -100,9 +100,9 @@ pub fn hf_merged_tree_lite_sub_res_benchmark(c: &mut Criterion) {
 }
 
 pub fn ws_tree_split_lite_benchmark(c: &mut Criterion) {
-    //let data_path = "tests/test_data/superlinear.txt";
+    let data_path = "tests/test_data/superlinear.txt";
     //let data_path = "tests/test_data/United_States.txt";
-    let data_path = "tests/test_data/bert_paper_complete.txt";
+    //let data_path = "tests/test_data/bert_paper_complete.txt";
     //let data_path = "tests/llm_papers_txt/2108.07258v3.txt";
 
 
