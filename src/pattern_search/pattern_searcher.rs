@@ -95,7 +95,6 @@ impl PatternSearcher {
                 Box::new(
                     sentence_tokenize(data_slice)
                         .unwrap()
-                        .tokens
                         .into_iter()
                         .map(move |st| SearchMatch {
                             pattern_len: 0,

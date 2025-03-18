@@ -317,7 +317,7 @@ mod tests {
         let pattern = vec!["\n\n".to_string()];
         let searcher = PatternSearcher::new(pattern);
         let file_path = "tests/splitter_test_data/data_nlnl_01.txt";
-        let binding = std::fs::read(file_path).unwrap();
+        let binding = std::fs::read(file_path)?;
         let data = binding.as_slice();
 
         let result = searcher.find_pattern(data, span(0, data.len()));
@@ -606,4 +606,5 @@ mod tests {
         }
         Ok(())
     }
+
 }
