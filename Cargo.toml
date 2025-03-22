@@ -9,7 +9,7 @@ name = "fast_text_splitter"
 #crate-type = ["cdylib"]
 
 [dependencies]
-tokenizers = { version = "0.19.1", features = ["http", "onig", "esaxx_fast"] }
+tokenizers = { version = "0.21.1", features = ["http", "onig", "esaxx_fast"] }
 aho-corasick = "=1.1.3"
 anyhow = "1.0.97"
 rayon = "1.10.0"
