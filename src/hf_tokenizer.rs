@@ -111,6 +111,42 @@ mod tests {
     use super::*;
 
     #[test]
+    fn openai_models_test() -> tokenizers::Result<()> {
+        let model = "google/gemma-3-1b-it".to_string();
+        let tokenizer = init_tokenizer(Some(model), Some(400), false)?;
+        let data = "This is a test";
+        let encoded = tokenizer.encode(data, false)?;
+        assert_eq!(encoded.len(), 4);
+        println!("Encoded IDs: {:?}", encoded.get_ids());
+        //assert_eq!(encoded.get_ids(), &[2028, 374, 264, 1296]);
+        println!("Tokens: {:?}", encoded.get_tokens());
+        //assert_eq!(encoded.get_tokens(), vec!["This".to_string(), " is".to_string(), " a".to_string(), " test".to_string()]);
+        Ok(())
+    }
+
+    #[test]
+    fn hf_models_test() -> tokenizers::Result<()> {
+        let model = "Xenova/gpt-4".to_string();
+        let tokenizer = init_tokenizer(Some(model), Some(400), false)?;
+        let data = "This is a test";
+        let encoded = tokenizer.encode(data, false)?;
+        assert_eq!(encoded.len(), 4);
+        assert_eq!(encoded.get_ids(), &[2028, 374, 264, 1296]);
+        let offsets = encoded.get_offsets();
+        let mut start = 0;
+        let mut tokens = Vec::new();
+        for offset in offsets {
+            let end = offset.1;
+            let token = &data[start..end];
+            tokens.push(token.to_string());
+            start = end;
+        }
+        println!("Tokens: {:?}", tokens);
+        assert_eq!(tokens, vec!["This".to_string(), " is".to_string(), " a".to_string(), " test".to_string()]);
+        Ok(())
+    }
+
+    #[test]
     fn tokens_len_test() -> tokenizers::Result<()> {
         let tokenizer = init_tokenizer(None, None, false)?;
         let data = "This is a test";

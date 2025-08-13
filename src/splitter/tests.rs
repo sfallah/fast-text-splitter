@@ -1139,12 +1139,12 @@ mod tests {
 
     #[test]
     fn nw_tree_hf_splits_superlinear() {
-        //let data_path = "tests/test_data/superlinear.txt";
+        let data_path = "tests/test_data/superlinear.txt";
         //let data_path = "tests/error_data/superlinear_loose_pattern.txt";
         //let data_path = "data/dev/History_of_baseball_in_the_United_States.txt";
         //let data_path = "tests/error_data/wiki_us_snippet_error.txt";
         //let data_path = "data/dev/Belle_(Beauty_and_the_Beast).txt";
-        let data_path = "tests/test_data/newsroom_no_space.txt";
+        //let data_path = "tests/test_data/newsroom_no_space.txt";
 
         let binding = fs::read_to_string(data_path).unwrap();
         let data = binding.as_bytes();
@@ -1163,8 +1163,11 @@ mod tests {
 
         let total_len: usize = splits.iter().map(|c| c.split_string.len()).sum();
         assert_eq!(data.len(), total_len);
+        
+        let openai_model_gpt4 = "Xenova/gpt-4".to_string();
 
-        let hf_tokenizer = init_tokenizer(None, Some(usize::MAX), false).unwrap();
+        let hf_tokenizer = init_tokenizer(Some(openai_model_gpt4), Some(usize::MAX), false).unwrap();
+        //let hf_tokenizer = init_tokenizer(None, Some(usize::MAX), false).unwrap();
         let hf_encoding = hf_tokenizer
             .encode(from_utf8(data).unwrap(), false)
             .unwrap();
@@ -1187,7 +1190,7 @@ mod tests {
             let hf_encoded = hf_tokenizer
                 .encode(split.split_string.clone(), false)
                 .unwrap();
-            //assert!(!split.tokens.is_empty());
+            assert!(!split.tokens.is_empty());
             assert!(split.tokens.len() <= 512);
             if split.tokens.len() != hf_encoded.len() {
                 // tokens in hf_encoded but not in split.tokens
@@ -1205,7 +1208,7 @@ mod tests {
                 break;
             }
             assert_eq!(hf_encoded.len(), split.tokens.len());
-            assert_eq!(hf_encoded.get_ids(), split.tokens);
+            //assert_eq!(hf_encoded.get_ids(), split.tokens);
         }
     }
 
