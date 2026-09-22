@@ -2,9 +2,8 @@ use criterion::{criterion_main, Criterion};
 use fast_text_splitter::config::SplitterLiteConfig;
 use fast_text_splitter::encodings::Tokenize;
 use fast_text_splitter::hf_tokenizer::init_tokenizer;
-use fast_text_splitter::pattern_search::pattern_searcher::icu_sentence_tokenize;
 use kitoken::{Definition, Kitoken, Processing, TokenId};
-use punkt::{sentence_tokenize_lang, SentenceToken};
+use sentence_splitter::{Language, Segmenter};
 use rayon::prelude::*;
 use std::fs;
 use std::hint::black_box;
@@ -140,10 +139,10 @@ pub fn sent_tokenize_benchmark(c: &mut Criterion) {
 
     c.bench_function("sent_tokenize_benchmark", |b| {
         b.iter(|| {
-            let sentences = sentence_tokenize_lang(&data, Some("english")).unwrap();
+            let sentences = Segmenter::punkt(Language::English).unwrap().sentences(&data).unwrap();
             let encodings = black_box(sentences)
                 .par_iter()
-                .map(|s| tokenizer.encode_fast(s.text.as_str(), false).unwrap())
+                .map(|s| tokenizer.encode_fast(*s, false).unwrap())
                 .collect::<Vec<_>>();
             black_box(encodings);
         })
@@ -160,10 +159,10 @@ pub fn sent_tik_tokenize_benchmark(c: &mut Criterion) {
 
     c.bench_function("sent_tik_tokenize_benchmark", |b| {
         b.iter(|| {
-            let sentences = sentence_tokenize_lang(&data, Some("english")).unwrap();
+            let sentences = Segmenter::punkt(Language::English).unwrap().sentences(&data).unwrap();
             let encodings = black_box(sentences)
                 .par_iter()
-                .map(|s| bpe_tokenizer.encode_with_special_tokens(s.text.as_str()))
+                .map(|s| bpe_tokenizer.encode_with_special_tokens(*s))
                 .collect::<Vec<_>>();
             black_box(encodings);
         })
@@ -202,10 +201,10 @@ pub fn sent_kitoken_tokenize_benchmark(c: &mut Criterion) {
 
     c.bench_function("sent_kitoken_tokenize_benchmark", |b| {
         b.iter(|| {
-            let sentences = sentence_tokenize_lang(&data, Some("english")).unwrap();
+            let sentences = Segmenter::punkt(Language::English).unwrap().sentences(&data).unwrap();
             let encodings = black_box(sentences)
                 .par_iter()
-                .map(|s| ki_tokenizer.encode(s.text.as_str(), false).unwrap())
+                .map(|s| ki_tokenizer.encode(*s, false).unwrap())
                 .collect::<Vec<_>>();
             black_box(encodings);
         })
@@ -213,7 +212,7 @@ pub fn sent_kitoken_tokenize_benchmark(c: &mut Criterion) {
 }
 
 fn simple_splits(
-    sentences: &Vec<SentenceToken>,
+    sentences: &Vec<&str>,
     ki_encodings: &Vec<Vec<TokenId>>,
 ) -> Vec<(String, usize)> {
     let max_len = 400;
@@ -229,7 +228,7 @@ fn simple_splits(
                     acc.2 = 0;
                 }
             }
-            acc.1.push(sentence.text.clone());
+            acc.1.push(sentence.to_string());
             acc.2 += encoding.len();
             if idx == no_sentences - 1 {
                 acc.0.push((acc.1.join(" "), acc.2 + encoding.len()));
@@ -274,10 +273,10 @@ pub fn sent_kitoken_simple_splits_benchmark(c: &mut Criterion) {
 
     c.bench_function("sent_kitoken_simple_splits_benchmark", |b| {
         b.iter(|| {
-            let sentences = sentence_tokenize_lang(&data, Some("english")).unwrap();
+            let sentences = Segmenter::punkt(Language::English).unwrap().sentences(&data).unwrap();
             let encodings = sentences
                 .par_iter()
-                .map(|s| ki_tokenizer.encode(s.text.as_str(), false).unwrap())
+                .map(|s| ki_tokenizer.encode(*s, false).unwrap())
                 .collect::<Vec<_>>();
             let splits = simple_splits(&sentences, &encodings);
             black_box(splits);
@@ -297,8 +296,8 @@ pub fn sent_tokenize_benchmark_paral_batch(c: &mut Criterion) {
 
     c.bench_function("sent_tokenize_benchmark_paral_batch", |b| {
         b.iter(|| {
-            let sentences = icu_sentence_tokenize(&data).unwrap();
-            let sentences_text: Vec<_> = sentences.iter().map(|s| s.text.as_str()).collect();
+            let sentences = Segmenter::icu().sentences(&data).unwrap();
+            let sentences_text: Vec<_> = sentences.iter().map(|s| *s).collect();
             let encodings = tokenizer.encode_batch_fast(sentences_text, false).unwrap();
             black_box(encodings);
         })
@@ -314,7 +313,7 @@ pub fn segment_sentences_benchmark(c: &mut Criterion) {
 
     c.bench_function("segment_sentences_benchmark", |b| {
         b.iter(|| {
-            let sentences = icu_sentence_tokenize(&data).unwrap();
+            let sentences = Segmenter::icu().sentences(&data).unwrap();
             black_box(sentences);
         })
     });

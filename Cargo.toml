@@ -22,8 +22,7 @@ unicode_categories = "0.1.1"
 serde = { version = "1.0.197", features = ["derive"] }
 itertools = "0.14.0"
 termtree = "0.5.1"
-punkt = { git = "https://gitlab.com/qimiaio/qimia-ai-dev/rust-punkt.git", branch = "feat/sentence_splitter" }
-icu_segmenter = "2.0.0"
+sentence-splitter = { git = "https://github.com/sfallah/sentence-splitter.git", branch = "main" }
 
 [features]
 default = []

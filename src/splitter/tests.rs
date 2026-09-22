@@ -8,7 +8,7 @@ mod tests {
     use crate::hf_tokenizer::HFTokenizer;
     use crate::normalizer::TextNormalizer;
     use crate::pattern_search::code_patterns::Language;
-    use crate::pattern_search::pattern_searcher::icu_sentence_tokenize;
+    use sentence_splitter::Segmenter;
     use crate::splitter::split_node::utils::SplitResultLite;
     use crate::splitter::split_node::visualization::term_tree;
     use crate::test_support::*;
@@ -422,9 +422,9 @@ mod tests {
     #[test]
     fn icu_sentences_tile_document_and_encode_independently() {
         let data = String::from_utf8(read("tests/test_data/superlinear.txt")).unwrap();
-        let sentences = icu_sentence_tokenize(&data).unwrap();
+        let sentences = Segmenter::icu().sentences(&data).unwrap();
 
-        let joined: String = sentences.iter().map(|s| s.text.as_str()).collect();
+        let joined: String = sentences.concat();
         assert_eq!(joined, data);
 
         // Encoding sentence by sentence must give the document encoding: the splitter
@@ -435,7 +435,7 @@ mod tests {
             .par_iter()
             .map(|s| {
                 tokenizer
-                    .encode(s.text.as_str(), false)
+                    .encode(*s, false)
                     .unwrap()
                     .get_ids()
                     .to_vec()
@@ -476,12 +476,11 @@ mod tests {
             kitoken.encode(data.as_str(), false).unwrap(),
             hf.encode(data.as_str(), false).unwrap().get_ids()
         );
-        for sentence in icu_sentence_tokenize(&data).unwrap() {
+        for sentence in Segmenter::icu().sentences(&data).unwrap() {
             assert_eq!(
-                kitoken.encode(sentence.text.as_str(), false).unwrap(),
-                hf.encode(sentence.text.as_str(), false).unwrap().get_ids(),
-                "{:?}",
-                sentence.text
+                kitoken.encode(sentence, false).unwrap(),
+                hf.encode(sentence, false).unwrap().get_ids(),
+                "{sentence:?}"
             );
         }
     }
