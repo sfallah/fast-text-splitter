@@ -21,13 +21,9 @@ unicode-normalization = "0.1.23"
 unicode_categories = "0.1.1"
 serde = { version = "1.0.197", features = ["derive"] }
 itertools = "0.14.0"
-rand = "0.9.2"
 termtree = "0.5.1"
 punkt = { git = "https://gitlab.com/qimiaio/qimia-ai-dev/rust-punkt.git", branch = "feat/sentence_splitter" }
 icu_segmenter = "2.0.0"
-tiktoken-rs = "0.7.0"
-kitoken = "=0.10.1"
-regex = "1.11.1"
 
 [features]
 default = []
@@ -35,6 +31,12 @@ py-binding = ["pyo3", "pyo3-macros-backend"]
 
 [dev-dependencies]
 criterion = "0.7.0"
+rand = "0.9.2"
+# tokenizer speed comparisons in benches/ and the kitoken equivalence test
+kitoken = "=0.10.1"
+tiktoken-rs = "0.7.0"
+# resolves tokenizer.json from the hf-hub cache for loaders that only read files
+hf-hub = { version = "0.4", features = ["ureq"] }
 memchr = "2.7.2"
 tempfile = "3.2.0"
 

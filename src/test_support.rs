@@ -2,6 +2,7 @@
 //! tokenizers, and the invariants every splitter result has to satisfy.
 
 use std::fs;
+use std::path::PathBuf;
 use std::str::from_utf8;
 
 use aho_corasick::Span;
@@ -105,6 +106,16 @@ pub fn tokenizer(model: &str) -> Tokenizer {
         MULTILINGUAL_MODEL => MULTILINGUAL_TOKENIZER.clone(),
         other => panic!("no cached tokenizer for {other}"),
     }
+}
+
+/// Path of `model`'s `tokenizer.json` in the hf-hub cache (downloaded on first use), for
+/// loaders such as kitoken that only read local files.
+pub fn tokenizer_file(model: &str) -> PathBuf {
+    hf_hub::api::sync::Api::new()
+        .unwrap()
+        .model(model.to_string())
+        .get("tokenizer.json")
+        .unwrap()
 }
 
 pub fn hf_tokenizer(model: &str) -> HFTokenizer {

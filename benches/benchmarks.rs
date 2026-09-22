@@ -9,6 +9,15 @@ use rayon::prelude::*;
 use std::fs;
 use std::hint::black_box;
 
+/// Path of `model`'s `tokenizer.json` in the hf-hub cache, downloaded on first use.
+fn tokenizer_file(model: &str) -> std::path::PathBuf {
+    hf_hub::api::sync::Api::new()
+        .unwrap()
+        .model(model.to_string())
+        .get("tokenizer.json")
+        .unwrap()
+}
+
 pub fn hf_merged_tree_lite_res_benchmark(c: &mut Criterion) {
     let data_path = "tests/test_data/superlinear.txt";
     //let data_path = "tests/test_data/United_States.txt";
@@ -167,8 +176,7 @@ pub fn sent_kitoken_tokenize_benchmark(c: &mut Criterion) {
     //let data_path = "tests/test_data/bert_paper_complete.txt";
 
     let data = fs::read_to_string(data_path).unwrap();
-    let model_file = "models/openai-community/gpt2/tokenizer.json";
-    //let model_file = "models/openai-community/sentence-transformers/all-MiniLM-L6-v2/tokenizer.json";
+    let model_file = tokenizer_file("openai-community/gpt2");
 
     let mut definition = Definition::from_tokenizers_file(model_file).unwrap();
     let processing = definition
@@ -240,9 +248,7 @@ pub fn sent_kitoken_simple_splits_benchmark(c: &mut Criterion) {
     //let data_path = "tests/test_data/bert_paper_complete.txt";
 
     let data = fs::read_to_string(data_path).unwrap();
-    let model_file = "models/openai-community/gpt2/tokenizer.json";
-    let model_file =
-        "models/openai-community/sentence-transformers/all-MiniLM-L6-v2/tokenizer.json";
+    let model_file = tokenizer_file("sentence-transformers/all-MiniLM-L6-v2");
 
     let mut definition = Definition::from_tokenizers_file(model_file).unwrap();
     let processing = definition

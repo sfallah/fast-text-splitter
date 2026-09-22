@@ -451,10 +451,8 @@ mod tests {
         use kitoken::{Definition, Kitoken, Processing};
 
         let data = String::from_utf8(read("tests/test_data/superlinear.txt")).unwrap();
-        let model_file =
-            "models/openai-community/sentence-transformers/all-MiniLM-L6-v2/tokenizer.json";
-
-        let mut definition = Definition::from_tokenizers_file(model_file).unwrap();
+        let mut definition =
+            Definition::from_tokenizers_file(tokenizer_file(DEFAULT_MODEL)).unwrap();
         definition.config.processing = definition
             .config
             .processing
