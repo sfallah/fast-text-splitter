@@ -13,8 +13,7 @@ tokenizers = { version = "0.23.2", features = ["http", "onig", "esaxx_fast"] }
 aho-corasick = "1.1.5"
 anyhow = "1.0.97"
 rayon = "1.10.0"
-pyo3 = { version = "0.22.6", optional = true, features = ["extension-module"] }
-pyo3-macros-backend = { version = "0.22.6", optional = true }
+pyo3 = { version = "0.29.2", optional = true, features = ["extension-module"] }
 memchr = "2.7.2"
 unicode-normalization = "0.1.23"
 unicode_categories = "0.1.1"
@@ -24,7 +23,7 @@ sentence-splitter = { git = "https://github.com/sfallah/sentence-splitter.git", 
 
 [features]
 default = []
-py-binding = ["pyo3", "pyo3-macros-backend"]
+py-binding = ["dep:pyo3"]
 
 [dev-dependencies]
 criterion = "0.8.2"
