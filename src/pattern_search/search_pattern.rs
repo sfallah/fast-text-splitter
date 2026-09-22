@@ -4,6 +4,7 @@ pub struct SearchPattern {
     pub pattern_len: usize,
     pub is_whitespace: bool,
     pub is_sentence: bool,
+    pub is_icu_sentence: bool,
 }
 
 impl SearchPattern {
@@ -15,6 +16,7 @@ impl SearchPattern {
             pattern_len,
             is_whitespace,
             is_sentence: pattern == "<SENT>",
+            is_icu_sentence: pattern == "<ICU_SENT>",
         }
     }
 

@@ -298,7 +298,17 @@ impl<'a, T: Tokenize + Sync> Splitter<'a, T> {
                 .and_then(|x| x.first().cloned());
 
             if self.pattern_id + 1 < self.config.patterns_len() {
-                let splitter = self.to_next_splitter();
+                // The next level gets the data-only token span; the separator's tokens
+                // belong to the pattern node added below.
+                let splitter = Splitter::new(
+                    self.config,
+                    self.search_data_span,
+                    self.pattern_id + 1,
+                    self.split_data_span,
+                    self.parallel,
+                    self.split_encoding.clone(),
+                    tokens_span.or(self.split_tokens_span),
+                );
                 vec![splitter.split()]
             } else {
                 if self.lt_max_len(

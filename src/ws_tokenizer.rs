@@ -127,140 +127,86 @@ pub fn ws_punc_tokens(text: &str) -> Vec<String> {
 mod tests {
     use super::*;
     use crate::normalizer::TextNormalizer;
-    use std::str::from_utf8;
 
-    #[test]
-    fn alphanumeric_test() {
-        assert!(!'.'.is_alphanumeric());
-        assert!(!'!'.is_alphanumeric());
-        assert!(!' '.is_alphanumeric());
-        assert!(!'?'.is_alphanumeric());
-        assert!(!'('.is_alphanumeric());
-        assert!(!')'.is_alphanumeric());
-        assert!(!'['.is_alphanumeric());
-        assert!(!']'.is_alphanumeric());
-        assert!(!'{'.is_alphanumeric());
-        assert!(!'}'.is_alphanumeric());
-        assert!(!'@'.is_alphanumeric());
-        assert!(!'#'.is_alphanumeric());
-        assert!(!'$'.is_alphanumeric());
-        assert!(!'%'.is_alphanumeric());
-    }
-
-    fn get_token(data: &str, start: usize, end: usize) -> String {
-        from_utf8(&data.as_bytes()[start..end]).unwrap().to_string()
+    fn tokens<'a>(tokenizer: &WSTokenizer, text: &'a str) -> Vec<&'a str> {
+        tokenizer
+            .whitespace_punctuation_tokenize(text)
+            .into_iter()
+            .map(|(start, end)| &text[start..end])
+            .collect()
     }
 
     #[test]
-    fn token_span_test() {
-        let ws_tokenizer = WSTokenizer { ascii: false };
-        let en_data =
-            "   \n \t This is a test, 123! :,+-     some more text. \n \n \t something else";
+    fn ascii_tokens_match_reference_implementation() {
+        let tokenizer = WSTokenizer { ascii: true };
+        let greeting = " Hello, you all! How are you ? I am fine. Nice to meet you all insecure! ";
+        assert_eq!(tokens(&tokenizer, greeting).len(), 20);
 
-        println!("{:?}", en_data);
-        let en_tokens = ws_tokenizer.whitespace_punctuation_tokenize(en_data);
-        println!("{:?}", en_tokens);
-
-        en_tokens.iter().for_each(|(start, end)| {
-            let token = get_token(en_data, *start, *end);
-            println!("{}", token);
-        });
-
-        let ar_data = "مرحبا، كيف حالك؟";
-        let ar_tokens = ws_tokenizer.whitespace_punctuation_tokenize(ar_data);
-
-        println!("{:?}", ar_tokens);
-        ar_tokens.iter().for_each(|(start, end)| {
-            let token = get_token(ar_data, *start, *end);
-            println!("{}", token);
-        });
-
-        let ja_data = "こんにちは、お元気ですか？";
-        let ja_tokens = ws_tokenizer.whitespace_punctuation_tokenize(ja_data);
-        ja_tokens.iter().for_each(|(start, end)| {
-            let token = get_token(ja_data, *start, *end);
-            println!("{}", token);
-        });
-
-        let zh_data = "历史地理学的起源至少可以追溯到我国最早的地理学著作《山海经》".to_string();
-        let normalizer = TextNormalizer::default();
-        let zh_data_str = normalizer.normalize(&zh_data).unwrap();
-        let zh_data = zh_data_str.as_str();
-
-        let zh_tokens = ws_tokenizer.whitespace_punctuation_tokenize(zh_data);
-        zh_tokens.iter().for_each(|(start, end)| {
-            let token = get_token(zh_data, *start, *end);
-            println!("{}", token);
-        });
-
-        let df_data = "\"You get out,\" I heard a thousand times, \"what you put in.\" I'm not sure, I don't think so.";
-
-        let df_tokens = ws_tokenizer.whitespace_punctuation_tokenize(df_data);
-        println!("tokens_no: {:?}", df_tokens.len());
-
-        df_tokens.iter().for_each(|(start, end)| {
-            let token = get_token(df_data, *start, *end);
-            println!("{:?}", token);
-        });
-    }
-
-    #[test]
-    fn ws_test() {
-        let ws_tokenizer = WSTokenizer { ascii: true };
-        let data = " Hello, you all! How are you ? I am fine. Nice to meet you all insecure! ";
-        let wd_spans = ws_tokenizer.whitespace_punctuation_tokenize(data);
-        assert_eq!(wd_spans.len(), 20);
-        let mut ws_tokens = Vec::new();
-        for (start, end) in wd_spans.iter() {
-            let token = get_token(data, *start, *end);
-            ws_tokens.push(token.clone());
-            println!("'{}'", token);
+        let superlinear = "\"Seek competition\" is similarly useless; what if the prize isn't worth competing for? Sufficiently fast exponential growth guarantees both the shape and magnitude of the return curve — because something that grows fast enough will grow big even if it's trivially small at first — but thresholds only guarantee the shape. ";
+        for text in [greeting, superlinear] {
+            assert_eq!(tokens(&tokenizer, text), ws_punc_tokens(text));
         }
-
-        let expected_tokens = ws_punc_tokens(data);
-        assert_eq!(ws_tokens, expected_tokens);
     }
 
     #[test]
-    fn ws_empty_test() {
-        let ws_tokenizer = WSTokenizer { ascii: false };
-
-        let data = "";
-        let wd_spans = ws_tokenizer.whitespace_punctuation_tokenize(data);
-        assert_eq!(wd_spans.len(), 0);
-
-        let data = " ";
-        let wd_spans = ws_tokenizer.whitespace_punctuation_tokenize(data);
-        assert_eq!(wd_spans.len(), 0);
-
-        let data = "  \n \t ";
-        let wd_spans = ws_tokenizer.whitespace_punctuation_tokenize(data);
-        assert_eq!(wd_spans.len(), 0);
+    fn whitespace_only_input_has_no_tokens() {
+        let tokenizer = WSTokenizer { ascii: false };
+        for text in ["", " ", "  \n \t "] {
+            assert!(tokens(&tokenizer, text).is_empty(), "{text:?}");
+        }
     }
 
+    /// Every token is a single punctuation mark or a run of word characters, and together
+    /// the tokens hold every non-whitespace character exactly once.
     #[test]
-    fn ws_superlinear_split_test() {
-        let ws_tokenizer = WSTokenizer { ascii: true };
-
-        let split_string = "\"Seek competition\" is similarly useless; what if the prize isn't worth competing for? Sufficiently fast exponential growth guarantees both the shape and magnitude of the return curve — because something that grows fast enough will grow big even if it's trivially small at first — but thresholds only guarantee the shape. ";
-
-        let tokens_spans = ws_tokenizer.whitespace_punctuation_tokenize(split_string);
-
-        let ws_tokens: Vec<_> = tokens_spans
-            .iter()
-            .map(|(start, end)| get_token(split_string, *start, *end))
-            .collect();
-        println!("{:?}", ws_tokens);
-        let tokens = ws_punc_tokens(split_string);
-        println!("{:?}", tokens);
-        assert_eq!(tokens.len(), tokens_spans.len());
-        assert_eq!(tokens, ws_tokens);
-
-        let problem_chars = split_string
-            .chars()
-            .filter(|c| !c.is_whitespace() && !c.is_alphanumeric() && !c.is_ascii_punctuation())
-            .map(|c| format!("'{}'", c))
-            .collect::<String>();
-        println!("{:?}", problem_chars);
+    fn unicode_tokens_split_on_whitespace_and_punctuation() {
+        let tokenizer = WSTokenizer { ascii: false };
+        let chinese = TextNormalizer::default()
+            .normalize(&"历史地理学的起源至少可以追溯到我国最早的地理学著作《山海经》".to_string())
+            .unwrap();
+        let texts = [
+            "   \n \t This is a test, 123! :,+-     some more text. \n \n \t something else",
+            "مرحبا، كيف حالك؟",
+            "こんにちは、お元気ですか？",
+            chinese.as_str(),
+            "\"You get out,\" I heard a thousand times, \"what you put in.\" I'm not sure, I don't think so.",
+        ];
+        for text in texts {
+            let mut previous_end = 0;
+            let mut covered = 0;
+            for (start, end) in tokenizer.whitespace_punctuation_tokenize(text) {
+                assert!(
+                    previous_end <= start && start < end && end <= text.len(),
+                    "{text:?}: bad span ({start}, {end})"
+                );
+                assert!(text.is_char_boundary(start) && text.is_char_boundary(end));
+                let token = &text[start..end];
+                let mut chars = token.chars();
+                let first = chars.next().unwrap();
+                assert!(
+                    !token.chars().any(|c| tokenizer.is_whitespace(&c)),
+                    "{token:?} contains whitespace"
+                );
+                if tokenizer.is_punctuation(&first) {
+                    assert_eq!(
+                        chars.next(),
+                        None,
+                        "punctuation token {token:?} is not a single char"
+                    );
+                } else {
+                    assert!(
+                        !token.chars().any(|c| tokenizer.is_punctuation(&c)),
+                        "{token:?} mixes word and punctuation characters"
+                    );
+                }
+                covered += token.chars().count();
+                previous_end = end;
+            }
+            let non_whitespace = text.chars().filter(|c| !tokenizer.is_whitespace(c)).count();
+            assert_eq!(
+                covered, non_whitespace,
+                "{text:?}: tokens miss or repeat characters"
+            );
+        }
     }
 }

@@ -136,6 +136,37 @@ impl SplitterLiteConfig<HFTokenizer> {
         }
     }
 
+    pub fn new_hf_with_normalizer_opt(
+        patterns: Vec<Vec<String>>,
+        max_tokens: Option<usize>,
+        merge_level: Option<usize>,
+        parallel: bool,
+        disable_normalizer: Option<bool>,
+        model: Option<String>,
+    ) -> Self {
+        let patterns_len = patterns.len();
+        let searchers: Vec<_> = patterns
+            .clone()
+            .iter()
+            .map(|p| PatternSearcher::new(p.clone()))
+            .collect();
+        // make sure merge_level is not greater than patterns_len ()
+        let merge_level = merge_level.map(|ml| if ml > patterns_len { patterns_len } else { ml });
+
+        let hf_tokenizer = HFTokenizer {
+            tokenizer: init_tokenizer(model, Some(usize::MAX), disable_normalizer.unwrap_or(false))
+                .unwrap(),
+        };
+        Self {
+            searchers,
+            tokenizer: hf_tokenizer,
+            max_tokens,
+            merge_level,
+            parallel: Some(parallel),
+            patterns_len,
+        }
+    }
+
     pub fn hf_splits(&self, data: &[u8]) -> Vec<SplitResultLite> {
         let span = Span {
             start: 0,

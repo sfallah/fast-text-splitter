@@ -7,5 +7,8 @@ pub mod pattern_search;
 pub mod splitter;
 pub mod ws_tokenizer;
 
+#[cfg(test)]
+mod test_support;
+
 #[cfg(feature = "py-binding")]
 mod py_binding;

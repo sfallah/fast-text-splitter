@@ -5,15 +5,23 @@ use crate::pattern_search::search_pattern::SearchPattern;
 use crate::pattern_search::search_result::SearchResult;
 use crate::pattern_search::search_split::SearchSplit;
 use aho_corasick::{AhoCorasick, Span};
+use icu_segmenter::options::SentenceBreakInvariantOptions;
+use icu_segmenter::{SentenceSegmenter, SentenceSegmenterBorrowed};
+use itertools::Itertools;
 use memchr::memmem::{find_iter, Finder};
 use memchr::{memchr2_iter, memchr3_iter};
-use punkt::sentence_tokenize;
+use once_cell::sync::Lazy;
+use punkt::{sentence_tokenize, sentence_tokenize_lang, SentenceToken};
+
+static ICU_SENTENCE_TOKENIZER: Lazy<SentenceSegmenterBorrowed> =
+    Lazy::new(|| SentenceSegmenter::new(SentenceBreakInvariantOptions::default()));
 
 pub struct PatternSearcher {
     pub patterns: Vec<SearchPattern>,
     pub aho_corasick: Option<AhoCorasick>,
     pub memchr_finder: Option<Finder<'static>>,
     pub sentence_tokenizer: Option<bool>,
+    pub icu_tokenizer: Option<bool>,
 }
 
 impl PatternSearcher {
@@ -31,6 +39,7 @@ impl PatternSearcher {
                     aho_corasick,
                     memchr_finder: None,
                     sentence_tokenizer: None,
+                    icu_tokenizer: None,
                 }
             } else {
                 // patterns.len() <= 3
@@ -41,6 +50,7 @@ impl PatternSearcher {
                         aho_corasick: None,
                         memchr_finder: None,
                         sentence_tokenizer: None,
+                        icu_tokenizer: None,
                     }
                 } else {
                     let aho_corasick = Some(get_aho_corasick(str_patterns.clone()));
@@ -49,6 +59,7 @@ impl PatternSearcher {
                         aho_corasick,
                         memchr_finder: None,
                         sentence_tokenizer: None,
+                        icu_tokenizer: None,
                     }
                 }
             }
@@ -60,14 +71,25 @@ impl PatternSearcher {
                     aho_corasick: None,
                     memchr_finder,
                     sentence_tokenizer: None,
+                    icu_tokenizer: None,
                 }
             } else {
-                if patterns[0].is_sentence {
+                if patterns[0].is_icu_sentence {
+                    // If the pattern is a whitespace, we can use a memchr finder
+                    Self {
+                        patterns,
+                        aho_corasick: None,
+                        memchr_finder: None,
+                        sentence_tokenizer: None,
+                        icu_tokenizer: Some(true),
+                    }
+                } else if patterns[0].is_sentence {
                     Self {
                         patterns,
                         aho_corasick: None,
                         memchr_finder: None,
                         sentence_tokenizer: Some(true),
+                        icu_tokenizer: None,
                     }
                 } else {
                     Self {
@@ -75,6 +97,7 @@ impl PatternSearcher {
                         aho_corasick: None,
                         memchr_finder: None,
                         sentence_tokenizer: None,
+                        icu_tokenizer: None,
                     }
                 }
             }
@@ -90,10 +113,22 @@ impl PatternSearcher {
         }
         if self.patterns.len() == 1 {
             let pattern = self.patterns.first().unwrap();
-            if pattern.is_sentence {
+            if pattern.is_icu_sentence {
+                let data_slice = std::str::from_utf8(&data[data_span.range()]).unwrap();
+                let sentences =
+                    icu_sentence_tokenize(data_slice)
+                        .unwrap()
+                        .into_iter()
+                        .map(move |st| SearchMatch {
+                            pattern_len: 0,
+                            is_pattern_whitespace: true,
+                            span: span(st.span.end, st.span.end),
+                        });
+                Box::new(sentences)
+            } else if pattern.is_sentence {
                 let data_slice = std::str::from_utf8(&data[data_span.range()]).unwrap();
                 Box::new(
-                    sentence_tokenize(data_slice)
+                    sentence_tokenize_lang(data_slice, Some("english"))
                         .unwrap()
                         .into_iter()
                         .map(move |st| SearchMatch {
@@ -249,4 +284,43 @@ impl PatternSearcher {
             matched: true,
         }
     }
+}
+
+pub fn icu_sentence_tokenize(text: &str) -> anyhow::Result<Vec<SentenceToken>> {
+    let mut cleaned_text = Vec::new();
+    replace_newlines_with_space(text, &mut cleaned_text)
+        .map_err(|e| anyhow::anyhow!("Failed to replace newlines: {}", e))?;
+    // Collect byte offsets produced by ICU.
+    let offsets: Vec<_> = ICU_SENTENCE_TOKENIZER
+        .segment_utf8(&cleaned_text)
+        .tuple_windows()
+        .map(|(start, end)| {
+            // SAFETY: offsets are byte indices from ICU; this must be valid UTF-8 boundaries.
+            (start, end)
+        })
+        .collect();
+
+    // Ensure we have a leading 0 and trailing text.len() to form closed intervals.
+
+    // Slice directly from offset pairs.
+    let mut icu_sentences = Vec::new();
+    for (start, end) in offsets {
+        // SAFETY: offsets are byte indices from ICU; this must be valid UTF-8 boundaries.
+        let sentence_str = &text[start..end];
+        icu_sentences.push(SentenceToken {
+            span: punkt::Span { start, end },
+            text: sentence_str.to_string(),
+        });
+    }
+
+    Ok(icu_sentences)
+}
+
+static AHO_CORASICK: Lazy<AhoCorasick> = Lazy::new(|| AhoCorasick::new(&["\n"]).unwrap());
+
+pub fn replace_newlines_with_space(rdr: &str, wtr: &mut Vec<u8>) -> anyhow::Result<()> {
+    AHO_CORASICK
+        .try_stream_replace_all(rdr.as_bytes(), wtr, &[" "])
+        .map_err(|e| anyhow::anyhow!("Failed to replace newlines: {}", e))?;
+    Ok(())
 }

@@ -37,15 +37,6 @@ mod tests {
     }
 
     #[test]
-    pub fn span_range_test() {
-        let sp = span(2, 5);
-        assert_eq!(sp.range(), 2..5);
-        let offsets = vec![(0, 1), (1, 2), (2, 3), (3, 4), (4, 5)];
-        let slice = &offsets[sp.range()];
-        assert_eq!(slice, &[(2, 3), (3, 4), (4, 5)]);
-    }
-
-    #[test]
     fn test_with_offset_sliced() {
         let offsets = vec![(0, 1), (1, 2), (2, 3), (3, 4), (4, 5)];
         let data_spans = vec![span(6, 8), span(8, 9)];

@@ -1,7 +1,6 @@
 use aho_corasick::Span;
 
 pub mod split;
-mod tests;
 pub mod tokens_result_lite;
 
 #[inline]
