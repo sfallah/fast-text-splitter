@@ -4,9 +4,9 @@
 use std::fs;
 use std::path::PathBuf;
 use std::str::from_utf8;
+use std::sync::LazyLock;
 
 use aho_corasick::Span;
-use once_cell::sync::Lazy;
 use tokenizers::Tokenizer;
 
 use crate::config::SplitterLiteConfig;
@@ -95,10 +95,10 @@ pub fn text_files(dir: &str) -> Vec<String> {
 
 // `Tokenizer::from_pretrained` races on hf-hub's cache lock when parallel tests load the
 // same model, so each model is loaded once per process and cloned out.
-static DEFAULT_TOKENIZER: Lazy<Tokenizer> =
-    Lazy::new(|| init_tokenizer(None, None, false).unwrap());
-static MULTILINGUAL_TOKENIZER: Lazy<Tokenizer> =
-    Lazy::new(|| init_tokenizer(Some(MULTILINGUAL_MODEL.to_string()), None, false).unwrap());
+static DEFAULT_TOKENIZER: LazyLock<Tokenizer> =
+    LazyLock::new(|| init_tokenizer(None, None, false).unwrap());
+static MULTILINGUAL_TOKENIZER: LazyLock<Tokenizer> =
+    LazyLock::new(|| init_tokenizer(Some(MULTILINGUAL_MODEL.to_string()), None, false).unwrap());
 
 pub fn tokenizer(model: &str) -> Tokenizer {
     match model {
