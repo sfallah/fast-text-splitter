@@ -44,7 +44,9 @@ pub fn init_tokenizer(
     }
     if disable_normalizer {
         let normalizer = BertNormalizer::new(false, false, None, false);
-        tokenizer.with_normalizer(Some(normalizer));
+        // tokenizers 0.23 made this fallible; a silently dropped error here would leave
+        // the model's own normalizer in place, which is the opposite of what was asked.
+        tokenizer.with_normalizer(Some(normalizer))?;
     }
     Ok(tokenizer)
 }
